@@ -1,9 +1,10 @@
 [application]
 
 [web.app]
-
 # HTML title tag content
 title = "mopimopi-dioxus"
+
+base_path = "mopimopi-rs"
 
 # include `assets` in web platform
 [web.resource]
@@ -19,3 +20,4 @@ script = []
 # Javascript code file
 # serve: [dev-server] only
 script = []
+
