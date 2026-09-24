@@ -45,16 +45,6 @@ fn header_table(environment: &TableEnvironment, columns: &[String]) -> Element {
             td {
                 key: "{column}",
                 class: "{column} cell",
-                onmouseenter: move |_| {
-                    if context.settings.peek().option_enabled("tooltips") {
-                        let mut tooltip = context.tooltip_html;
-                        tooltip.set(hint.clone());
-                    }
-                },
-                onmouseleave: move |_| {
-                    let mut tooltip = context.tooltip_html;
-                    tooltip.set(None);
-                },
                 "{title}"
             }
         }

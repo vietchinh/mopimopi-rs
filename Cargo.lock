@@ -1836,6 +1836,7 @@ dependencies = [
  "js-sys",
  "serde",
  "serde_json",
+ "tracing",
  "wasm-bindgen",
  "web-sys",
 ]
