@@ -3,13 +3,11 @@
 //! * `language_links`  – "Please select your language: 한국어 | English | ..."
 //! * `connect_box`     – ACT address box for a hosted copy (not in the original)
 
-mod connect_box;
 mod language_links;
 
 use super::combat_tables::CombatTables;
 use crate::application::app_state::AppContext;
 use crate::domain::translations::translations;
-use connect_box::ConnectBox;
 use crate::presentation::ui::shared::safe_markup::markup_view;
 use dioxus::prelude::*;
 use language_links::LanguageLinks;
@@ -50,7 +48,6 @@ fn StartScreen() -> Element {
             }
             div { id: "tip", {markup_view(&tip)} }
             div { id: "update", {markup_view(&update_notes)} }
-            ConnectBox {}
         }
     }
 }
