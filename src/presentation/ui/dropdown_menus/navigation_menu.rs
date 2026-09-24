@@ -42,9 +42,6 @@ pub(super) fn navigation_menu_items(context: AppContext) -> Element {
     });
     rsx! {
         {lines}
-        if screen == Screen::Main {
-            {menu_item("connect", "Connect to ACT…", None, move |_| show_start_screen(context))}
-        }
     }
 }
 
