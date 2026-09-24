@@ -34,7 +34,7 @@ dx serve --platform desktop
 This port renders with Rust and WebAssembly (Dioxus) and only touches the page when data arrives. The original overlay
 is jQuery-based and redraws continuously. I recorded a Chrome performance trace of each while connected to live ACT data,
 served from GitHub Pages in both cases, at almost the same message rate (2.7 and 2.6 combat messages per second), and
-compared them.
+compared them. The trace was recorded with the following state in the game: 1 player auto attacking a dummy.
 
 ### Results
 
