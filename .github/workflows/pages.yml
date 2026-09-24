@@ -27,24 +27,24 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@main
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@master
 
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@main
         with:
           tool: dioxus-cli
 
       - name: Build with dx
         run: dx bundle --platform web --release --out-dir pages
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@main
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@main
         with:
           path: pages/public
 
@@ -56,4 +56,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@main
