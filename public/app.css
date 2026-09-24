@@ -1,0 +1,27 @@
+/* Layout glue that the original did with JS (resizeWindow) */
+#wrap{display:flex;flex-direction:column;position:relative;overflow:hidden}
+#content{flex:1;min-height:0;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.mainBody{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
+.noticeBody{flex:1;min-height:0;overflow-y:auto}
+.setBody{display:flex;flex-direction:column;height:100%}
+.setBody .previewArea{flex:none}
+.setBody .scrollArea{flex:1;min-height:0}
+.histBody{display:flex;flex-direction:column;height:100%}
+.histBody #HISTORYBody{flex:1;min-height:0}
+.dropdown{position:absolute;top:0;left:0;width:100%;height:100%}
+.dropdown ul{max-height:80%}
+.connectBox{padding:1rem;text-align:center;background:rgba(0,0,0,.6)}
+.connectBox input{width:70%;padding:.6rem;background:#212121;color:#fff;border:.1rem solid #616161;font-size:1.2rem}
+.connectBox button,.connectBox .cbtn{margin:.5rem;padding:.6rem 1.2rem;background:#03A9F4;color:#000;border:0;cursor:pointer;font-size:1.2rem;border-radius:.2rem}
+.connectBox .cbtn.alt{background:#616161;color:#fff}
+.connectBox .stat{font-size:1.2rem;margin:.4rem}
+input[type=color]{width:4rem;height:2.4rem;border:0;padding:0;background:none;cursor:pointer}
+.inputEff{background:transparent;color:#fff;width:100%;outline:0}
+.li_text .inputBox{position:relative}
+.focus-border{position:absolute;bottom:0;left:50%;width:0;height:.2rem}
+.shadow{box-shadow:0 .1rem .3rem rgba(0,0,0,.4)}
+/* Hide scrollbars (Chrome ignores ::-webkit-scrollbar when other scrollbar props apply) */
+#DPSBody,#HPSBody,#DPSBody_P,#HPSBody_P,#HISTORYBody,.mainBody,.noticeBody,.scrollArea,.dropdown ul,#update{scrollbar-width:none}
+#DPSBody::-webkit-scrollbar,#HPSBody::-webkit-scrollbar,#DPSBody_P::-webkit-scrollbar,#HPSBody_P::-webkit-scrollbar,#HISTORYBody::-webkit-scrollbar,.mainBody::-webkit-scrollbar,.noticeBody::-webkit-scrollbar,.scrollArea::-webkit-scrollbar,.dropdown ul::-webkit-scrollbar,#update::-webkit-scrollbar{display:none;width:0;height:0}
+/* Dioxus mounts into #main; #wrap uses height:100% so #main must fill the window */
+#main{width:100%;height:100%}

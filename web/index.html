@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="icon" href="images/menu/icon.png" />
+  <link rel="apple-touch-icon" href="images/menu/icon.png" />
+  <title>MopiMopi</title>
+  <!-- Same helper the original loaded: exposes OverlayPluginApi when running inside OverlayPlugin -->
+  <script src="https://ngld.github.io/OverlayPlugin/assets/shared/common.min.js"></script>
+  <style>html,body{margin:0;background:transparent}
+    #main{width:100%;height:100%}</style>
+</head>
+<body>
+  <div id="main"></div>
+  <script type="module">
+    import init from "./pkg/mopimopi-dioxus.js";
+    init();
+  </script>
+</body>
+</html>
