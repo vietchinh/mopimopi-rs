@@ -1,5 +1,3 @@
-//! What happens when `OverlayPlugin` sends new combat data.
-
 use super::app_context::{AppContext, Screen};
 use super::encounter_history::HistoryEntry;
 use super::standby_mode::restart_standby_timer;
@@ -52,21 +50,7 @@ fn record_finished_encounter(context: AppContext, message: &Rc<CombatDataMessage
         return;
     }
     let encounter_number_in_zone = next_encounter_number_in_zone(context, &encounter.zone_name);
-    let local_player = message.local_player();
-    let local_player_dps = local_player.map(|player| (player.damage / encounter.duration_seconds).floor());
-    let local_player_hps = local_player.map(|player| (player.healed / encounter.duration_seconds).floor());
-    let entry = HistoryEntry {
-        encounter_key: encounter_key.clone(),
-        title: if encounter.title == "Encounter" { "No Data".into() } else { encounter.title.clone() },
-        zone_name: encounter.zone_name.clone(),
-        duration_text: encounter.duration_text.clone(),
-        encounter_dps: encounter.damage_per_second,
-        encounter_hps: encounter.heal_per_second,
-        local_player_dps,
-        local_player_hps,
-        encounter_number_in_zone,
-        combat_data: message.clone(),
-    };
+    let entry = HistoryEntry { encounter_key: encounter_key.clone(), encounter_number_in_zone, combat_data: message.clone() };
     history.write().insert(0, entry);
 
     let mut viewed = context.viewed_history_key;
@@ -76,7 +60,7 @@ fn record_finished_encounter(context: AppContext, message: &Rc<CombatDataMessage
 /// 1 for the first encounter or a new zone, otherwise one more than the previous entry's count.
 fn next_encounter_number_in_zone(context: AppContext, zone_name: &str) -> usize {
     let mut counter = context.encounters_in_current_zone;
-    let previous_zone = context.encounter_history.peek().first().map(|entry| entry.zone_name.clone());
+    let previous_zone = context.encounter_history.peek().first().map(|entry| entry.zone_name().to_string());
     let next_number = match previous_zone {
         Some(previous) if previous == zone_name => *counter.peek() + 1,
         _ => 1,

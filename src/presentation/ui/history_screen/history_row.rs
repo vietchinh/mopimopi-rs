@@ -8,8 +8,9 @@ pub(super) fn history_row(context: AppContext, entry: &HistoryEntry, is_shown_no
     let number_format = NumberFormat::from_settings(&context.settings.read());
     let rate = |value: f64| number_format.format_number(value, 1.0, number_format.rate_decimals);
     let rate_or_no_data = |value: Option<f64>| value.map_or_else(|| "No Data".into(), &rate);
-    let (encounter_dps, encounter_hps) = (rate(entry.encounter_dps), rate(entry.encounter_hps));
-    let (local_dps, local_hps) = (rate_or_no_data(entry.local_player_dps), rate_or_no_data(entry.local_player_hps));
+    let (encounter_dps, encounter_hps) = (rate(entry.encounter_dps()), rate(entry.encounter_hps()));
+    let (local_dps, local_hps) = (rate_or_no_data(entry.local_player_dps()), rate_or_no_data(entry.local_player_hps()));
+    let (title, zone_name, duration_text) = (entry.title(), entry.zone_name(), entry.duration_text());
     let encounter_key = entry.encounter_key.clone();
 
     rsx! {
@@ -20,8 +21,8 @@ pub(super) fn history_row(context: AppContext, entry: &HistoryEntry, is_shown_no
                         td { class: "cell_5",
                             if is_shown_now { img { src: "images/menu/eye.svg", style: "width:1.5rem" } }
                         }
-                        td { class: "cell_1", "{entry.title}", span { class: "ex", " / {entry.zone_name}" } }
-                        td { class: "cell_5", "{entry.duration_text}" }
+                        td { class: "cell_1", "{title}", span { class: "ex", " / {zone_name}" } }
+                        td { class: "cell_5", "{duration_text}" }
                         td { class: "cell_6", "{encounter_dps}" }
                         td { class: "cell_6", "{encounter_hps}" }
                         td { class: "cell_6 ac", "{local_dps}" }
