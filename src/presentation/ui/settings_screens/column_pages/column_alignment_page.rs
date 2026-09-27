@@ -3,7 +3,7 @@
 use super::column_titles::{active_columns, column_title};
 use crate::presentation::ui::settings_screens::row_context::RowContext;
 use crate::presentation::ui::settings_screens::row_layout::settings_row;
-use crate::application::app_state::*;
+use crate::application::app_state::Dropdown;
 use crate::domain::translations::{translate, translations};
 use dioxus::prelude::*;
 

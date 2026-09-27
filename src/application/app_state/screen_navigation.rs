@@ -50,11 +50,11 @@ pub fn return_to_main_screen(context: AppContext) {
     dropdown.set(None);
     let mut preview = context.settings_preview_enabled;
     preview.set(false);
-    let newest = context.latest_combat_data.peek().clone();
-    if let Some(newest) = newest.filter(|_| *context.has_received_data.peek()) {
-        let mut displayed = context.displayed_combat_data;
-        displayed.set(Some(newest));
-    }
+    // let newest = context.latest_combat_data.peek().clone();
+    // if let Some(newest) = newest.filter(|_| *context.has_received_data.peek()) {
+    //     let mut displayed = context.displayed_combat_data;
+    //     displayed.set(Some(newest));
+    // }
     restart_standby_timer(context);
 }
 

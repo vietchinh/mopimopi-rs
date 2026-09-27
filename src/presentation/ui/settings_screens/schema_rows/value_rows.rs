@@ -43,7 +43,7 @@ pub(super) fn slider_setting_row(page_context: &RowContext, entry: &SchemaEntry)
     let t = title(page_context, entry);
     let ic = icon(entry);
     slider_row(
-        SliderSpec {
+        &SliderSpec {
             id: &entry.id,
             icon: &ic,
             title: &t,

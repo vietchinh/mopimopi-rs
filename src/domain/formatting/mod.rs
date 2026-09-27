@@ -3,7 +3,7 @@
 //! * `text_fragment`   – text plus dimmed unit text ("12.3" + "k")
 //! * `number_format`   – digit grouping, decimal marks, k/M units, from the user's settings
 //! * `player_name`     – name abbreviation, owner names, rank prefix
-//! * `strongest_action_text` – the MaxHit / MaxHeal cell
+//! * `strongest_action_text` – the `MaxHit` / `MaxHeal` cell
 //! * `column_cell`     – one function that produces every column's cell
 
 mod column_cell;
@@ -15,3 +15,7 @@ mod text_fragment;
 pub use column_cell::{cell_fragments, cell_plain_text, CellContext};
 pub use number_format::NumberFormat;
 pub use text_fragment::TextFragment;
+
+
+/// Job code for the Limit Break pseudo-combatant (used to look up its translated display name).
+pub const LIMIT_BREAK_JOB_CODE: &str = "LMB";

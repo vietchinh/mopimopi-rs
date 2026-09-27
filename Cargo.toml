@@ -5,23 +5,25 @@ edition = "2021"
 
 [dependencies]
 dioxus = { version = "0.7.10", features = ["web"] }
+futures = { version = "0.3", default-features = false, features = ["std", "async-await"] }
 gloo-timers = { version = "0.4.0", features = ["futures"] }
 js-sys = "0.3.105"
+# Compiles out `tracing` spans and events below WARN in release builds. Dioxus records a span for every signal
+# and memo update; with the browser subscriber each one becomes a PerformanceMark + PerformanceMeasure that the
+# browser keeps forever (about one pair per combat update).
+tracing = { version = "0.1", features = ["release_max_level_warn"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["preserve_order"] }
 wasm-bindgen = "0.2.128"
-tracing = { version = "0.1.44", features = ["release_max_level_warn"] }
-web-sys = { version = "0.3.105", features = ["Window","Document","Element","HtmlElement","HtmlInputElement","WebSocket","MessageEvent","CloseEvent","ErrorEvent","Event","EventTarget","Storage","File","FileList","FileReader","ProgressEvent","CustomEvent","Location","console","BinaryType","Navigator","UrlSearchParams","HtmlTextAreaElement","Blob","Url"] }
+wasm-bindgen-futures = "0.4"
+
+web-sys = { version = "0.3", features = ["Window","Document","Element","HtmlElement","HtmlInputElement","WebSocket","MessageEvent","CloseEvent","ErrorEvent","Event","EventTarget","Storage","File","FileList","FileReader","ProgressEvent","CustomEvent","Location","console","BinaryType","Navigator","UrlSearchParams","HtmlTextAreaElement","Blob","Url"] }
 
 [profile.release]
-# Speed first: opt-level "z" (smallest) only saves about 2.5% more size than 3 (measured).
 opt-level = 3
-# One codegen unit lets the optimizer see the whole crate: smaller and faster code, slower build.
+debug = false
+lto = true
 codegen-units = 1
-# Removes the ~300 KB `name` section (debug function names, 18% of the wasm). Only stack traces
-# lose function names; behaviour is unchanged.
-strip = true
-# wasm cannot unwind anyway; makes that explicit and drops the unwinding machinery.
 panic = "abort"
-# Not enabled because it could not be tested in the sandbox (needs a prebuilt wasm std):
-lto = "fat"
+strip = true
+incremental = false

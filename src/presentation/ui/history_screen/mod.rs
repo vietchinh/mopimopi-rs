@@ -4,7 +4,7 @@
 
 mod history_row;
 
-use crate::application::app_state::*;
+use crate::application::app_state::{AppContext, close_history_screen};
 use crate::domain::translations::{translate, translations};
 use crate::presentation::ui::navigation_bar::capture_screenshot;
 use dioxus::prelude::*;

@@ -1,7 +1,7 @@
 //! Table columns: their definitions, which are enabled per table, and their order.
 
 use super::json_coercion::is_truthy;
-use super::user_settings::*;
+use super::user_settings::{COLUMN_DEFINITIONS_SECTION, COLUMN_ORDER_SECTION};
 use super::Settings;
 use serde_json::{json, Map, Value};
 
@@ -37,13 +37,13 @@ impl Settings {
             .unwrap_or_default()
     }
 
-    fn set_column_order(&mut self, table_label: &str, order: Vec<String>) {
+    fn set_column_order(&mut self, table_label: &str, order: &[String]) {
         self.json_document[COLUMN_ORDER_SECTION][table_label] = json!(order);
     }
 
     /// Switches a column on or off for a table, keeping the display order in sync.
     pub fn set_column_enabled(&mut self, column: &str, table_label: &str, enabled: bool) {
-        self.set_column_field(column, table_label, json!(enabled as i32));
+        self.set_column_field(column, table_label, json!(i32::from(enabled)));
         let mut order = self.column_order(table_label);
         if enabled {
             if !order.iter().any(|name| name == column) {
@@ -52,7 +52,7 @@ impl Settings {
         } else {
             order.retain(|name| name != column);
         }
-        self.set_column_order(table_label, order);
+        self.set_column_order(table_label, &order);
     }
 
     /// Swaps a column with its neighbour (`move_up`: towards the front).
@@ -62,7 +62,7 @@ impl Settings {
         let neighbour = if move_up { index.checked_sub(1) } else { Some(index + 1) };
         if let Some(neighbour) = neighbour.filter(|&position| position < order.len()) {
             order.swap(index, neighbour);
-            self.set_column_order(table_label, order);
+            self.set_column_order(table_label, &order);
         }
     }
 }

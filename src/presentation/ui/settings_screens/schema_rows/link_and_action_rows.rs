@@ -3,7 +3,7 @@
 use super::{icon, note, title};
 use crate::presentation::ui::settings_screens::row_context::RowContext;
 use crate::presentation::ui::settings_screens::row_layout::settings_row;
-use crate::application::app_state::*;
+use crate::application::app_state::{open_settings_page, AppContext, reset_settings_to_defaults, back_up_settings, restore_settings_from_backup, Dropdown};
 use crate::domain::translations::{translate, translations};
 use dioxus::prelude::*;
 use serde_json::Value;

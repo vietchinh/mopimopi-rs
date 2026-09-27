@@ -1,7 +1,7 @@
 //! The ⋮ menu. Its entries come from `ui_schema.NAV.main.dr` / `ui_schema.NAV.settings.dr`.
 
 use super::menu_item::menu_item;
-use crate::application::app_state::*;
+use crate::application::app_state::{AppContext, Screen, toggle_fullscreen_mode, open_settings_screen, return_to_main_screen};
 use crate::domain::translations::{translate, translations};
 use dioxus::prelude::*;
 
@@ -35,9 +35,9 @@ pub(super) fn navigation_menu_items(context: AppContext) -> Element {
         let entry_id = entry.id.clone();
         if entry.kind == "dr_checkbox" {
             let is_on = is_menu_switch_on(context, &entry.id);
-            menu_item(&entry.id, &entry.label_html, Some(is_on), move |_| toggle_menu_switch(context, &entry_id))
+            menu_item(&entry.id, &entry.label_html, Some(is_on), move |()| toggle_menu_switch(context, &entry_id))
         } else {
-            menu_item(&entry.id, &entry.label_html, None, move |_| run_menu_action(context, &entry_id))
+            menu_item(&entry.id, &entry.label_html, None, move |()| run_menu_action(context, &entry_id))
         }
     });
     rsx! {
@@ -73,12 +73,4 @@ fn run_menu_action(context: AppContext, entry_id: &str) {
         "home" => return_to_main_screen(context),
         _ => {}
     }
-}
-
-/// Back to the start screen so another ACT address can be entered.
-fn show_start_screen(context: AppContext) {
-    let mut has_received_data = context.has_received_data;
-    has_received_data.set(false);
-    let mut dropdown = context.open_dropdown;
-    dropdown.set(None);
 }

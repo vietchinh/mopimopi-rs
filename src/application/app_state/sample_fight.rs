@@ -1,7 +1,7 @@
 //! A built-in sample fight (from the original's `previewLog.json`).
 
-use crate::models::act_data::CombatDataMessage;
 use std::sync::OnceLock;
+use crate::infrastructure::act::data::CombatDataMessage;
 
 pub fn sample_combat_message() -> &'static CombatDataMessage {
     static SAMPLE: OnceLock<CombatDataMessage> = OnceLock::new();

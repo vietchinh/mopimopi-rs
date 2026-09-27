@@ -33,10 +33,10 @@ pub fn restart_standby_timer(context: AppContext) {
     if *is_hidden.peek() {
         is_hidden.set(false); // only write when it changes: every write redraws the readers
     }
-    let fight_is_running = context.latest_combat_data.peek().as_ref().map(|data| data.is_encounter_active).unwrap_or(false);
-    if fight_is_running {
-        return; // never hide during a fight
-    }
+    // let fight_is_running = context.latest_combat_data.peek().as_ref().map(|data| data.is_encounter_active).unwrap_or(false);
+    // if fight_is_running {
+    //     return; // never hide during a fight
+    // }
     let delay = (standby_minutes * MILLISECONDS_PER_MINUTE).clamp(MINIMUM_STANDBY_MILLISECONDS, MAXIMUM_TIMER_MILLISECONDS);
     let timer = Timeout::new(delay as u32, move || {
         let mut dropdown = context.open_dropdown;

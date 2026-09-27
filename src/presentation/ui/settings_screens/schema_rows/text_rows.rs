@@ -1,7 +1,7 @@
 //! Text boxes, the share code, the abbreviation add button and the background upload.
 
 use super::{icon, note, title};
-use crate::presentation::ui::settings_screens::form_actions::*;
+use crate::presentation::ui::settings_screens::form_actions::{add_abbreviation, submit_text, set_background};
 use crate::presentation::ui::settings_screens::text_box::{text_box, typed_text};
 use crate::presentation::ui::settings_screens::row_context::RowContext;
 use crate::presentation::ui::shared::safe_markup::markup_view;
@@ -40,7 +40,7 @@ pub(super) fn text_row(page_context: &RowContext, entry: &SchemaEntry, with_butt
                     add_abbreviation(context, inputs);
                 }
             } else {
-                submit_text(context, inputs, &box_id, text);
+                submit_text(context, inputs, &box_id, text.as_str());
             }
         }
     };
@@ -54,7 +54,7 @@ pub(super) fn text_row(page_context: &RowContext, entry: &SchemaEntry, with_butt
                 td { style: "width:100%;padding-right:1.4rem", {input} }
                 if with_button {
                     td { class: "gIcon ft sendBtn",
-                        onclick: move |_| submit_text(context, inputs, &send_id, typed_text(inputs, &send_id)),
+                        onclick: move |_| submit_text(context, inputs, &send_id, typed_text(inputs, &send_id).as_str()),
                         i { class: "material-icons", "send" }
                     }
                 }

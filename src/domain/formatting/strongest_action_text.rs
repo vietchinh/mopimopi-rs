@@ -1,11 +1,10 @@
-//! The MaxHit / MaxHeal cell: action name (optionally abbreviated) and amount.
+//! The `MaxHit` / `MaxHeal` cell: action name (optionally abbreviated) and amount.
 
 use super::number_format::NumberFormat;
 use super::text_fragment::TextFragment;
-use crate::domain::combat::StrongestAction;
 use crate::domain::settings::Settings;
 
-/// Where the action name goes relative to the amount ("MaxHit" settings).
+/// Where the action name goes relative to the amount ("`MaxHit`" settings).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ActionLayout {
     NameThenAmount,
@@ -25,10 +24,10 @@ impl ActionLayout {
     }
 }
 
-/// Fragments of the cell for `action`.
-pub fn strongest_action_fragments(action: &StrongestAction, settings: &Settings, number_format: &NumberFormat) -> Vec<TextFragment> {
-    let action_name = shown_action_name(&action.action_name, settings);
-    let amount = number_format.strongest_action_amount_fragments(action.amount);
+// /// Fragments of the cell for `action`.
+pub fn strongest_action_fragments(action_name: &str, action_amount: f64,  settings: &Settings, number_format: &NumberFormat) -> Vec<TextFragment> {
+    let action_name = shown_action_name(action_name, settings);
+    let amount = number_format.strongest_action_amount_fragments(action_amount);
     let separator = settings.option_text("mhh_unit");
     match ActionLayout::from_option_number(settings.option_number("mhh") as i32) {
         ActionLayout::NameThenAmount => {
@@ -54,7 +53,5 @@ fn shown_action_name(action_name: &str, settings: &Settings) -> String {
     settings
         .action_abbreviations()
         .into_iter()
-        .find(|(long_name, _)| long_name == action_name)
-        .map(|(_, short_name)| short_name)
-        .unwrap_or_else(|| action_name.to_string())
+        .find(|(long_name, _)| long_name == action_name).map_or_else(|| action_name.to_string(), |(_, short_name)| short_name)
 }

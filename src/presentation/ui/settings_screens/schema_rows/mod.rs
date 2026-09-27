@@ -20,10 +20,10 @@ use super::row_context::RowContext;
 use crate::domain::translations::translate;
 use dioxus::prelude::*;
 
-use choice_rows::*;
-use link_and_action_rows::*;
-use text_rows::*;
-use value_rows::*;
+use choice_rows::{radio_row, switch_row, column_switch_row};
+use link_and_action_rows::{link_row, action_row};
+use text_rows::{share_row, text_row, add_button_row, file_row};
+use value_rows::{color_row, slider_setting_row, value_row, info_row};
 
 pub(super) fn title(page_context: &RowContext, entry: &SchemaEntry) -> String {
     translate(&entry.definition["tt"], page_context.language_code)

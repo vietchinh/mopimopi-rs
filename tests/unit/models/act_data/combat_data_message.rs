@@ -16,7 +16,7 @@ fn parses_the_sample_fight() {
     let you = message.combatants.iter().find(|c| c.name == "YOU").unwrap();
     assert_eq!(you.job_text, "Sch");
     assert_eq!(you.damage, 77193.0);
-    assert_eq!(you.strongest_hit_text, "Broil-8,765");
+    assert_eq!(you.strongest_hit_name, "Broil");
     assert_eq!(you.strongest_hit_amount, 8765.0);
 }
 

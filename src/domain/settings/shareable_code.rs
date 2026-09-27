@@ -1,6 +1,6 @@
 //! "Custom UI Data": export the look of the overlay as text and import somebody else's.
 
-use super::user_settings::*;
+use super::user_settings::{SHAREABLE_SECTIONS, OPTIONS_SECTION, SLIDERS_SECTION};
 use super::Settings;
 use serde_json::{Map, Value};
 
