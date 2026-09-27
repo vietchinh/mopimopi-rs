@@ -8,7 +8,7 @@ use super::overlay_plugin_context::OverlayPluginContext;
 use super::overlays::{Toast, Tooltip};
 use super::settings_screens::{SettingsNavigationBar, SettingsScreen};
 use super::start_screen::MainScreen;
-use crate::application::app_state::{AppContext, Screen, SettingsLocation, Dropdown, ToastState, on_combat_data_changed, register_save_on_page_hide, schedule_settings_save};
+use crate::application::app_state::{AppContext, Screen, SettingsLocation, Dropdown, ToastState, on_combat_data_changed, register_save_on_page_hide, schedule_settings_save, restart_standby_timer};
 use crate::domain::settings::Settings;
 use crate::presentation::theme::build_theme_css;
 use dioxus::prelude::*;
@@ -45,10 +45,7 @@ fn create_app_context() -> AppContext {
 #[component]
 pub fn App() -> Element {
     let context = create_app_context();
-    // The signals are created here, as ordinary hooks, and only then handed to
-    // `OverlayPluginContext::new` (a plain constructor) and `spawn_connection_task` (which starts
-    // and keeps the connection going). `merge_pets_into_owner` only reads the "pets" setting once,
-    // at start-up; further changes reach it through `set_merge_pets_into_owner` below.
+
     let connection_status = use_signal(|| overlay_plugin_context::ConnectionStatus::NotConfigured);
     let combat_data_message = use_signal(|| None);
     let player_name_signal = use_signal(String::new);
@@ -62,15 +59,13 @@ pub fn App() -> Element {
     use_context_provider(|| context);
     use_context_provider(|| overlay_plugin_context);
 
-    // Keeps the connection's merge-pets bool in step with the GUI setting, without ever
-    // recreating the connection itself (that only happens once, in the `use_hook` above).
+    use_hook(|| restart_standby_timer(context));
+
     use_effect(move || {
         let merge_pets = context.settings.read().option_enabled("pets");
         overlay_plugin_context.set_merge_pets_into_owner(merge_pets);
     });
 
-    // Applies every new message from OverlayPlugin to the application state (freezing the
-    // display while settings are open, recording finished encounters, and so on).
     use_effect(move || {
         if let Some(message) = overlay_plugin_context.combat_data_message() {
             on_combat_data_changed(context, message);

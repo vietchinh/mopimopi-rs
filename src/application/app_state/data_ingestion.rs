@@ -56,7 +56,7 @@ fn record_finished_encounter(context: AppContext, message: &Rc<CombatDataMessage
     let local_player_dps = local_player.map(|player| (player.damage / encounter.duration_seconds).floor());
     let local_player_hps = local_player.map(|player| (player.healed / encounter.duration_seconds).floor());
     let entry = HistoryEntry {
-        encounter_key,
+        encounter_key: encounter_key.clone(),
         title: if encounter.title == "Encounter" { "No Data".into() } else { encounter.title.clone() },
         zone_name: encounter.zone_name.clone(),
         duration_text: encounter.duration_text.clone(),
@@ -68,6 +68,9 @@ fn record_finished_encounter(context: AppContext, message: &Rc<CombatDataMessage
         combat_data: message.clone(),
     };
     history.write().insert(0, entry);
+
+    let mut viewed = context.viewed_history_key;
+    viewed.set(Some(encounter_key));
 }
 
 /// 1 for the first encounter or a new zone, otherwise one more than the previous entry's count.
