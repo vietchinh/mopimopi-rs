@@ -33,7 +33,7 @@ const PETS_BY_JOB: &[(PetJob, &[&str])] = &[
     (PetJob::Astrologian, ASTROLOGIAN_PETS),
     (PetJob::WhiteMage, WHITE_MAGE_PETS),
     (PetJob::Sage, SAGE_PETS),
-    (PetJob::Beastmaster, BEASTMASTER_PETS),
+    (PetJob::Beastmaster, &[]),
 ];
 
 const SUMMONER_PETS: &[&str] = &[
@@ -75,6 +75,3 @@ const WHITE_MAGE_PETS: &[&str] = &[
 ];
 
 const SAGE_PETS: &[&str] = &["ペプシス", "Pepsis", "소화 작용", "消化"];
-
-/// English only so far; other client languages still need to be added.
-const BEASTMASTER_PETS: &[&str] = &["Cu Sith"];

@@ -31,9 +31,9 @@ impl<'a> CombatantKind<'a> {
             // ACT sends the Limit Break gauge's job text as "Limit Break", but on some captures it
             // arrives blank instead; the name alone still identifies it.
             "" if combatant.name == "Limit Break" => Self::LimitBreak,
-            "" => match (job_of_pet(base_name), owner_name) {
-                (Some(job), Some(owner_name)) => Self::Pet { owner_name, job },
-                _ => Self::Unknown,
+            "" => match owner_name {
+                Some(owner_name) => Self::Pet { owner_name, job: job_of_pet(base_name).unwrap_or(PetJob::Beastmaster) },
+                None => Self::Unknown,
             },
             _ => Self::Player,
         }
