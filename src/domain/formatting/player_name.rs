@@ -2,7 +2,7 @@
 
 use crate::domain::combat::CombatantKind::LimitBreak;
 use crate::domain::combat::LOCAL_PLAYER;
-use crate::domain::formatting::{COMBATANT_JOB_CODE, LIMIT_BREAK_JOB_CODE};
+use crate::domain::formatting::LIMIT_BREAK_JOB_CODE;
 use crate::domain::settings::Settings;
 use crate::domain::translations::Translations;
 use crate::infrastructure::act::data::CombatantRecord;
@@ -80,20 +80,6 @@ fn abbreviate_pet_or_player_name(name: &str, local_player_name: &str, options: &
     };
     format!("{} ({})", pet_part.trim_end(), shown_owner)
 }
-
-/// "Eos(YOU)" for pets, or the translated companion label for owned combatants.
-fn label_for_own_pet(player: &CombatantRecord, translations: &Translations, language_code: &str) -> String {
-    if player.job_text == COMBATANT_JOB_CODE {
-        format!("{} ({LOCAL_PLAYER})", translations.dictionary_title(COMBATANT_JOB_CODE, language_code))
-    } else {
-        format!("{}({LOCAL_PLAYER})", player.name.split('(').next().unwrap_or(""))
-    }
-}
-
-// fn is_owned_by_local_player(player: &CombatantRecord, local_player_name: &str) -> bool {
-//     !player.pet_owner_name.is_empty()
-//         && (player.pet_owner_name == local_player_name || player.pet_owner_name == LOCAL_PLAYER)
-// }
 
 /// The text of the name cell.
 pub fn display_name(

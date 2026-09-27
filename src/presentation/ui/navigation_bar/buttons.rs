@@ -1,15 +1,11 @@
 //! Buttons at the right of the top bar. Capture, History and End-encounter appear when pinned
 //! in the settings or while the mouse is over the ⋮ button.
 
+use super::capture_screenshot;
 use crate::application::app_state::*;
 use crate::domain::translations::{translate, translations};
 use dioxus::prelude::*;
-use gloo_timers::callback::Timeout;
 use crate::presentation::ui::overlay_plugin_context::OverlayPluginContext;
-
-const CAPTURE_ICON_BLINK_MILLISECONDS: u32 = 750;
-/// ACT needs a moment after the blink before the screenshot request is sent.
-const CAPTURE_REQUEST_DELAY_MILLISECONDS: u32 = 1_300;
 
 #[component]
 pub(super) fn NavigationButtons(is_settings_preview: bool) -> Element {
@@ -37,7 +33,9 @@ pub(super) fn NavigationButtons(is_settings_preview: bool) -> Element {
             },
             if is_shown("Capture") { NavigationButton { name: "Capture", icon: "camera", is_settings_preview } }
             if is_shown("History") { NavigationButton { name: "History", icon: "history", is_settings_preview } }
-            if is_shown("RequestEnd") { NavigationButton { name: "RequestEnd", icon: "timer_off", is_settings_preview } }
+            // "RequestEnd" (End encounter) is not shown: this backend has no command to end an encounter
+            // (OverlayPlugin's WebSocket API documents no such call; the original used the removed legacy
+            // ACTWebSocket protocol for it). Automatic ending via OverlayPlugin's own settings still works.
             NavigationButton { name: "More", icon: "more_vert", is_settings_preview }
         }
     }
@@ -72,8 +70,7 @@ fn NavigationButton(name: &'static str, icon: &'static str, is_settings_preview:
 fn press_button(context: AppContext, name: &str) {
     match name {
         "Capture" => capture_screenshot(context),
-        // "History" => open_history_screen(context),
-        // "RequestEnd" => network::send_overlay_request("RequestEnd"),
+        "History" => open_history_screen(context),
         _ => {
             let mut dropdown = context.open_dropdown;
             dropdown.set(Some(Dropdown::Navigation));
@@ -93,15 +90,4 @@ fn show_button_tooltip(context: AppContext, button_name: &str) {
     }
 }
 
-/// Screenshot request: blink the icon, ask ACT to save a capture, then show a toast.
-pub fn capture_screenshot(context: AppContext) {
-    let mut flashing = context.capture_flash_active;
-    flashing.set(true);
-    Timeout::new(CAPTURE_ICON_BLINK_MILLISECONDS, move || {
-        let mut flashing = context.capture_flash_active;
-        flashing.set(false);
-    })
-    .forget();
-    // Timeout::new(CAPTURE_REQUEST_DELAY_MILLISECONDS, || network::send_overlay_request("Capture")).forget();
-    show_toast_message(context, "Capture", 1500, 8000);
-}
+

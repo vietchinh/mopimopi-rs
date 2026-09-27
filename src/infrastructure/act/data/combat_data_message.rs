@@ -39,10 +39,18 @@ impl CombatDataMessage {
     pub fn merge_pets_into_owners(&mut self, local_player_name: Option<&str>) {
         let identities = self.combatants.iter().map(CombatantRecord::identity);
         let merges = plan_pet_merges(identities, local_player_name);
-
+        if merges.is_empty() {
+            return;
+        }
         for merge in &merges {
             self.fold_pet_into_owner(merge);
         }
+        self.combatants.sort_by(|a, b| {
+            match (b.damage_per_second).partial_cmp(&(a.damage_per_second)) {
+                Some(std::cmp::Ordering::Equal) | None => b.damage.partial_cmp(&a.damage).unwrap_or(std::cmp::Ordering::Equal),
+                Some(order) => order,
+            }
+        });
     }
 
     /// Moves one pet's numbers into its owner and removes the pet's row. The plan only names
@@ -92,5 +100,5 @@ fn deserialize_in_arrival_order<'de, D: Deserializer<'de>>(deserializer: D) -> R
 }
 
 #[cfg(test)]
-#[path = "../../../../tests/unit/models/act_data/combat_data_message.rs"]
+#[path = "../../../../tests/unit/infrastructure/act_data/combat_data_message.rs"]
 mod tests;

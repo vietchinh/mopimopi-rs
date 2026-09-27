@@ -218,5 +218,5 @@ pub fn lenient_bool<'de, D: Deserializer<'de>>(deserializer: D) -> Result<bool, 
 }
 
 #[cfg(test)]
-#[path = "../../../../tests/unit/models/act_data/lenient_values.rs"]
+#[path = "../../../../tests/unit/infrastructure/act_data/lenient_values.rs"]
 mod tests;

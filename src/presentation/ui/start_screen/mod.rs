@@ -1,7 +1,7 @@
 //! The main screen before any data arrived (start screen), and the switch to the tables.
 //!
-//! * `language_links`  – "Please select your language: 한국어 | English | ..."
-//! * `connect_box`     – ACT address box for a hosted copy (not in the original)
+//! * `language_links`    – "Please select your language: 한국어 | English | ..."
+//! * `connection_panel`  – connection status and the sample-data button
 
 mod language_links;
 
@@ -15,13 +15,13 @@ use language_links::LanguageLinks;
 /// The tables once data has arrived, the start screen before that.
 #[component]
 pub fn MainScreen() -> Element {
-    // let context = use_context::<AppContext>();
-    // if !*context.has_received_data.read() {
-    //     return rsx! { StartScreen {} };
-    // }
-    // let is_standby_hidden = *context.is_standby_hidden.read();
+    let context = use_context::<AppContext>();
+    if !*context.has_received_data.read() {
+        return rsx! { StartScreen {} };
+    }
+    let is_standby_hidden = *context.is_standby_hidden.read();
     rsx! {
-        div { "name": "main", class: "mainBody", style: if false { "display:none" } else { "" },
+        div { "name": "main", class: "mainBody", style: if is_standby_hidden { "display:none" } else { "" },
             CombatTables { is_settings_preview: false }
         }
     }

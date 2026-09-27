@@ -44,12 +44,6 @@ fn owner_is_needed_for_pets_and_chocobos() {
 }
 
 #[test]
-fn pet_job_abbreviation() {
-    assert_eq!(PetJob::Scholar.abbreviation(), "SCH");
-    assert_eq!(PetJob::DarkKnight.abbreviation(), "DRK");
-}
-
-#[test]
 fn pet_owner_name_only_for_pets() {
     assert_eq!(classify("Eos (Future Fade)", "").pet_owner_name(), Some("Future Fade"));
     assert_eq!(classify("Boco (Future Fade)", "0").pet_owner_name(), None);

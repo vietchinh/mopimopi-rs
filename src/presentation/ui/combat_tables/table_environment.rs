@@ -1,7 +1,5 @@
 //! Everything the table drawing functions need, bundled so they don't take many arguments each.
 
-use crate::application::app_state::AppContext;
-use dioxus::prelude::*;
 use crate::domain::formatting::CellContext;
 use crate::domain::settings::Settings;
 use crate::domain::translations::translations;

@@ -111,6 +111,49 @@ impl CombatantRecord {
         CombatantKind::classify(self.identity())
     }
 
+    /// Whether this combatant counts as a tank / healer / crafter-or-gatherer for the job-filter
+    /// settings ("DPS_T", "HPS_H", ... in `visible_players`) and the "role" palette mode. Checked
+    /// directly against `job_text` (base classes included as their own entries, not remapped to
+    /// their advanced job), the same way the icon is looked up (`job_text.to_uppercase()`).
+    pub fn is_tank(&self) -> bool {
+        matches!(self.job_text.to_uppercase().as_str(), "PLD" | "WAR" | "DRK" | "GNB" | "GLA" | "MRD")
+    }
+
+    pub fn is_healer(&self) -> bool {
+        matches!(self.job_text.to_uppercase().as_str(), "SCH" | "WHM" | "AST" | "SGE" | "CNJ")
+    }
+
+    pub fn is_crafter(&self) -> bool {
+        matches!(self.job_text.to_uppercase().as_str(), "CRP" | "BSM" | "ARM" | "GSM" | "LTW" | "WVR" | "ALC" | "CUL")
+    }
+
+    pub fn is_gatherer(&self) -> bool {
+        matches!(self.job_text.to_uppercase().as_str(), "BTN" | "MIN" | "FSH")
+    }
+
+    pub fn is_crafter_or_gatherer(&self) -> bool {
+        self.is_crafter() || self.is_gatherer()
+    }
+
+    /// The colour key for the "role" palette mode (settings: `Color.Tanker`, `.Healer`,
+    /// `.Crafter`, `.Gathering`). Empty for anything else (pets, chocobos, Limit Break), which
+    /// then fall back to their own job-code colour instead (see `presentation::ui::shared::palette`).
+    pub fn role_palette_key(&self) -> &'static str {
+        if self.is_tank() {
+            "Tanker"
+        } else if self.is_healer() {
+            "Healer"
+        } else if self.is_crafter() {
+            "Crafter"
+        } else if self.is_gatherer() {
+            "Gathering"
+        } else if matches!(self.kind(), CombatantKind::Player) {
+            "DPS"
+        } else {
+            ""
+        }
+    }
+
     /// Healing split into what was restored, overhealed and shielded.
     pub fn healing(&self) -> Healing {
         Healing { healed: self.healed, over_heal: self.over_heal, damage_shield: self.damage_shield }
@@ -168,7 +211,7 @@ impl CombatantRecord {
         }
         if pet.strongest_heal_amount > self.strongest_heal_amount {
             self.strongest_heal_amount = pet.strongest_heal_amount;
-            self.strongest_hit_name.clone_from(&pet.strongest_hit_name);
+            self.strongest_heal_name.clone_from(&pet.strongest_heal_name);
         }
     }
 }

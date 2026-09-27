@@ -28,6 +28,9 @@ impl<'a> CombatantKind<'a> {
                 Some(owner_name) => Self::Chocobo { owner_name },
                 None => Self::Unknown,
             },
+            // ACT sends the Limit Break gauge's job text as "Limit Break", but on some captures it
+            // arrives blank instead; the name alone still identifies it.
+            "" if combatant.name == "Limit Break" => Self::LimitBreak,
             "" => match (job_of_pet(base_name), owner_name) {
                 (Some(job), Some(owner_name)) => Self::Pet { owner_name, job },
                 _ => Self::Unknown,

@@ -3,6 +3,8 @@
 use super::dropdown_menus::DropdownMenu;
 use super::history_screen::{HistoryNavigationBar, HistoryScreen};
 use super::navigation_bar::NavigationBar;
+use super::overlay_plugin_context;
+use super::overlay_plugin_context::OverlayPluginContext;
 use super::overlays::{Toast, Tooltip};
 use super::settings_screens::{SettingsNavigationBar, SettingsScreen};
 use super::start_screen::MainScreen;
@@ -11,41 +13,21 @@ use crate::domain::settings::Settings;
 use crate::presentation::theme::build_theme_css;
 use dioxus::prelude::*;
 use std::collections::HashSet;
-use std::rc::Rc;
-use futures::channel::mpsc;
-use crate::infrastructure::browser_websocket::connection_status::ConnectionStatus;
-use crate::presentation::ui::overlay_plugin_context::OverlayPluginContext;
-
 
 /// Creates every piece of shared state (see `app_state::AppContext` for what each one means).
 fn create_app_context() -> AppContext {
     let settings = use_signal(Settings::load_from_browser);
-    // let displayed_combat_data = use_signal(|| None::<Rc<CombatDataMessage>>);
-    let local_player_name = use_signal(String::new);
-
-    // Recomputed only when the data, the pet-merging setting or the player name changes.
-    // let merge_pets = use_memo(move || settings.read().option_enabled("pets"));
-    // let rankings = use_memo(move || {
-    //     let message = displayed_combat_data.read().clone()?;
-    //     let name = local_player_name.read().clone();
-    //     Some(Rc::new(build_rankings(&message, merge_pets(), &name)))
-    // });
-    // let sample_rankings = use_memo(move || Rc::new(build_rankings(sample_combat_message(), merge_pets(), "")));
 
     AppContext {
         settings,
-        // displayed_combat_data,
-        local_player_name,
-        // rankings,
-        // sample_rankings,
+        displayed_combat_data: use_signal(|| None),
+        local_player_name: use_signal(String::new),
         current_screen: use_signal(|| Screen::Main),
-        // latest_combat_data: use_signal(|| None::<Rc<CombatDataMessage>>),
         has_received_data: use_signal(|| false),
         encounter_was_active: use_signal(|| false),
-        // encounter_history: use_signal(Vec::<HistoryEntry>::new),
+        encounter_history: use_signal(Vec::new),
         encounters_in_current_zone: use_signal(|| 0usize),
         viewed_history_key: use_signal(|| None::<String>),
-        connection_status: use_signal(|| ConnectionStatus::Idle),
         settings_location: use_signal(SettingsLocation::top_level),
         open_dropdown: use_signal(|| None::<Dropdown>),
         settings_preview_enabled: use_signal(|| false),
@@ -63,25 +45,57 @@ fn create_app_context() -> AppContext {
 #[component]
 pub fn App() -> Element {
     let context = create_app_context();
-    let overlay_plugin_context = OverlayPluginContext::new();
+    // The signals are created here, as ordinary hooks, and only then handed to
+    // `OverlayPluginContext::new` (a plain constructor) and `spawn_connection_task` (which starts
+    // and keeps the connection going). `merge_pets_into_owner` only reads the "pets" setting once,
+    // at start-up; further changes reach it through `set_merge_pets_into_owner` below.
+    let connection_status = use_signal(|| overlay_plugin_context::ConnectionStatus::NotConfigured);
+    let combat_data_message = use_signal(|| None);
+    let player_name_signal = use_signal(String::new);
+    let connection_error = use_signal(|| None);
+    let merge_pets_into_owner = use_signal(|| context.settings.peek().option_enabled("pets"));
+
+    let overlay_plugin_context =
+        OverlayPluginContext::new(connection_status, combat_data_message, player_name_signal, connection_error, merge_pets_into_owner);
+    overlay_plugin_context::spawn_connection_task(connection_status, combat_data_message, player_name_signal, connection_error, merge_pets_into_owner);
 
     use_context_provider(|| context);
     use_context_provider(|| overlay_plugin_context);
 
+    // Keeps the connection's merge-pets bool in step with the GUI setting, without ever
+    // recreating the connection itself (that only happens once, in the `use_hook` above).
+    use_effect(move || {
+        let merge_pets = context.settings.read().option_enabled("pets");
+        overlay_plugin_context.set_merge_pets_into_owner(merge_pets);
+    });
+
+    // Applies every new message from OverlayPlugin to the application state (freezing the
+    // display while settings are open, recording finished encounters, and so on).
+    use_effect(move || {
+        if let Some(message) = overlay_plugin_context.combat_data_message() {
+            on_combat_data_changed(context, message);
+        }
+    });
+    use_effect(move || {
+        let name = overlay_plugin_context.local_player_name();
+        if !name.is_empty() {
+            let mut local_player_name = context.local_player_name;
+            local_player_name.set(name);
+        }
+    });
+
     // Save the settings shortly after the last change (see `settings_saving`).
-    // use_hook(|| register_save_on_page_hide(context.settings));
-    // use_effect(move || {
-    //     let _ = context.settings.read(); // re-run after every change
-    //     schedule_settings_save(context.settings);
-    // });
+    use_hook(|| register_save_on_page_hide(context.settings));
+    use_effect(move || {
+        let _ = context.settings.read(); // re-run after every change
+        schedule_settings_save(context.settings);
+    });
 
     // Rebuilt only when the settings change, not when the screen or a dropdown does.
     let theme_css = use_memo(move || build_theme_css(&context.settings.read()));
     let screen = *context.current_screen.read();
 
     rsx! {
-        // document::Link { rel: "stylesheet", href: "https://fonts.googleapis.com/icon?family=Material+Icons" }
-        // document::Link { rel: "stylesheet", href: "https://fonts.googleapis.com/css?family=Roboto+Condensed" }
         style { "{theme_css}" }
         div { id: "wrap",
             if context.open_dropdown.read().is_some() {
@@ -94,21 +108,19 @@ pub fn App() -> Element {
                     },
                 }
             }
-            // match screen {
-            //     Screen::Main => rsx! { NavigationBar { is_settings_preview: false } },
-            //     Screen::History => rsx! { HistoryNavigationBar {} },
-            //     Screen::Settings => rsx! { SettingsNavigationBar {} },
-            // }
-            NavigationBar { is_settings_preview: false }
+            match screen {
+                Screen::Main => rsx! { NavigationBar { is_settings_preview: false } },
+                Screen::History => rsx! { HistoryNavigationBar {} },
+                Screen::Settings => rsx! { SettingsNavigationBar {} },
+            }
             div { id: "content",
                 Tooltip {}
                 Toast {}
-                MainScreen {}
-                // match screen {
-                //     Screen::Main => rsx! { MainScreen {} },
-                //     Screen::History => rsx! { HistoryScreen {} },
-                //     Screen::Settings => rsx! { SettingsScreen {} },
-                // }
+                match screen {
+                    Screen::Main => rsx! { MainScreen {} },
+                    Screen::History => rsx! { HistoryScreen {} },
+                    Screen::Settings => rsx! { SettingsScreen {} },
+                }
             }
         }
     }

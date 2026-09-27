@@ -41,11 +41,7 @@ pub struct ParseOptions<'a> {
 
 impl OverlayMessage {
     pub fn parse(json_text: &str) -> Result<Self, serde_json::Error> {
-        let message = match serde_json::from_str(json_text)? {
-            Self::CombatData(combat_data) => Self::CombatData(combat_data),
-            other => other,
-        };
-        Ok(message)
+        serde_json::from_str(json_text)
     }
 
     pub fn kind(&self) -> MessageType {
@@ -72,12 +68,8 @@ impl OverlayMessage {
 }
 
 #[cfg(test)]
-#[path = "../../../../tests/unit/models/act_data/incoming_message.rs"]
+#[path = "../../../../tests/unit/infrastructure/act_data/overlay_message.rs"]
 mod tests;
-
-#[cfg(test)]
-#[path = "../../../../tests/unit/models/act_data/incoming_message_capture_tests.rs"]
-mod capture_tests;
 
 #[cfg(test)]
 #[path = "../../../../tests/unit/infrastructure/act_data/pet_merging.rs"]

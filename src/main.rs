@@ -16,5 +16,8 @@ mod infrastructure;
 mod presentation;
 
 fn main() {
+    // Turns a wasm panic into a readable browser-console message with the actual Rust location and
+    // message, instead of the browser only reporting an opaque "unreachable" trap.
+    std::panic::set_hook(Box::new(|info| web_sys::console::error_1(&info.to_string().into())));
     dioxus::launch(presentation::ui::App);
 }

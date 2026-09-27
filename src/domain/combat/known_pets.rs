@@ -17,22 +17,6 @@ pub enum PetJob {
     Beastmaster,
 }
 
-impl PetJob {
-    pub fn abbreviation(self) -> &'static str {
-        match self {
-            Self::Summoner => "SMN",
-            Self::Scholar => "SCH",
-            Self::Machinist => "MCH",
-            Self::DarkKnight => "DRK",
-            Self::Ninja => "NIN",
-            Self::Astrologian => "AST",
-            Self::WhiteMage => "WHM",
-            Self::Sage => "SGE",
-            Self::Beastmaster => "BST",
-        }
-    }
-}
-
 pub fn job_of_pet(pet_name: &str) -> Option<PetJob> {
     PETS_BY_JOB
         .iter()

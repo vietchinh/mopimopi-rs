@@ -5,7 +5,7 @@
 
 use crate::infrastructure::browser_websocket::{BrowserWebsocketUrl, UrlError};
 use std::fmt;
-use crate::infrastructure::act::data::{CombatDataMessage, OverlayMessage};
+use crate::infrastructure::act::data::{CombatDataMessage, OverlayMessage, ParseOptions};
 use crate::infrastructure::act::overlay_plugin_protocol::OverlayPluginEvent::{CombatData, PrimaryPlayerChanged};
 // ---------- the URL ----------
 
@@ -80,9 +80,12 @@ pub enum OverlayPluginEvent {
 
 /// What one message means. Pure: no I/O, so it is tested directly.
 /// `Ok(None)` for valid messages that are not events (for example, replies to calls).
-pub fn interpret(text: &str) -> Result<Option<OverlayPluginEvent>, serde_json::Error> {
+pub fn interpret(text: &str, options: ParseOptions) -> Result<Option<OverlayPluginEvent>, serde_json::Error> {
     match OverlayMessage::parse(text)? {
-        OverlayMessage::CombatData(combat_data) => {
+        OverlayMessage::CombatData(mut combat_data) => {
+            if options.merge_pets_into_owner {
+                combat_data.merge_pets_into_owners(options.local_player_name);
+            }
             Ok(Some(CombatData(combat_data)))
         }
         OverlayMessage::ChangePrimaryPlayer(player) => {
@@ -124,8 +127,13 @@ mod tests {
 
     #[test]
     fn interprets_combat_data() {
-        let text = r#"{"type":"CombatData","Encounter":{"title":"Striking Dummy","DURATION":"10","damage":"24,466","CurrentZoneName":"Shirogane"},"Combatant":{"YOU":{"name":"YOU","Job":"Drk","damage":"24466","dps":"2740.98","maxhit":"attack-8273","MAXHIT":"8273"}},"isActive":"true"}"#;
-        let Ok(Some(OverlayPluginEvent::CombatData(e))) = interpret(text) else { panic!("not combat data") };
+        // `CombatantRecord.damage_per_second` is still parsed from ACT's own `encdps` field (this
+        // just checks that parsing), but the "encdps"/"dps" table columns no longer display it
+        // directly: `domain::formatting::column_cell` recomputes those from `damage` and the
+        // (personal or encounter) duration instead, since a player's own raw rate field can go
+        // stale while they land no new hits. See `column_cell`'s tests for that behaviour.
+        let text = r#"{"type":"CombatData","Encounter":{"title":"Striking Dummy","DURATION":"10","damage":"24,466","CurrentZoneName":"Shirogane"},"Combatant":{"YOU":{"name":"YOU","Job":"Drk","damage":"24466","encdps":"2740.98","maxhit":"attack-8273","MAXHIT":"8273"}},"isActive":"true"}"#;
+        let Ok(Some(OverlayPluginEvent::CombatData(e))) = interpret(text, ParseOptions::default()) else { panic!("not combat data") };
         assert_eq!((e.encounter.title.as_str(), e.encounter.zone_name.as_str(), e.encounter.total_damage), ("Striking Dummy", "Shirogane", 24466.0));
         assert_eq!(e.combatants[0].name, "YOU");
         assert_eq!(e.combatants[0].damage_per_second, 2740.98);
@@ -133,14 +141,35 @@ mod tests {
 
     #[test]
     fn interprets_the_primary_player() {
-        let event = interpret(r#"{"type":"ChangePrimaryPlayer","charID":268938170,"charName":"Future Fade"}"#).unwrap();
+        let event = interpret(r#"{"type":"ChangePrimaryPlayer","charID":268938170,"charName":"Future Fade"}"#, ParseOptions::default()).unwrap();
         assert!(matches!(event, Some(OverlayPluginEvent::PrimaryPlayerChanged(ref name)) if name.as_str() == "Future Fade"));
     }
 
     #[test]
     fn ignores_other_messages_and_reports_malformed_ones() {
-        assert!(matches!(interpret(r#"{"type":"ChangeZone","zoneID":132}"#), Ok(None)));
-        assert!(matches!(interpret(r#"{"rseq":1,"data":[]}"#), Ok(None)));
-        assert!(interpret("{not json").is_err());
+        assert!(matches!(interpret(r#"{"type":"ChangeZone","zoneID":132}"#, ParseOptions::default()), Ok(None)));
+        // No "type" key at all (e.g. a subscribe call's reply, {"rseq":1,"data":[]}) is a parse
+        // error here: `#[serde(tag = "type")]` requires the tag to be present, and nothing pre-checks
+        // for its absence (that pre-check, `TypeOnly`, was removed as out of scope).
+        assert!(interpret(r#"{"rseq":1,"data":[]}"#, ParseOptions::default()).is_err());
+        assert!(interpret("{not json", ParseOptions::default()).is_err());
+    }
+
+    #[test]
+    fn merges_pets_only_when_asked_to() {
+        let text = r#"{"type":"CombatData","Encounter":{},"Combatant":{
+            "YOU":{"name":"YOU","Job":"Sch","damage":"100"},
+            "Eos (Future Fade)":{"name":"Eos (Future Fade)","damage":"20"}
+        },"isActive":"true"}"#;
+
+        let unmerged = interpret(text, ParseOptions::default()).unwrap();
+        let Some(OverlayPluginEvent::CombatData(unmerged)) = unmerged else { panic!("not combat data") };
+        assert_eq!(unmerged.combatants.len(), 2, "no merging: both rows stay");
+
+        let options = ParseOptions { merge_pets_into_owner: true, local_player_name: Some("Future Fade") };
+        let merged = interpret(text, options).unwrap();
+        let Some(OverlayPluginEvent::CombatData(merged)) = merged else { panic!("not combat data") };
+        assert_eq!(merged.combatants.len(), 1, "the pet's row is folded into YOU");
+        assert_eq!(merged.local_player().unwrap().damage, 120.0);
     }
 }
