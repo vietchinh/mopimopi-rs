@@ -1,3 +1,7 @@
+/* fonts */
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
 /* Layout glue that the original did with JS (resizeWindow) */
 #wrap{display:flex;flex-direction:column;position:relative;overflow:hidden}
 #content{flex:1;min-height:0;position:relative;overflow:hidden;display:flex;flex-direction:column}

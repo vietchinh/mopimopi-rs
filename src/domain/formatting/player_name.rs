@@ -1,8 +1,11 @@
 //! How a player's name is displayed in the name column.
 
-use crate::domain::combat::{Player, COMBATANT_JOB_CODE, LIMIT_BREAK_JOB_CODE, LOCAL_PLAYER_ROW_NAME};
+use crate::domain::combat::CombatantKind::LimitBreak;
+use crate::domain::combat::LOCAL_PLAYER;
+use crate::domain::formatting::{COMBATANT_JOB_CODE, LIMIT_BREAK_JOB_CODE};
 use crate::domain::settings::Settings;
 use crate::domain::translations::Translations;
+use crate::infrastructure::act::data::CombatantRecord;
 
 /// How much of a "First Last" name is shortened (the "Name" settings page).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -69,8 +72,8 @@ fn abbreviate_pet_or_player_name(name: &str, local_player_name: &str, options: &
         return abbreviate_name(name, options.abbreviation);
     };
     let owner = rest.strip_suffix(')').unwrap_or(rest);
-    let shown_owner = if !options.keep_you_label && owner == LOCAL_PLAYER_ROW_NAME {
-        let character = if local_player_name.is_empty() { LOCAL_PLAYER_ROW_NAME } else { local_player_name };
+    let shown_owner = if !options.keep_you_label && owner == LOCAL_PLAYER {
+        let character = if local_player_name.is_empty() { LOCAL_PLAYER } else { local_player_name };
         abbreviate_name(character, options.abbreviation)
     } else {
         abbreviate_name(owner, options.abbreviation)
@@ -79,28 +82,28 @@ fn abbreviate_pet_or_player_name(name: &str, local_player_name: &str, options: &
 }
 
 /// "Eos(YOU)" for pets, or the translated companion label for owned combatants.
-fn label_for_own_pet(player: &Player, translations: &Translations, language_code: &str) -> String {
-    if player.job_code == COMBATANT_JOB_CODE {
-        format!("{} ({LOCAL_PLAYER_ROW_NAME})", translations.dictionary_title(COMBATANT_JOB_CODE, language_code))
+fn label_for_own_pet(player: &CombatantRecord, translations: &Translations, language_code: &str) -> String {
+    if player.job_text == COMBATANT_JOB_CODE {
+        format!("{} ({LOCAL_PLAYER})", translations.dictionary_title(COMBATANT_JOB_CODE, language_code))
     } else {
-        format!("{}({LOCAL_PLAYER_ROW_NAME})", player.name.split('(').next().unwrap_or(""))
+        format!("{}({LOCAL_PLAYER})", player.name.split('(').next().unwrap_or(""))
     }
 }
 
-fn is_owned_by_local_player(player: &Player, local_player_name: &str) -> bool {
-    !player.pet_owner_name.is_empty()
-        && (player.pet_owner_name == local_player_name || player.pet_owner_name == LOCAL_PLAYER_ROW_NAME)
-}
+// fn is_owned_by_local_player(player: &CombatantRecord, local_player_name: &str) -> bool {
+//     !player.pet_owner_name.is_empty()
+//         && (player.pet_owner_name == local_player_name || player.pet_owner_name == LOCAL_PLAYER)
+// }
 
 /// The text of the name cell.
 pub fn display_name(
-    player: &Player,
+    player: &CombatantRecord,
     local_player_name: &str,
     options: &NameOptions,
     translations: &Translations,
     language_code: &str,
 ) -> String {
-    let is_local_row = player.name == LOCAL_PLAYER_ROW_NAME;
+    let is_local_row = player.name == LOCAL_PLAYER;
     let name = if !options.hide_names {
         if is_local_row && !options.keep_you_label {
             if local_player_name.is_empty() {
@@ -108,21 +111,17 @@ pub fn display_name(
             } else {
                 abbreviate_pet_or_player_name(local_player_name, local_player_name, options)
             }
-        } else if is_owned_by_local_player(player, local_player_name) && options.keep_you_label {
-            label_for_own_pet(player, translations, language_code)
         } else {
             abbreviate_pet_or_player_name(&player.name, local_player_name, options)
         }
     } else if is_local_row {
         player.name.clone()
-    } else if is_owned_by_local_player(player, local_player_name) && !local_player_name.is_empty() {
-        label_for_own_pet(player, translations, language_code)
-    } else if player.job_code == LIMIT_BREAK_JOB_CODE {
+    } else if player.kind() == LimitBreak {
         translations.dictionary_title(LIMIT_BREAK_JOB_CODE, language_code)
     } else {
         String::new()
     };
-    if options.prefix_rank { format!("{}. {}", player.rank + 1, name) } else { name }
+    if options.prefix_rank { format!("{}. {}", 1, name) } else { name }
 }
 
 #[cfg(test)]

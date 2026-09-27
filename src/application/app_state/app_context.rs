@@ -1,14 +1,11 @@
 //! The shared signals.
 
-use crate::models::act_data::CombatDataMessage;
-use crate::application::app_state::encounter_history::HistoryEntry;
-use crate::domain::combat::EncounterRankings;
-use crate::infrastructure::network::ConnectionStatus;
 use crate::domain::settings::Settings;
 use dioxus::prelude::*;
 use serde_json::Value;
 use std::collections::HashSet;
 use std::rc::Rc;
+use crate::infrastructure::browser_websocket::connection_status::ConnectionStatus;
 
 /// Which full screen is shown.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -59,14 +56,14 @@ pub struct AppContext {
     pub settings: Signal<Settings>,
     pub current_screen: Signal<Screen>,
 
-    /// Newest data received from ACT.
-    pub latest_combat_data: Signal<Option<Rc<CombatDataMessage>>>,
-    /// Data currently drawn; differs from the latest while browsing history or settings.
-    pub displayed_combat_data: Signal<Option<Rc<CombatDataMessage>>>,
-    /// `displayed_combat_data` turned into sorted tables for the current settings.
-    pub rankings: Memo<Option<Rc<EncounterRankings>>>,
-    /// Rankings of the built-in sample fight (settings page previews).
-    pub sample_rankings: Memo<Rc<EncounterRankings>>,
+    // /// Newest data received from ACT.
+    // pub latest_combat_data: Signal<Option<Rc<CombatDataMessage>>>,
+    // /// Data currently drawn; differs from the latest while browsing history or settings.
+    // pub displayed_combat_data: Signal<Option<Rc<CombatDataMessage>>>,
+    // /// `displayed_combat_data` turned into sorted tables for the current settings.
+    // pub rankings: Memo<Option<Rc<EncounterRankings>>>,
+    // /// Rankings of the built-in sample fight (settings page previews).
+    // pub sample_rankings: Memo<Rc<EncounterRankings>>,
 
     /// Name of the local character, reported by ACT.
     pub local_player_name: Signal<String>,
@@ -76,7 +73,7 @@ pub struct AppContext {
     /// True while the previous message was from a running fight (used to detect fight ends).
     pub encounter_was_active: Signal<bool>,
 
-    pub encounter_history: Signal<Vec<HistoryEntry>>,
+    // pub encounter_history: Signal<Vec<HistoryEntry>>,
     /// Number of encounters recorded in a row in the same zone.
     pub encounters_in_current_zone: Signal<usize>,
     /// History entry currently displayed, if any.

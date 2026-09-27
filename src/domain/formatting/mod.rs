@@ -15,3 +15,11 @@ mod text_fragment;
 pub use column_cell::{cell_fragments, cell_plain_text, CellContext};
 pub use number_format::NumberFormat;
 pub use text_fragment::TextFragment;
+
+
+/// Job code the overlay uses for pets that belong to a player.
+pub const PET_JOB_CODE: &str = "AVA";
+/// Job code for the Limit Break pseudo-combatant.
+pub const LIMIT_BREAK_JOB_CODE: &str = "LMB";
+/// Job code for owned combatants that are not known pets (for example chocobos).
+pub const COMBATANT_JOB_CODE: &str = "CBO";

@@ -1,9 +1,10 @@
 //! The coloured bar behind a row and the small pet / overheal / shield bars.
 
 use super::table_environment::TableEnvironment;
-use crate::domain::combat::{EncounterRanking, Player, TableKind};
+use crate::domain::combat::{TableKind};
 use crate::presentation::ui::shared::palette::{bar_color, percent_of_whole, player_bar_color, with_optional_gradient};
 use dioxus::prelude::*;
+use crate::infrastructure::act::data::{CombatantRecord, EncounterRecord};
 
 /// Bar widths in whole percent (0-100).
 struct BarWidths {
@@ -13,28 +14,28 @@ struct BarWidths {
     shield_bar: i32,
 }
 
-fn bar_widths(environment: &TableEnvironment, ranking: &EncounterRanking, table: TableKind, player: &Player) -> BarWidths {
+fn bar_widths(environment: &TableEnvironment, combatant_record: &CombatantRecord, encounter_record: &EncounterRecord, table: TableKind) -> BarWidths {
     let (total, contributed_by_pets) = match table {
-        TableKind::Damage => (player.merged_stats.damage, player.merged_stats.damage - player.own_stats.damage),
+        TableKind::Damage => (combatant_record.damage, combatant_record.pet_damage),
         TableKind::Healing => (
-            player.merged_stats.healed,
-            player.merged_stats.effective_healed - player.own_stats.effective_healed,
+            combatant_record.healed,
+            combatant_record.healing().effective() - combatant_record.pet_effective_healed,
         ),
     };
     let pets_are_merged = environment.settings.option_enabled("pets");
     BarWidths {
-        main_bar: percent_of_whole(total, ranking.top_value),
-        pet_bar: if pets_are_merged { percent_of_whole(contributed_by_pets, ranking.top_value) } else { 0 },
-        overheal_bar: percent_of_whole(player.merged_stats.over_heal, player.merged_stats.healed),
-        shield_bar: percent_of_whole(player.merged_stats.damage_shield, player.merged_stats.healed),
+        main_bar: percent_of_whole(total, combatant_record.damage),
+        pet_bar: if pets_are_merged { percent_of_whole(contributed_by_pets, combatant_record.damage) } else { 0 },
+        overheal_bar: percent_of_whole(combatant_record.over_heal, combatant_record.healed),
+        shield_bar: percent_of_whole(combatant_record.damage_shield, combatant_record.healed),
     }
 }
 
-pub(super) fn graph_bars(environment: &TableEnvironment, ranking: &EncounterRanking, table: TableKind, player: &Player, row_id: &str) -> Element {
+pub(super) fn graph_bars(environment: &TableEnvironment, combatant_record: &CombatantRecord, encounter_record: &EncounterRecord, table: TableKind, row_id: &str) -> Element {
     let settings = environment.settings;
-    let widths = bar_widths(environment, ranking, table, player);
+    let widths = bar_widths(environment, combatant_record, encounter_record, table);
     let transition = if environment.animate_bars { "transition:width .3s;" } else { "" };
-    let main_background = with_optional_gradient(settings, &player_bar_color(settings, player, row_id));
+    let main_background = with_optional_gradient(settings, &player_bar_color(settings, combatant_record, row_id));
 
     // One of the small bars, drawn only when its option is on.
     let small_bar = |bar_kind: &str, width: i32, option_key: &str| -> Element {

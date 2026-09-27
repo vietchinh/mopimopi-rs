@@ -1,12 +1,12 @@
 //! Content of every table column. The column names are ACT's / the original's field names.
 
+use crate::domain::formatting::strongest_action_text::strongest_action_fragments;
 use super::number_format::NumberFormat;
 use super::player_name::{display_name, NameOptions};
-use super::strongest_action_text::strongest_action_fragments;
 use super::text_fragment::{join_plain_text, TextFragment};
-use crate::domain::combat::{EncounterRanking, Player};
 use crate::domain::settings::Settings;
 use crate::domain::translations::Translations;
+use crate::infrastructure::act::data::{CombatantRecord, EncounterRecord};
 
 /// Everything needed to format cells, gathered once per table.
 pub struct CellContext<'a> {
@@ -32,64 +32,63 @@ impl<'a> CellContext<'a> {
 }
 
 /// Fragments of one cell. The job icon column (`Class`) is drawn by the caller.
-pub fn cell_fragments(column: &str, player: &Player, ranking: &EncounterRanking, context: &CellContext) -> Vec<TextFragment> {
+pub fn cell_fragments(column: &str, combatant_record: &CombatantRecord, encounter_record: &EncounterRecord, context: &CellContext) -> Vec<TextFragment> {
     let format = &context.number_format;
-    let merged = &player.merged_stats;
-    let rates = &player.rates;
     match column {
         "name" => vec![TextFragment::Plain(display_name(
-            player,
+            combatant_record,
             context.local_player_name,
             &context.name_options,
             context.translations,
             &context.language_code,
         ))],
-        "duration" => vec![TextFragment::Plain(player.personal_duration_text.clone())],
-        "EncounterDuration" => vec![TextFragment::Plain(ranking.encounter.duration_text.clone())],
+        "duration" => vec![TextFragment::Plain(combatant_record.duration_text.clone())],
+        "EncounterDuration" => vec![TextFragment::Plain(encounter_record.duration_text.clone())],
 
-        "dps" => format.rate_fragments(rates.damage_per_second),
-        "encdps" => format.rate_fragments(rates.encounter_damage_per_second),
-        "enchps" => format.rate_fragments(rates.encounter_heal_per_second),
-        "mergedLast10DPS" => format.rate_fragments(merged.damage_per_second_last_10_seconds),
-        "mergedLast30DPS" => format.rate_fragments(merged.damage_per_second_last_30_seconds),
-        "mergedLast60DPS" => format.rate_fragments(merged.damage_per_second_last_60_seconds),
-        "mergedLast180DPS" => format.rate_fragments(merged.damage_per_second_last_180_seconds),
+        "dps" => vec![TextFragment::Plain(combatant_record.damage.to_string())],
+        "encdps" => vec![TextFragment::Plain(combatant_record.damage_per_second.to_string())],
+        "enchps" => vec![TextFragment::Plain(combatant_record.heal_per_second.to_string())],
+        "mergedLast10DPS" => vec![TextFragment::Plain(combatant_record.damage_per_second_last_10_seconds.to_string())],
+        "mergedLast30DPS" => vec![TextFragment::Plain(combatant_record.damage_per_second_last_30_seconds.to_string())],
+        "mergedLast60DPS" => vec![TextFragment::Plain(combatant_record.damage_per_second_last_60_seconds.to_string())],
+        "mergedLast180DPS" => vec![TextFragment::Plain(combatant_record.damage_per_second_last_180_seconds.to_string())],
 
-        "mergedDamage" => format.amount_fragments(merged.damage),
-        "mergedSwings" => format.amount_fragments(merged.swings),
-        "mergedHits" => format.amount_fragments(merged.hits),
-        "mergedDirectHitCount" => format.amount_fragments(merged.direct_hits),
-        "mergedCrithits" => format.amount_fragments(merged.critical_hits),
-        "mergedCritDirectHitCount" => format.amount_fragments(merged.critical_direct_hits),
-        "mergedMisses" => format.amount_fragments(merged.misses),
-        "hitfailed" => format.amount_fragments(player.avoided_hits),
-        "mergedDamagetaken" => format.amount_fragments(merged.damage_taken),
-        "mergedHealstaken" => format.amount_fragments(merged.heals_taken),
-        "mergedHealed" => format.amount_fragments(merged.healed),
-        "mergedEffHealed" => format.amount_fragments(merged.effective_healed),
-        "mergedDamageShield" => format.amount_fragments(merged.damage_shield),
-        "mergedOverHeal" => format.amount_fragments(merged.over_heal),
-        "mergedHeals" => format.amount_fragments(merged.heals),
-        "mergedCritheals" => format.amount_fragments(merged.critical_heals),
-        "mergedCures" => format.amount_fragments(merged.cures),
-        "mergedAbsorbHeal" => format.amount_fragments(merged.absorb_heal),
-        "powerheal" => format.amount_fragments(player.mana_restored),
-        "deaths" => format.amount_fragments(player.deaths),
+        "mergedDamage" => vec![TextFragment::Plain(combatant_record.damage.to_string())],
+        "mergedSwings" => vec![TextFragment::Plain(combatant_record.swings.to_string())],
+        "mergedHits" => vec![TextFragment::Plain(combatant_record.hits.to_string())],
+        "mergedDirectHitCount" => vec![TextFragment::Plain(combatant_record.direct_hits.to_string())],
+        "mergedCrithits" => vec![TextFragment::Plain(combatant_record.critical_hits.to_string())],
+        "mergedCritDirectHitCount" => vec![TextFragment::Plain(combatant_record.critical_direct_hits.to_string())],
+        "mergedMisses" => vec![TextFragment::Plain(combatant_record.misses.to_string())],
+        "hitfailed" => vec![TextFragment::Plain(combatant_record.avoided_hits.to_string())],
+        "mergedDamagetaken" => vec![TextFragment::Plain(combatant_record.damage_taken.to_string())],
+        "mergedHealstaken" => vec![TextFragment::Plain(combatant_record.heals_taken.to_string())],
+        "mergedHealed" => vec![TextFragment::Plain(combatant_record.healed.to_string())],
+        "mergedEffHealed" => vec![TextFragment::Plain(combatant_record.healing().effective().to_string())],
+        "mergedDamageShield" => vec![TextFragment::Plain(combatant_record.damage_shield.to_string())],
+        "mergedOverHeal" => vec![TextFragment::Plain(combatant_record.over_heal.to_string())],
+        "mergedHeals" => vec![TextFragment::Plain(combatant_record.heals.to_string())],
+        "mergedCritheals" => vec![TextFragment::Plain(combatant_record.critical_heals.to_string())],
+        "mergedCures" => vec![TextFragment::Plain(combatant_record.cures.to_string())],
+        "mergedAbsorbHeal" => vec![TextFragment::Plain(combatant_record.absorb_heal.to_string())],
+        "powerheal" => vec![TextFragment::Plain(combatant_record.mana_restored.to_string())],
+        "deaths" => vec![TextFragment::Plain(combatant_record.deaths.to_string())],
 
-        "ParryPct" => whole_percent(player.parry_percent, format),
-        "BlockPct" => whole_percent(player.block_percent, format),
-        "maxhit" => strongest_action_fragments(&player.merged_strongest_hit, context.settings, format),
-        "maxheal" => strongest_action_fragments(&player.merged_strongest_heal, context.settings, format),
+        "ParryPct" => vec![TextFragment::Plain(combatant_record.parry_percent.to_string())],
+        "BlockPct" => vec![TextFragment::Plain(combatant_record.block_percent.to_string())],
+        "maxhit" => strongest_action_fragments(combatant_record.strongest_hit_name.as_str(), combatant_record.strongest_hit_amount, context.settings, &context.number_format),
+        "maxheal" => vec![TextFragment::Plain(combatant_record.strongest_heal_amount.to_string())],
 
-        "damagePct" => format.percent_fragments(rates.damage_percent),
-        "healedPct" => format.percent_fragments(rates.healed_percent),
-        "overHealPct" => format.percent_fragments(rates.over_heal_percent),
-        "DirectHitPct" => format.percent_fragments(rates.direct_hit_percent),
-        "crithitPct" => format.percent_fragments(rates.critical_hit_percent),
-        "CritDirectHitPct" => format.percent_fragments(rates.critical_direct_hit_percent),
-        "crithealPct" => format.percent_fragments(rates.critical_heal_percent),
-        "tohit" => format.percent_fragments(rates.accuracy_percent),
-        _ => format.percent_fragments(0.0),
+        "damagePct" => vec![TextFragment::Plain((combatant_record.damage / combatant_record.duration_seconds).to_string())],
+        "healedPct" => vec![TextFragment::Plain((combatant_record.healed / combatant_record.duration_seconds).to_string())],
+        "overHealPct" => vec![TextFragment::Plain(combatant_record.healing().overheal_percent().unwrap_or(0.0).to_string())],
+        "DirectHitPct" => vec![TextFragment::Plain((combatant_record.direct_hits / combatant_record.hits * 100.0).to_string())],
+        "crithitPct" => vec![TextFragment::Plain((combatant_record.critical_hits / combatant_record.hits * 100.0).to_string())],
+        "CritDirectHitPct" => vec![TextFragment::Plain((combatant_record.critical_direct_hits / combatant_record.hits * 100.0).to_string())],
+        "crithealPct" => vec![TextFragment::Plain((combatant_record.critical_heals / combatant_record.heals * 100.0).to_string())],
+        "tohit" => vec![TextFragment::Plain((combatant_record.hits / combatant_record.swings * 100.0).to_string())],
+
+        _ => vec![TextFragment::Plain(0.0.to_string()), TextFragment::Dimmed("%".into())],
     }
 }
 
@@ -99,6 +98,6 @@ fn whole_percent(value: f64, format: &NumberFormat) -> Vec<TextFragment> {
 }
 
 /// Plain text of a cell (used where dimming does not matter, e.g. the summary line).
-pub fn cell_plain_text(column: &str, player: &Player, ranking: &EncounterRanking, context: &CellContext) -> String {
-    join_plain_text(&cell_fragments(column, player, ranking, context))
+pub fn cell_plain_text(column: &str, combatant_record: &CombatantRecord, encounter_record: &EncounterRecord, context: &CellContext) -> String {
+    join_plain_text(&cell_fragments(column, combatant_record, encounter_record, context))
 }

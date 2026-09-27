@@ -15,13 +15,13 @@ use language_links::LanguageLinks;
 /// The tables once data has arrived, the start screen before that.
 #[component]
 pub fn MainScreen() -> Element {
-    let context = use_context::<AppContext>();
-    if !*context.has_received_data.read() {
-        return rsx! { StartScreen {} };
-    }
-    let is_standby_hidden = *context.is_standby_hidden.read();
+    // let context = use_context::<AppContext>();
+    // if !*context.has_received_data.read() {
+    //     return rsx! { StartScreen {} };
+    // }
+    // let is_standby_hidden = *context.is_standby_hidden.read();
     rsx! {
-        div { "name": "main", class: "mainBody", style: if is_standby_hidden { "display:none" } else { "" },
+        div { "name": "main", class: "mainBody", style: if false { "display:none" } else { "" },
             CombatTables { is_settings_preview: false }
         }
     }

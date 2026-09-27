@@ -13,7 +13,6 @@ mod benchmarks;
 mod common;
 mod domain;
 mod infrastructure;
-mod models;
 mod presentation;
 
 fn main() {

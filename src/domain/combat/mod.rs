@@ -1,33 +1,30 @@
-//! The combat domain model: players built from ACT records, pet merging, ranking.
+//! Who is who in a fight, and which pets belong to which player.
 //!
-//! * `player_stats`        – additive counters (damage, hits, heals...)
-//! * `strongest_action`    – "Broil-8,765" split into action name and amount
-//! * `player_role`         – tank / healer / damage / crafter / gatherer
-//! * `job_classification`  – decides job, class icon, role and pet-ness of a record
-//! * `pet_names`           – known pet names in every game language
-//! * `derived_rates`       – DPS, HPS and percentages computed from stats
-//! * `player`              – one row of the tables
-//! * `encounter_ranking`   – the sorted list of players for one metric (damage or healing)
-//! * `pet_merging`         – folding pets into their owners
-//! * `rankings`            – builds both rankings from one ACT message
+//! * `combatant_kind` – player, pet, chocobo, Limit Break, from a combatant's name and job
+//! * `healing`        – effective healing, overheal and shield shares
+//! * `known_pets`     – every pet name the game uses, per job and client language
+//! * `pet_ownership`  – which combatant a pet belongs to, including the local player ("YOU")
+//! * `pet_merge_plan` – the list of "fold this pet into that owner" steps for one update
+//! * `percent`        – percentages without ACT's rounding
 
-mod derived_rates;
-mod encounter_ranking;
-mod job_classification;
-mod pet_merging;
-mod pet_names;
-mod player;
-mod player_role;
-mod player_stats;
+mod combatant_kind;
+mod healing;
+mod known_pets;
+mod percent;
+mod pet_merge_plan;
+mod pet_ownership;
 mod rankings;
-mod strongest_action;
 
-pub use encounter_ranking::EncounterRanking;
-pub use job_classification::{COMBATANT_JOB_CODE, LIMIT_BREAK_JOB_CODE, PET_JOB_CODE};
-pub use player::Player;
-pub use player_role::PlayerRole;
-pub use rankings::{build_rankings, EncounterRankings, TableKind};
-pub use strongest_action::StrongestAction;
+pub use combatant_kind::{CombatantIdentity, CombatantKind};
+pub use healing::Healing;
+pub use known_pets::PetJob;
+pub use percent::percent_of;
+pub use pet_merge_plan::{plan_pet_merges, PetMerge};
+pub use pet_ownership::LOCAL_PLAYER;
 
-/// Name ACT gives to the local player's row.
-pub const LOCAL_PLAYER_ROW_NAME: &str = "YOU";
+// pub use encounter_ranking::EncounterRanking;
+// pub use job_classification::{COMBATANT_JOB_CODE, LIMIT_BREAK_JOB_CODE, PET_JOB_CODE};
+// pub use player::Player;
+// pub use player_role::PlayerRole;
+pub use rankings::{TableKind};
+// pub use strongest_action::StrongestAction;

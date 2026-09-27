@@ -24,8 +24,6 @@ mod standby_mode;
 mod toast_notifications;
 
 pub use app_context::{AppContext, Dropdown, Screen, SettingsLocation, ToastState};
-pub use data_ingestion::handle_combat_data_received;
-pub use encounter_history::{close_history_screen, open_history_screen, show_history_entry, HistoryEntry};
 pub use sample_fight::sample_combat_message;
 pub use screen_navigation::{
     go_back_in_settings, open_settings_page, open_settings_screen, return_to_main_screen, select_settings_tab,

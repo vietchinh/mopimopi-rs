@@ -2,10 +2,10 @@
 //! in the settings or while the mouse is over the ⋮ button.
 
 use crate::application::app_state::*;
-use crate::infrastructure::network;
 use crate::domain::translations::{translate, translations};
 use dioxus::prelude::*;
 use gloo_timers::callback::Timeout;
+use crate::presentation::ui::overlay_plugin_context::OverlayPluginContext;
 
 const CAPTURE_ICON_BLINK_MILLISECONDS: u32 = 750;
 /// ACT needs a moment after the blink before the screenshot request is sent.
@@ -13,13 +13,14 @@ const CAPTURE_REQUEST_DELAY_MILLISECONDS: u32 = 1_300;
 
 #[component]
 pub(super) fn NavigationButtons(is_settings_preview: bool) -> Element {
+    let overlay_plugin_context = use_context::<OverlayPluginContext>();
     let context = use_context::<AppContext>();
     let settings = context.settings.read();
     let mouse_is_over_menu_button = *context.nav_buttons_expanded.read();
-    let fight_is_running = context.latest_combat_data.read().as_ref().map(|data| data.is_encounter_active).unwrap_or(false);
+    let is_encounter_active = overlay_plugin_context.get_is_encounter_active();
     let is_shown = |button: &str| {
         let is_pinned = settings.option_enabled(&format!("btn_{button}"));
-        let history_is_available = !(button == "History" && fight_is_running);
+        let history_is_available = !(button == "History" && is_encounter_active);
         is_pinned || (mouse_is_over_menu_button && history_is_available)
     };
     let (class, style) = if is_settings_preview { ("right btn_wrap", "top:0") } else { ("right top btn_wrap", "") };
@@ -71,8 +72,8 @@ fn NavigationButton(name: &'static str, icon: &'static str, is_settings_preview:
 fn press_button(context: AppContext, name: &str) {
     match name {
         "Capture" => capture_screenshot(context),
-        "History" => open_history_screen(context),
-        "RequestEnd" => network::send_overlay_request("RequestEnd"),
+        // "History" => open_history_screen(context),
+        // "RequestEnd" => network::send_overlay_request("RequestEnd"),
         _ => {
             let mut dropdown = context.open_dropdown;
             dropdown.set(Some(Dropdown::Navigation));
@@ -101,6 +102,6 @@ pub fn capture_screenshot(context: AppContext) {
         flashing.set(false);
     })
     .forget();
-    Timeout::new(CAPTURE_REQUEST_DELAY_MILLISECONDS, || network::send_overlay_request("Capture")).forget();
+    // Timeout::new(CAPTURE_REQUEST_DELAY_MILLISECONDS, || network::send_overlay_request("Capture")).forget();
     show_toast_message(context, "Capture", 1500, 8000);
 }

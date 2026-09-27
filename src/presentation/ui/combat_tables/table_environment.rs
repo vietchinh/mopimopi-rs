@@ -8,7 +8,6 @@ use crate::domain::translations::translations;
 use std::collections::HashSet;
 
 pub(super) struct TableEnvironment<'a> {
-    pub context: AppContext,
     pub settings: &'a Settings,
     /// "" for the real tables, "_P" for the settings preview (element ids must differ).
     pub element_id_suffix: &'a str,
@@ -22,15 +21,13 @@ pub(super) struct TableEnvironment<'a> {
 
 impl<'a> TableEnvironment<'a> {
     pub fn new(
-        context: AppContext,
+        fight_is_running: bool,
         settings: &'a Settings,
         local_player_name: &'a str,
         blurred_rows: &'a HashSet<String>,
         is_settings_preview: bool,
     ) -> TableEnvironment<'a> {
-        let fight_is_running = context.latest_combat_data.read().as_ref().map(|data| data.is_encounter_active).unwrap_or(false);
         TableEnvironment {
-            context,
             settings,
             element_id_suffix: if is_settings_preview { "_P" } else { "" },
             cell_context: CellContext::new(settings, translations(), local_player_name),
