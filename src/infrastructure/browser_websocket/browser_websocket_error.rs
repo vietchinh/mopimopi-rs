@@ -41,6 +41,6 @@ impl From<UrlError> for BrowserWebsocketError {
 }
 
 /// Browser exceptions as readable text.
-pub(super) fn describe(value: JsValue) -> String {
+pub(super) fn describe(value: &JsValue) -> String {
     value.as_string().unwrap_or_else(|| format!("{value:?}"))
 }

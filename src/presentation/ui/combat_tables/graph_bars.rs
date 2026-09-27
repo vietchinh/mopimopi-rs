@@ -7,10 +7,10 @@ use dioxus::prelude::*;
 
 /// Bar widths in whole percent (0-100).
 struct BarWidths {
-    main_bar: i32,
-    pet_bar: i32,
-    overheal_bar: i32,
-    shield_bar: i32,
+    main: i32,
+    pet: i32,
+    overheal: i32,
+    shield: i32,
 }
 
 fn bar_widths(combatant: &CombatantRecord, top_value: f64, is_healing: bool) -> BarWidths {
@@ -20,10 +20,10 @@ fn bar_widths(combatant: &CombatantRecord, top_value: f64, is_healing: bool) -> 
         // The main bar's width is relative to the table's best value; the small bars are drawn
         // nested inside a div already sized to the main bar's width (see `mini` below), so their
         // own widths must be relative to this row's own total, not to the table's top value.
-        main_bar: percent_of_whole(total, top_value),
-        pet_bar: percent_of_whole(contributed_by_pets, total),
-        overheal_bar: percent_of_whole(combatant.over_heal, combatant.healed),
-        shield_bar: percent_of_whole(combatant.damage_shield, combatant.healed),
+        main: percent_of_whole(total, top_value),
+        pet: percent_of_whole(contributed_by_pets, total),
+        overheal: percent_of_whole(combatant.over_heal, combatant.healed),
+        shield: percent_of_whole(combatant.damage_shield, combatant.healed),
     }
 }
 
@@ -39,16 +39,16 @@ pub(super) fn graph_bars(environment: &TableEnvironment, combatant: &CombatantRe
         let is_enabled = settings.option_enabled(option_key);
         rsx! { if is_enabled { div { class: "{bar_kind}", style: "width:{width}%;background:{background};{transition}" } } }
     };
-    let main_width = widths.main_bar;
+    let main_width = widths.main;
     rsx! {
         div { class: "bar", style: "width:{main_width}%;background:{main_background};{transition}" }
         div { class: "mini", style: "width:{main_width}%;{transition}",
             if is_healing {
-                {small_bar("oh", widths.overheal_bar, "bar_oh")}
-                {small_bar("ds", widths.shield_bar, "bar_ds")}
-                {small_bar("pet", widths.pet_bar, "bar_pet")}
+                {small_bar("oh", widths.overheal, "bar_oh")}
+                {small_bar("ds", widths.shield, "bar_ds")}
+                {small_bar("pet", widths.pet, "bar_pet")}
             } else {
-                {small_bar("pet", widths.pet_bar, "bar_pet")}
+                {small_bar("pet", widths.pet, "bar_pet")}
             }
         }
     }

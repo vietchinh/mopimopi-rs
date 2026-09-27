@@ -32,7 +32,8 @@ pub(super) fn parse_markup(markup: &str) -> Vec<MarkupNode> {
         let rest = &markup[position..];
         if rest.starts_with('<') {
             if let Some((tag, length)) = parse_tag(rest) {
-                builder.add_text(std::mem::take(&mut text));
+                builder.add_text(&text);
+                text.clear();
                 builder.add_tag(tag);
                 position += length;
                 continue;
@@ -42,7 +43,7 @@ pub(super) fn parse_markup(markup: &str) -> Vec<MarkupNode> {
         text.push(character);
         position += character.len_utf8();
     }
-    builder.add_text(text);
+    builder.add_text(&text);
     builder.finish()
 }
 
@@ -60,9 +61,9 @@ impl TreeBuilder {
         }
     }
 
-    fn add_text(&mut self, text: String) {
+    fn add_text(&mut self, text: &str) {
         if !text.is_empty() {
-            self.current_children().push(MarkupNode::Text(decode_entities(&text)));
+            self.current_children().push(MarkupNode::Text(decode_entities(text)));
         }
     }
 

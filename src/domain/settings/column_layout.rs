@@ -37,7 +37,7 @@ impl Settings {
             .unwrap_or_default()
     }
 
-    fn set_column_order(&mut self, table_label: &str, order: Vec<String>) {
+    fn set_column_order(&mut self, table_label: &str, order: &[String]) {
         self.json_document[COLUMN_ORDER_SECTION][table_label] = json!(order);
     }
 
@@ -52,7 +52,7 @@ impl Settings {
         } else {
             order.retain(|name| name != column);
         }
-        self.set_column_order(table_label, order);
+        self.set_column_order(table_label, &order);
     }
 
     /// Swaps a column with its neighbour (`move_up`: towards the front).
@@ -62,7 +62,7 @@ impl Settings {
         let neighbour = if move_up { index.checked_sub(1) } else { Some(index + 1) };
         if let Some(neighbour) = neighbour.filter(|&position| position < order.len()) {
             order.swap(index, neighbour);
-            self.set_column_order(table_label, order);
+            self.set_column_order(table_label, &order);
         }
     }
 }

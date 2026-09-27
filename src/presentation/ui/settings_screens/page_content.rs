@@ -51,10 +51,10 @@ pub(super) fn tabs_of(page: &str) -> Vec<(String, Value)> {
 }
 
 /// The selected tab: the remembered one if valid, otherwise the first.
-pub(super) fn current_tab(page: &str, wanted: &Option<String>) -> Option<String> {
+pub(super) fn current_tab(page: &str, wanted: Option<&String>) -> Option<String> {
     let tabs = tabs_of(page);
     let first = tabs.first()?.0.clone();
-    Some(wanted.clone().filter(|t| tabs.iter().any(|(k, _)| k == t)).unwrap_or(first))
+    Some(wanted.cloned().filter(|t| tabs.iter().any(|(k, _)| k == t)).unwrap_or(first))
 }
 
 pub(super) fn content_for(settings: &Settings, location: &SettingsLocation) -> PageContent {
@@ -63,7 +63,7 @@ pub(super) fn content_for(settings: &Settings, location: &SettingsLocation) -> P
     if page == "abbset" {
         return PageContent::Abbreviations(entries_of(&schema["abbset"], None));
     }
-    let Some(tab) = current_tab(page, &location.tab) else {
+    let Some(tab) = current_tab(page, location.tab.as_ref()) else {
         return PageContent::SchemaRows(entries_of(&schema[page], None)); // page without tabs
     };
     let column_flag = tab.trim_start_matches("tab_").to_string();

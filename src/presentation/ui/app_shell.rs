@@ -91,6 +91,15 @@ pub fn App() -> Element {
         schedule_settings_save(context.settings);
     });
 
+    use_effect(move || {
+        let _ = context.current_screen.read();
+        let _ = context.settings_location.read();
+        let mut tooltip = context.tooltip_html;
+        if tooltip.peek().is_some() {
+            tooltip.set(None);
+        }
+    });
+
     // Rebuilt only when the settings change, not when the screen or a dropdown does.
     let theme_css = use_memo(move || build_theme_css(&context.settings.read()));
     let screen = *context.current_screen.read();

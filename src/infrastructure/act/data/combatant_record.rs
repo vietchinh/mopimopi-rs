@@ -159,18 +159,6 @@ impl CombatantRecord {
         Healing { healed: self.healed, over_heal: self.over_heal, damage_shield: self.damage_shield }
     }
 
-    /// Share of the party's damage, like ACT's `damage%` but exact (ACT cuts off the
-    /// decimals; `NumberFormat::share` does the same).
-    pub fn damage_share_percent(&self, encounter_total_damage: f64) -> Option<f64> {
-        percent_of(self.damage, encounter_total_damage)
-    }
-
-    /// Share of the party's healing, like ACT's `healed%` but exact (ACT cuts off the
-    /// decimals; `NumberFormat::share` does the same).
-    pub fn healing_share_percent(&self, encounter_total_healed: f64) -> Option<f64> {
-        percent_of(self.healed, encounter_total_healed)
-    }
-
     /// Like ACT's `critheal%`, but exact (ACT rounds; `NumberFormat::percent` does the same).
     pub fn critical_heal_percent(&self) -> Option<f64> {
         percent_of(self.critical_heals, self.heals)

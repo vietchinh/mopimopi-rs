@@ -17,9 +17,5 @@ pub use number_format::NumberFormat;
 pub use text_fragment::TextFragment;
 
 
-/// Job code the overlay uses for pets that belong to a player.
-pub const PET_JOB_CODE: &str = "AVA";
-/// Job code for the Limit Break pseudo-combatant.
+/// Job code for the Limit Break pseudo-combatant (used to look up its translated display name).
 pub const LIMIT_BREAK_JOB_CODE: &str = "LMB";
-/// Job code for owned combatants that are not known pets (for example chocobos).
-pub const COMBATANT_JOB_CODE: &str = "CBO";

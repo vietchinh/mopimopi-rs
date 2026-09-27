@@ -9,7 +9,7 @@ use dioxus::prelude::*;
 
 pub(super) fn tab_bar(page_context: &RowContext, nav: &SettingsLocation) -> Element {
     let context = page_context.context;
-    let selected = current_tab(&nav.page, &nav.tab);
+    let selected = current_tab(&nav.page, nav.tab.as_ref());
     let buttons = tabs_of(&nav.page).into_iter().map(|(id, def)| {
         let on = selected.as_deref() == Some(id.as_str());
         let width = def["w"].as_f64().unwrap_or(25.0);

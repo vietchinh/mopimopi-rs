@@ -74,11 +74,3 @@ fn run_menu_action(context: AppContext, entry_id: &str) {
         _ => {}
     }
 }
-
-/// Back to the start screen so another ACT address can be entered.
-fn show_start_screen(context: AppContext) {
-    let mut has_received_data = context.has_received_data;
-    has_received_data.set(false);
-    let mut dropdown = context.open_dropdown;
-    dropdown.set(None);
-}

@@ -80,22 +80,10 @@ impl OverlayPluginContext {
         self.error.read().clone()
     }
 
-    pub fn get_local_player_combatant_record(&self) -> Option<CombatantRecord> {
-        self.combat_data_message.read().as_ref().and_then(|message| message.local_player().cloned())
-    }
-
     pub fn get_is_encounter_active(&self) -> bool {
         self.combat_data_message.read().as_ref().is_some_and(|message| message.is_encounter_active)
     }
 
-    pub fn get_combatant_records(&self) -> Vec<CombatantRecord> {
-        self.combat_data_message.read().as_ref().map(|message| message.combatants.clone()).unwrap_or_default()
-    }
-
-    pub fn get_encounter_record(&self) -> EncounterRecord {
-        self.combat_data_message.read().as_ref().map(|message| message.encounter.clone()).unwrap_or_default()
-    }
-    
     pub fn combat_data_message(&self) -> Option<Rc<CombatDataMessage>> {
         self.combat_data_message.read().clone()
     }

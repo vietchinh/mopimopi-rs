@@ -44,6 +44,7 @@ impl OverlayMessage {
         serde_json::from_str(json_text)
     }
 
+    #[allow(dead_code)]
     pub fn kind(&self) -> MessageType {
         match self {
             Self::CombatData(_) => MessageType::CombatData,
@@ -52,6 +53,7 @@ impl OverlayMessage {
         }
     }
 
+    #[allow(dead_code)]
     pub fn combat_data(&self) -> Option<&CombatDataMessage> {
         match self {
             Self::CombatData(combat_data) => Some(combat_data),
@@ -59,6 +61,7 @@ impl OverlayMessage {
         }
     }
 
+    #[allow(dead_code)]
     pub fn change_primary_player(&self) -> Option<&ChangePrimaryPlayer> {
         match self {
             Self::ChangePrimaryPlayer(player) => Some(player),

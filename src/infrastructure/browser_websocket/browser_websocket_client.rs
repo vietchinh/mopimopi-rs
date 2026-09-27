@@ -36,7 +36,7 @@ impl BrowserWebsocketClient {
     ) -> Result<Self, BrowserWebsocketError> {
         let socket = WebSocket::new(url.as_str()).map_err(|e| UrlError::RejectedByBrowser {
             url: url.as_str().to_owned(),
-            detail: describe(e),
+            detail: describe(&e),
         })?;
         let open = open_handler(on_open);
         let message = message_handler(on_message, on_error.clone());
@@ -53,12 +53,7 @@ impl BrowserWebsocketClient {
 
     /// Sends a text message. Fails if the connection is not open yet or has closed.
     pub fn send(&self, text: &str) -> Result<(), BrowserWebsocketError> {
-        self.socket.send_with_str(text).map_err(|e| BrowserWebsocketError::Send(describe(e)))
-    }
-
-    /// Starts closing the connection; `on_close` fires when it has closed.
-    pub fn close(&self) {
-        let _ = self.socket.close();
+        self.socket.send_with_str(text).map_err(|e| BrowserWebsocketError::Send(describe(&e)))
     }
 }
 
@@ -69,7 +64,7 @@ impl Drop for BrowserWebsocketClient {
         self.socket.set_onmessage(None);
         self.socket.set_onerror(None);
         self.socket.set_onclose(None);
-        let _ = self.socket.close();
+        self.socket.close().expect("Close socket error");
     }
 }
 

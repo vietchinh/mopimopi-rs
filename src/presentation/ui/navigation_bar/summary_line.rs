@@ -6,6 +6,7 @@ use crate::domain::settings::Settings;
 use crate::domain::translations::{translate, translations};
 use crate::infrastructure::act::data::{CombatantRecord, EncounterRecord};
 use dioxus::prelude::*;
+use std::fmt::Write;
 
 /// Shows only the parts the user enabled ("Display Type of Combatant Data" settings). Without a
 /// local player row it shows the "Please start the combat." hint.
@@ -28,23 +29,26 @@ pub(super) fn summary_line(
 
     let mut summary = String::new();
     if settings.option_enabled("act_rd") {
-        summary += &format!("Total DPS {}　", rate(encounter.damage_per_second));
+        let _ = write!(summary, "Total DPS {}　", rate(encounter.damage_per_second));
     }
     if settings.option_enabled("act_rh") {
-        summary += &format!("Total HPS {}　", rate(encounter.heal_per_second));
+        let _ = write!(summary, "Total HPS {}　", rate(encounter.heal_per_second));
     }
     if settings.option_enabled("act_md") {
-
-        summary += &format!("My DPS {}　", rate(player.damage / encounter.duration_seconds));
+        // Recomputed from the raw accumulator and the encounter's own duration, same as the
+        // "encdps" table column and for the same reason (see `column_cell::cell_fragments`): the
+        // local player's own raw rate field can go stale while they aren't dealing damage, but the
+        // encounter's duration keeps advancing every message.
+        let _ = write!(summary, "My DPS {}　", rate(player.damage / encounter.duration_seconds));
     }
     if settings.option_enabled("act_mh") {
-        summary += &format!("My HPS {}　", rate(player.healed / encounter.duration_seconds));
+        let _ = write!(summary, "My HPS {}　", rate(player.healed / encounter.duration_seconds));
     }
     if settings.option_enabled("act_rank") {
         let mut by_healing: Vec<&CombatantRecord> = combatants.iter().collect();
         by_healing.sort_by(|a, b| b.healed.partial_cmp(&a.healed).unwrap_or(std::cmp::Ordering::Equal));
         let healing_rank = by_healing.iter().position(|c| c.name == "YOU").unwrap_or(damage_rank);
-        summary += &format!("Rank {}/{}/{}　", damage_rank + 1, healing_rank + 1, combatants.len());
+        let _ = write!(summary, "Rank {}/{}/{}　", damage_rank + 1, healing_rank + 1, combatants.len());
     }
 
     // Clicking the "MaxHit" label switches it to "MaxHeal" and back.

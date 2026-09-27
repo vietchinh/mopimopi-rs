@@ -30,6 +30,7 @@ pub(super) fn history_row(context: AppContext, entry: &HistoryEntry, is_shown_no
                     }
                 }
             }
+            div { class: "barBg" }
         }
     }
 }

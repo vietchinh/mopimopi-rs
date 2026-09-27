@@ -36,7 +36,9 @@ impl BrowserWebsocketUrl {
         }
     }
 
-    /// True for `wss://`.
+    /// True for `wss://`. Nothing reads this yet (the app has no automatic ws-vs-wss handling),
+    /// but it is real, tested behaviour (see this file's tests), kept as API for that later.
+    #[allow(dead_code)]
     pub fn is_secure(&self) -> bool {
         matches!(self, BrowserWebsocketUrl::Wss(_))
     }

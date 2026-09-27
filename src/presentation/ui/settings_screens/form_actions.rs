@@ -11,7 +11,7 @@ use serde_json::json;
 /// * `in_apply`          – paste of a shared "Custom UI Data" code
 /// * `headerText_<col>`  – custom title of a table column
 /// * `in_<setting>`      – any other setting (fonts)
-pub(super) fn submit_text(context: AppContext, inputs: TypedTexts, box_id: &str, text: String) {
+pub(super) fn submit_text(context: AppContext, inputs: TypedTexts, box_id: &str, text: &str) {
     let text = text.trim().to_string();
     if text.is_empty() {
         show_toast_message(context, "noInput", 500, 3000);

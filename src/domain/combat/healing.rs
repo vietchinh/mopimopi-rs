@@ -23,7 +23,10 @@ impl Healing {
         percent_of(self.over_heal, self.healed)
     }
 
-    /// How much of `healed` was shields (mopimopi draws this on the HPS bar).
+    /// How much of `healed` was shields (mopimopi draws this on the HPS bar). Not read by any
+    /// display code yet (nothing shows a shield percentage column), but it is real, correct
+    /// behaviour with its own tests (`tests/unit/domain/combat/healing.rs`), not leftover cruft.
+    #[allow(dead_code)]
     pub fn shield_percent(self) -> Option<f64> {
         percent_of(self.damage_shield, self.healed)
     }
