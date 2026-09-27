@@ -25,7 +25,7 @@ pub(super) struct SliderSpec<'a> {
 }
 
 /// Row with a range slider. `on_change` receives the new value.
-pub(super) fn slider_row(spec: SliderSpec, mut on_change: impl FnMut(f64) + 'static) -> Element {
+pub(super) fn slider_row(spec: &SliderSpec, mut on_change: impl FnMut(f64) + 'static) -> Element {
     let value = number_to_javascript_string(spec.value);
     let shown = format!("{value}{}", slider_unit(spec.id));
     let control = rsx! {

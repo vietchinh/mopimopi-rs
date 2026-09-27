@@ -7,7 +7,7 @@
 //! setting the GUI owns (see `Settings`, key `"pets"`); this context only carries that one bool
 //! through to the point where a message is turned into an event (`set_merge_pets_into_owner`).
 
-use crate::infrastructure::act::data::{peek_combat_data, CombatDataMessage, CombatantRecord, EncounterRecord, ParseOptions};
+use crate::infrastructure::act::data::{peek_combat_data, CombatDataMessage, ParseOptions};
 use crate::infrastructure::act::overlay_plugin_protocol::{interpret, subscribe_message, OverlayPluginEvent, OverlayPluginUrl, OverlayPluginUrlError};
 use crate::infrastructure::browser_websocket::BrowserWebsocketClient;
 use dioxus::prelude::Signal;
