@@ -1,7 +1,7 @@
 //! Reading settings. Every reader takes the key used in `defaults.json` / `l.json`.
 
 use super::json_coercion::{as_number, is_truthy};
-use super::user_settings::*;
+use super::user_settings::{OPTIONS_SECTION, SLIDERS_SECTION, COLORS_SECTION, ABBREVIATIONS_SECTION};
 use super::Settings;
 use serde_json::Value;
 

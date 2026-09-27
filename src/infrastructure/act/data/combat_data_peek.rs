@@ -1,7 +1,7 @@
 //! A look at a raw `CombatData` message *without parsing or copying it*: is the encounter
 //! active, and does it have any combatants?
 //!
-//! Between fights OverlayPlugin keeps sending the same message every second, e.g. after
+//! Between fights `OverlayPlugin` keeps sending the same message every second, e.g. after
 //! leaving a trial: `"Combatant":{}` with `"isActive":"true"`. In a WebAssembly GUI the text
 //! arrives as a JavaScript string; peeking at it through `JsString` runs the search inside
 //! the browser, so a message that is going to be skipped is never copied into WebAssembly

@@ -14,8 +14,8 @@ pub(super) fn option_choice_items(context: AppContext, setting_key: &str, choice
     let lines = choices.as_object().into_iter().flatten().map(|(value, label)| {
         let (setting_key, value) = (setting_key.to_string(), value.clone());
         let is_current = current_value == value;
-        menu_item(&value.clone(), &translate(label, &language), Some(is_current), move |_| {
-            context.edit_settings(|settings| settings.set_option_from_text(&setting_key, &value))
+        menu_item(&value.clone(), &translate(label, &language), Some(is_current), move |()| {
+            context.edit_settings(|settings| settings.set_option_from_text(&setting_key, &value));
         })
     });
     rsx! { {lines} }
@@ -25,11 +25,11 @@ pub(super) fn option_choice_items(context: AppContext, setting_key: &str, choice
 pub(super) fn option_toggle_items(context: AppContext, options: Vec<(String, String)>) -> Element {
     let lines = options.into_iter().map(|(setting_key, label)| {
         let is_on = context.settings.read().option_enabled(&setting_key);
-        menu_item(&setting_key.clone(), &label, Some(is_on), move |_| {
+        menu_item(&setting_key.clone(), &label, Some(is_on), move |()| {
             context.edit_settings(|settings| {
                 let was_on = settings.option_enabled(&setting_key);
                 settings.set_option_enabled(&setting_key, !was_on);
-            })
+            });
         })
     });
     rsx! { {lines} }
@@ -43,8 +43,8 @@ pub(super) fn column_alignment_items(context: AppContext, column: &str, field: &
     let lines = alignments.map(|(alignment, label)| {
         let (column, field, alignment) = (column.to_string(), field.to_string(), alignment.clone());
         let is_current = current_alignment == alignment;
-        menu_item(&alignment.clone(), &translate(label, &language), Some(is_current), move |_| {
-            context.edit_settings(|settings| settings.set_column_field(&column, &field, json!(alignment)))
+        menu_item(&alignment.clone(), &translate(label, &language), Some(is_current), move |()| {
+            context.edit_settings(|settings| settings.set_column_field(&column, &field, json!(alignment)));
         })
     });
     rsx! { {lines} }

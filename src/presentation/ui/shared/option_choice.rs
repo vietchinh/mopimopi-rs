@@ -12,7 +12,7 @@ pub fn choice_key_of_value(value: &Value) -> String {
             Some(x) => x.to_string(),
             None => number.to_string(),
         },
-        Value::Bool(flag) => (*flag as i32).to_string(),
+        Value::Bool(flag) => i32::from(*flag).to_string(),
         _ => String::new(),
     }
 }

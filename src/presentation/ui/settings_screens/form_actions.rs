@@ -3,7 +3,7 @@
 use super::base64_encoding::base64_encode;
 use super::row_context::TypedTexts;
 use super::text_box::clear_typed_text;
-use crate::application::app_state::*;
+use crate::application::app_state::{AppContext, show_toast_message};
 use dioxus::prelude::*;
 use serde_json::json;
 

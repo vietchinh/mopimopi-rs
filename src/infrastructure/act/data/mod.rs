@@ -10,7 +10,7 @@
 //! * `combatant_record`      – one entry of the `Combatant` object: player, pet, chocobo or LB
 //! * `combat_data_message`   – the whole `CombatData` payload, and folding pets into owners
 //! * `combat_data_peek`      – is it active / empty? read from the raw text, without parsing
-//! * `overlay_message`       – `OverlayMessage`: every OverlayPlugin message, one enum
+//! * `overlay_message`       – `OverlayMessage`: every `OverlayPlugin` message, one enum
 
 mod combat_data_message;
 mod combat_data_peek;

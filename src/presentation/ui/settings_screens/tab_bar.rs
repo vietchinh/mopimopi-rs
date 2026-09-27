@@ -2,7 +2,7 @@
 
 use super::page_content::{current_tab, tabs_of};
 use super::row_context::RowContext;
-use crate::application::app_state::*;
+use crate::application::app_state::{SettingsLocation, select_settings_tab};
 use crate::domain::translations::translate;
 use crate::presentation::ui::shared::safe_markup::markup_view;
 use dioxus::prelude::*;

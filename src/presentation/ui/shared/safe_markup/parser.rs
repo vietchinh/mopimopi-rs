@@ -165,18 +165,15 @@ fn parse_attributes(text: &str) -> Vec<(String, String)> {
             continue; // a flag without a value
         };
         let after_equals = after_equals.trim_start();
-        let (value, remaining) = match after_equals.chars().next() {
-            Some(quote @ ('"' | '\'')) => {
-                let body = &after_equals[1..];
-                match body.find(quote) {
-                    Some(close) => (&body[..close], &body[close + 1..]),
-                    None => (body, ""),
-                }
+        let (value, remaining) = if let Some(quote @ ('"' | '\'')) = after_equals.chars().next() {
+            let body = &after_equals[1..];
+            match body.find(quote) {
+                Some(close) => (&body[..close], &body[close + 1..]),
+                None => (body, ""),
             }
-            _ => {
-                let end = after_equals.find(char::is_whitespace).unwrap_or(after_equals.len());
-                (&after_equals[..end], &after_equals[end..])
-            }
+        } else {
+            let end = after_equals.find(char::is_whitespace).unwrap_or(after_equals.len());
+            (&after_equals[..end], &after_equals[end..])
         };
         if !name.is_empty() {
             attributes.push((name, decode_entities(value)));

@@ -22,7 +22,7 @@ pub(super) enum PageContent {
     SchemaRows(Vec<SchemaEntry>),
     /// Column order list for "DPS" or "HPS".
     ColumnOrder(String),
-    /// Width / margin / align / header-text pages ("tab_width", ...).
+    /// Width / margin / align / header-text pages ("`tab_width`", ...).
     ColumnSettings(String),
     /// Abbreviation page: a form plus the list of saved abbreviations.
     Abbreviations(Vec<SchemaEntry>),

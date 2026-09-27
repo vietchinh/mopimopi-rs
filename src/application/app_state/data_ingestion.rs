@@ -1,4 +1,4 @@
-//! What happens when OverlayPlugin sends new combat data.
+//! What happens when `OverlayPlugin` sends new combat data.
 
 use super::app_context::{AppContext, Screen};
 use super::encounter_history::HistoryEntry;
@@ -7,7 +7,7 @@ use crate::infrastructure::act::data::CombatDataMessage;
 use dioxus::prelude::*;
 use std::rc::Rc;
 
-/// Called whenever OverlayPlugin's combat-data signal changes. The table is redrawn while a
+/// Called whenever `OverlayPlugin`'s combat-data signal changes. The table is redrawn while a
 /// fight runs and once when it ends (then the encounter is also added to the history). While the
 /// settings screen is open the display is left alone so the user can edit undisturbed.
 pub fn on_combat_data_changed(context: AppContext, message: Rc<CombatDataMessage>) {
@@ -48,7 +48,7 @@ fn record_finished_encounter(context: AppContext, message: &Rc<CombatDataMessage
     let encounter_key = format!("{}{}{}", encounter.title, encounter.total_damage, encounter.total_healed);
 
     let mut history = context.encounter_history;
-    if history.peek().first().map(|entry| entry.encounter_key == encounter_key).unwrap_or(false) {
+    if history.peek().first().is_some_and(|entry| entry.encounter_key == encounter_key) {
         return;
     }
     let encounter_number_in_zone = next_encounter_number_in_zone(context, &encounter.zone_name);
@@ -57,7 +57,7 @@ fn record_finished_encounter(context: AppContext, message: &Rc<CombatDataMessage
     let local_player_hps = local_player.map(|player| (player.healed / encounter.duration_seconds).floor());
     let entry = HistoryEntry {
         encounter_key,
-        title: if encounter.title != "Encounter" { encounter.title.clone() } else { "No Data".into() },
+        title: if encounter.title == "Encounter" { "No Data".into() } else { encounter.title.clone() },
         zone_name: encounter.zone_name.clone(),
         duration_text: encounter.duration_text.clone(),
         encounter_dps: encounter.damage_per_second,

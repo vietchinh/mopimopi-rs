@@ -57,7 +57,7 @@ pub struct AppContext {
     pub settings: Signal<Settings>,
     pub current_screen: Signal<Screen>,
 
-    /// Data currently drawn by the tables: mirrors what OverlayPlugin last sent, except while
+    /// Data currently drawn by the tables: mirrors what `OverlayPlugin` last sent, except while
     /// browsing history or editing settings, when it is frozen on a chosen message instead
     /// (see `data_ingestion` and `encounter_history`).
     pub displayed_combat_data: Signal<Option<Rc<CombatDataMessage>>>,

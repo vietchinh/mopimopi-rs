@@ -23,7 +23,7 @@ pub struct NumberFormat {
     pub amount_decimals: usize,
     /// Show large DPS and damage values as "12.3k" / "1.2M".
     pub shorten_large_values: bool,
-    /// Show large MaxHit / MaxHeal values as "12.3k" / "1.2M".
+    /// Show large `MaxHit` / `MaxHeal` values as "12.3k" / "1.2M".
     pub shorten_strongest_action_values: bool,
 }
 
@@ -105,7 +105,7 @@ impl NumberFormat {
         }
     }
 
-    /// A MaxHit / MaxHeal amount (has its own unit switch and starts shortening at 1,000).
+    /// A `MaxHit` / `MaxHeal` amount (has its own unit switch and starts shortening at 1,000).
     pub fn strongest_action_amount_fragments(&self, value: f64) -> Vec<TextFragment> {
         if self.shorten_strongest_action_values && value >= MILLION {
             self.number_with_unit(value, MILLION, self.amount_decimals)

@@ -1,7 +1,7 @@
 //! Top bar of the main screen: encounter time, target name, DPS summary and buttons.
 //! Also drawn (with `is_settings_preview`) as the sample bar on settings pages.
 //!
-//! * `summary_line`  – "Total DPS 0  Total HPS 0  Rank 1/1/1  MaxHit ..."
+//! * `summary_line`  – "Total DPS 0  Total HPS 0  Rank 1/1/1  `MaxHit` ..."
 //! * `buttons`       – Capture, History and the ⋮ button (no End-encounter command in this backend)
 //!
 //! Capture only blinks the icon and shows a toast for now (`capture_screenshot`, below): the real
@@ -19,7 +19,7 @@ use buttons::NavigationButtons;
 use dioxus::prelude::*;
 use summary_line::summary_line;
 
-/// Screenshot request: blink the icon and say so in a toast. The original asked ACTWebSocket to
+/// Screenshot request: blink the icon and say so in a toast. The original asked `ACTWebSocket` to
 /// save a capture; that protocol is gone (see `MAINTAINING.md`), and the real replacement (drawing
 /// the page to a PNG in the browser) is parked in `screenshot.rs` for later, so for now this only
 /// gives the same visible feedback the button always gave, without actually saving anything.

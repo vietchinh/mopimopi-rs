@@ -2,7 +2,7 @@
 //! in the settings or while the mouse is over the ⋮ button.
 
 use super::capture_screenshot;
-use crate::application::app_state::*;
+use crate::application::app_state::{AppContext, open_history_screen, Dropdown};
 use crate::domain::translations::{translate, translations};
 use dioxus::prelude::*;
 use crate::presentation::ui::overlay_plugin_context::OverlayPluginContext;

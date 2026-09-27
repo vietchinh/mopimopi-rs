@@ -4,7 +4,7 @@ use crate::domain::combat::CombatantKind;
 use crate::domain::settings::Settings;
 use crate::infrastructure::act::data::CombatantRecord;
 
-/// The job-filter options ("DPS_T" = tanks in the DPS table, "HPS_H" = healers in the HPS table ...).
+/// The job-filter options ("`DPS_T`" = tanks in the DPS table, "`HPS_H`" = healers in the HPS table ...).
 fn passes_job_filter(settings: &Settings, is_healing: bool, combatant: &CombatantRecord) -> bool {
     let filter_enabled = |suffix: &str| settings.option_enabled(&format!("{}_{suffix}", super::table_label(is_healing)));
     (filter_enabled("T") && combatant.is_tank())

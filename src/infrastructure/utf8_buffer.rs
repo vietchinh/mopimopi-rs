@@ -9,7 +9,7 @@
 //! copies one character at a time in a JavaScript loop and allocates a new
 //! `String` per message. Measured in V8 on ACT-sized messages (copy + UTF-8 check):
 //!
-//! | message                  | as_string()         | Utf8Buffer         |
+//! | message                  | `as_string()`         | `Utf8Buffer`         |
 //! |--------------------------|---------------------|--------------------|
 //! | 24 KB, ASCII             | 64.9 us, allocates  | 4.5 us, 0 allocs   |
 //! | 62 KB, ASCII             | 168.3 us, allocates | 11.7 us, 0 allocs  |

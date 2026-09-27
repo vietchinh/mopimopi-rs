@@ -112,7 +112,7 @@ impl CombatantRecord {
     }
 
     /// Whether this combatant counts as a tank / healer / crafter-or-gatherer for the job-filter
-    /// settings ("DPS_T", "HPS_H", ... in `visible_players`) and the "role" palette mode. Checked
+    /// settings ("`DPS_T`", "`HPS_H`", ... in `visible_players`) and the "role" palette mode. Checked
     /// directly against `job_text` (base classes included as their own entries, not remapped to
     /// their advanced job), the same way the icon is looked up (`job_text.to_uppercase()`).
     pub fn is_tank(&self) -> bool {

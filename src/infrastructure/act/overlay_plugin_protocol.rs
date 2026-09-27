@@ -1,4 +1,4 @@
-//! OverlayPlugin's protocol, as pure functions and types: the address, the subscribe
+//! `OverlayPlugin`'s protocol, as pure functions and types: the address, the subscribe
 //! message, and what each incoming message means. No I/O: everything here is tested
 //! directly. The connection itself is wired up by the UI (see
 //! `ui::overlay_plugin_provider`), on top of `browser_websocket::JsWebsocketClient`.
@@ -9,7 +9,7 @@ use crate::infrastructure::act::data::{CombatDataMessage, OverlayMessage, ParseO
 use crate::infrastructure::act::overlay_plugin_protocol::OverlayPluginEvent::{CombatData, PrimaryPlayerChanged};
 // ---------- the URL ----------
 
-/// OverlayPlugin's WebSocket address: a `ws://` or `wss://` URL ending in `/ws`,
+/// `OverlayPlugin`'s WebSocket address: a `ws://` or `wss://` URL ending in `/ws`,
 /// such as `ws://127.0.0.1:10501/ws`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OverlayPluginUrl(BrowserWebsocketUrl);
@@ -61,7 +61,7 @@ impl std::error::Error for OverlayPluginUrlError {}
 
 // ---------- the subscribe message ----------
 
-/// OverlayPlugin sends nothing until subscribed, and forgets the subscription with the
+/// `OverlayPlugin` sends nothing until subscribed, and forgets the subscription with the
 /// connection, so this is sent on every (re)open. The format common.js uses.
 pub fn subscribe_message() -> String {
     r#"{"call":"subscribe","events":["CombatData","ChangePrimaryPlayer"]}"#.to_string()
@@ -69,7 +69,7 @@ pub fn subscribe_message() -> String {
 
 // ---------- incoming messages ----------
 
-/// What an OverlayPlugin message means, in the domain's terms.
+/// What an `OverlayPlugin` message means, in the domain's terms.
 #[derive(Debug, Clone, PartialEq)]
 pub enum OverlayPluginEvent {
     /// A `CombatData` update.

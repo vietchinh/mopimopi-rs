@@ -1,7 +1,7 @@
 //! Changing settings.
 
 use super::json_coercion::{as_number, number_to_json};
-use super::user_settings::*;
+use super::user_settings::{OPTIONS_SECTION, SLIDERS_SECTION, COLORS_SECTION, ABBREVIATIONS_SECTION, COLUMN_DEFINITIONS_SECTION};
 use super::Settings;
 use serde_json::{json, Value};
 
@@ -11,7 +11,7 @@ impl Settings {
     }
 
     pub fn set_option_enabled(&mut self, key: &str, enabled: bool) {
-        self.json_document[OPTIONS_SECTION][key] = json!(enabled as i32);
+        self.json_document[OPTIONS_SECTION][key] = json!(i32::from(enabled));
     }
 
     /// Sets an option from the text of a picked list entry, keeping the stored type

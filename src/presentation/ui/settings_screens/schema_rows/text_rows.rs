@@ -1,7 +1,7 @@
 //! Text boxes, the share code, the abbreviation add button and the background upload.
 
 use super::{icon, note, title};
-use crate::presentation::ui::settings_screens::form_actions::*;
+use crate::presentation::ui::settings_screens::form_actions::{add_abbreviation, submit_text, set_background};
 use crate::presentation::ui::settings_screens::text_box::{text_box, typed_text};
 use crate::presentation::ui::settings_screens::row_context::RowContext;
 use crate::presentation::ui::shared::safe_markup::markup_view;

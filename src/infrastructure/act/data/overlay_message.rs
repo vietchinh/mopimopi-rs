@@ -1,8 +1,8 @@
-//! Every OverlayPlugin WebSocket message, as one enum.
+//! Every `OverlayPlugin` WebSocket message, as one enum.
 //!
 //! * `{"type":"CombatData", "Encounter":..., "Combatant":..., "isActive":...}`
 //! * `{"type":"ChangePrimaryPlayer", "charID":..., "charName":"..."}`
-//! * Any other type, including MiniParse's old `broadcast` messages, is `NotSupported`.
+//! * Any other type, including `MiniParse`'s old `broadcast` messages, is `NotSupported`.
 
 use super::combat_data_message::CombatDataMessage;
 use serde::Deserialize;
@@ -12,7 +12,7 @@ use serde::Deserialize;
 pub enum OverlayMessage {
     CombatData(CombatDataMessage),
     ChangePrimaryPlayer(ChangePrimaryPlayer),
-    /// Any other `"type"` (ChangeZone, LogLine, MiniParse `broadcast`, ...). Its fields are discarded.
+    /// Any other `"type"` (`ChangeZone`, `LogLine`, `MiniParse` `broadcast`, ...). Its fields are discarded.
     #[serde(other)]
     NotSupported,
 }

@@ -7,7 +7,7 @@ use dioxus::prelude::*;
 pub(super) fn history_row(context: AppContext, entry: &HistoryEntry, is_shown_now: bool) -> Element {
     let number_format = NumberFormat::from_settings(&context.settings.read());
     let rate = |value: f64| number_format.format_number(value, 1.0, number_format.rate_decimals);
-    let rate_or_no_data = |value: Option<f64>| value.map(&rate).unwrap_or_else(|| "No Data".into());
+    let rate_or_no_data = |value: Option<f64>| value.map_or_else(|| "No Data".into(), &rate);
     let (encounter_dps, encounter_hps) = (rate(entry.encounter_dps), rate(entry.encounter_hps));
     let (local_dps, local_hps) = (rate_or_no_data(entry.local_player_dps), rate_or_no_data(entry.local_player_hps));
     let encounter_key = entry.encounter_key.clone();

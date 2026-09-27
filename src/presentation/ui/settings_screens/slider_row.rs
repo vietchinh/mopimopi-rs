@@ -37,7 +37,7 @@ pub(super) fn slider_row(spec: SliderSpec, mut on_change: impl FnMut(f64) + 'sta
             value: "{value}",
             oninput: move |event| {
                 if let Ok(x) = event.value().parse::<f64>() {
-                    on_change(x)
+                    on_change(x);
                 }
             },
         }

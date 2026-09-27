@@ -1,10 +1,10 @@
-//! The MaxHit / MaxHeal cell: action name (optionally abbreviated) and amount.
+//! The `MaxHit` / `MaxHeal` cell: action name (optionally abbreviated) and amount.
 
 use super::number_format::NumberFormat;
 use super::text_fragment::TextFragment;
 use crate::domain::settings::Settings;
 
-/// Where the action name goes relative to the amount ("MaxHit" settings).
+/// Where the action name goes relative to the amount ("`MaxHit`" settings).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ActionLayout {
     NameThenAmount,
@@ -53,7 +53,5 @@ fn shown_action_name(action_name: &str, settings: &Settings) -> String {
     settings
         .action_abbreviations()
         .into_iter()
-        .find(|(long_name, _)| long_name == action_name)
-        .map(|(_, short_name)| short_name)
-        .unwrap_or_else(|| action_name.to_string())
+        .find(|(long_name, _)| long_name == action_name).map_or_else(|| action_name.to_string(), |(_, short_name)| short_name)
 }

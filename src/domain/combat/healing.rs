@@ -13,7 +13,7 @@ pub struct Healing {
 }
 
 impl Healing {
-    /// HP actually restored: everything minus overheal minus shields (mopimopi's "EffHealed").
+    /// HP actually restored: everything minus overheal minus shields (mopimopi's "`EffHealed`").
     pub fn effective(self) -> f64 {
         self.healed - self.over_heal - self.damage_shield
     }

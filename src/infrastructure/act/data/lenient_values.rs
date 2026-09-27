@@ -189,7 +189,7 @@ pub fn lenient_text<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String
 }
 
 /// A strongest hit or heal, which ACT writes as "Action-1,234": keeps only the action
-/// ("Shieldsplitter", "Divine Veil (*)", "item_ffc95"), since the amount already arrives on
+/// ("Shieldsplitter", "Divine Veil (*)", "`item_ffc95`"), since the amount already arrives on
 /// its own as `MAXHIT` / `MAXHEAL`. Only a trailing "-" plus a number is removed, so names
 /// that contain hyphens keep them; text without a trailing amount is kept as it is.
 pub fn lenient_action_name<'de, D: Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {

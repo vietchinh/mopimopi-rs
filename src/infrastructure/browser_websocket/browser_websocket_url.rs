@@ -9,7 +9,7 @@ use std::str::FromStr;
 /// never reach `JsWebsocketClient::connect`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BrowserWebsocketUrl {
-    /// `ws://`: unencrypted, as OverlayPlugin serves it on this machine.
+    /// `ws://`: unencrypted, as `OverlayPlugin` serves it on this machine.
     Ws(String),
     /// `wss://`: encrypted.
     Wss(String),

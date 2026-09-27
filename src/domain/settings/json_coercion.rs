@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 pub fn is_truthy(value: &Value) -> bool {
     match value {
         Value::Bool(flag) => *flag,
-        Value::Number(number) => number.as_f64().map(|x| x != 0.0).unwrap_or(false),
+        Value::Number(number) => number.as_f64().is_some_and(|x| x != 0.0),
         Value::String(text) => !(text.is_empty() || text == "0" || text == "false"),
         Value::Null => false,
         _ => true,
@@ -19,7 +19,7 @@ pub(super) fn as_number(value: &Value) -> f64 {
     match value {
         Value::Number(number) => number.as_f64().unwrap_or(0.0),
         Value::String(text) => text.trim().parse().unwrap_or(0.0),
-        Value::Bool(flag) => *flag as i32 as f64,
+        Value::Bool(flag) => f64::from(i32::from(*flag)),
         _ => 0.0,
     }
 }

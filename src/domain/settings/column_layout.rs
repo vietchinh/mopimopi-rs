@@ -1,7 +1,7 @@
 //! Table columns: their definitions, which are enabled per table, and their order.
 
 use super::json_coercion::is_truthy;
-use super::user_settings::*;
+use super::user_settings::{COLUMN_DEFINITIONS_SECTION, COLUMN_ORDER_SECTION};
 use super::Settings;
 use serde_json::{json, Map, Value};
 
@@ -43,7 +43,7 @@ impl Settings {
 
     /// Switches a column on or off for a table, keeping the display order in sync.
     pub fn set_column_enabled(&mut self, column: &str, table_label: &str, enabled: bool) {
-        self.set_column_field(column, table_label, json!(enabled as i32));
+        self.set_column_field(column, table_label, json!(i32::from(enabled)));
         let mut order = self.column_order(table_label);
         if enabled {
             if !order.iter().any(|name| name == column) {

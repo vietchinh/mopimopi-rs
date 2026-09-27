@@ -1,8 +1,8 @@
-//! MopiMopi overlay for FFXIV / ACT, written in Rust with Dioxus.
+//! `MopiMopi` overlay for FFXIV / ACT, written in Rust with Dioxus.
 //!
 //! Layers, top to bottom (a layer only imports from the ones below it):
-//! `presentation` (ui, theme) -> `application` (app_state) -> `infrastructure` (network)
-//! -> `domain` (combat, formatting, settings, translations) -> `models` (act_data) -> `common`.
+//! `presentation` (ui, theme) -> `application` (`app_state`) -> `infrastructure` (network)
+//! -> `domain` (combat, formatting, settings, translations) -> `models` (`act_data`) -> `common`.
 //!
 //! See `MAINTAINING.md` for a guided tour.
 

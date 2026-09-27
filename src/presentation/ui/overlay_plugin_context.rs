@@ -1,4 +1,4 @@
-//! The one connection to OverlayPlugin, and everything it reports, as Dioxus context.
+//! The one connection to `OverlayPlugin`, and everything it reports, as Dioxus context.
 //!
 //! Its signals are created once, in `App`'s own body (see `new` and `spawn_connection_task`),
 //! configured only from the
@@ -18,7 +18,7 @@ use gloo_timers::future::TimeoutFuture;
 use std::fmt;
 use std::rc::Rc;
 
-/// State of the link to OverlayPlugin.
+/// State of the link to `OverlayPlugin`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ConnectionStatus {
     /// The page's URL has no usable `?OVERLAY_WS=` / `?HOST_PORT=`.
