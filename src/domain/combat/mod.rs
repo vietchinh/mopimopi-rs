@@ -17,7 +17,6 @@ mod pet_ownership;
 
 pub use combatant_kind::{CombatantIdentity, CombatantKind};
 pub use healing::Healing;
-pub use known_pets::PetJob;
 pub use percent::percent_of;
 pub use pet_merge_plan::{plan_pet_merges, PetMerge};
 pub use pet_ownership::LOCAL_PLAYER;

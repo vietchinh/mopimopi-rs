@@ -20,10 +20,9 @@ mod lenient_values;
 mod overlay_message;
 
 pub use combat_data_message::CombatDataMessage;
-pub use combat_data_peek::{peek_combat_data, CombatDataPeek, SearchableText};
+pub use combat_data_peek::peek_combat_data;
 pub use combatant_record::CombatantRecord;
 pub use encounter_record::EncounterRecord;
-pub use lenient_values::describes_a_name_not_a_number;
 pub use overlay_message::{
-    ChangePrimaryPlayer, MessageType, OverlayMessage, ParseOptions,
+    OverlayMessage, ParseOptions,
 };

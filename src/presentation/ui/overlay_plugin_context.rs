@@ -127,8 +127,8 @@ pub fn spawn_connection_task(
 
 async fn keep_connected(
     mut connection_status: Signal<ConnectionStatus>,
-    mut combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
-    mut player_name_signal: Signal<String>,
+    combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
+    player_name_signal: Signal<String>,
     mut error_signal: Signal<Option<String>>,
     merge_pets_into_owner: Signal<bool>,
 ) {
