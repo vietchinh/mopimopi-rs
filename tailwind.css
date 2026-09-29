@@ -1,0 +1,931 @@
+/* Input file for Tailwind, as in the Dioxus guide (https://dioxuslabs.com/learn/0.7/guides/utilities/tailwind): the whole of Tailwind
+   is imported with one line, and the Rust sources are registered with `@source` (see the end of this file).
+
+   Cascade layers. Tailwind's imports live in layers (`theme`, `base` = Preflight, `utilities`), and a layered rule loses to ANY
+   un-layered rule, whatever its specificity. This file also carries the original overlay's stylesheet (the "legacy" block below;
+   it used to be assets/mopimopi.css) and the layout glue (`app`, used to be assets/app.css), which must keep their place in the cascade: app, then legacy, then
+   the utilities meant to override them. So those two are layers as well, in exactly that order, declared first so nothing else
+   can reorder them (public/base.css repeats the statement, because it is the first stylesheet the page loads):
+
+       theme < base (Preflight) < app (the layout glue, public/base.css) < legacy (public/base.css, then the block below) < components < utilities
+
+   Inside one sheet a rule wins by specificity, then by order. Across the layers it wins by the layer. The last rule of thumb
+   is the one that changed: a utility now beats a legacy rule even where the legacy selector is more specific, and legacy beats
+   the layout glue likewise. `tests/cascade-diff.spec.ts` compares the computed style of every element against another build. */
+@layer theme, base, app, legacy, components, utilities;
+@import "tailwindcss" source(none);
+
+/* Preflight, undone. `@import "tailwindcss"` includes Preflight, a reset applied to every element (box-sizing:border-box,
+   `img{display:block}`, `border:0 solid`, list and heading resets, ...). The overlay is a port of a page that never had it, and with
+   it the size of ~230 elements changed. So for every selector Preflight styles, the same properties are set to `revert-layer`
+   here, in the same layer and later: that rolls each one back to the browser's own default. The block is generated from Preflight
+   by `node tools/cancel-preflight.mjs` (`--check` says whether this copy is current; run it after upgrading Tailwind). */
+/* BEGIN cancel-preflight (generated, do not edit) */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    box-sizing: revert-layer;
+    margin: revert-layer;
+    padding: revert-layer;
+    border: revert-layer;
+  }
+  html,
+  :host {
+    line-height: revert-layer;
+    -webkit-text-size-adjust: revert-layer;
+    tab-size: revert-layer;
+    font-family: revert-layer;
+    font-feature-settings: revert-layer;
+    font-variation-settings: revert-layer;
+    -webkit-tap-highlight-color: revert-layer;
+  }
+  hr {
+    height: revert-layer;
+    color: revert-layer;
+    border-top-width: revert-layer;
+  }
+  abbr:where([title]) {
+    -webkit-text-decoration: revert-layer;
+    text-decoration: revert-layer;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: revert-layer;
+    font-weight: revert-layer;
+  }
+  a {
+    color: revert-layer;
+    -webkit-text-decoration: revert-layer;
+    text-decoration: revert-layer;
+  }
+  b,
+  strong {
+    font-weight: revert-layer;
+  }
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: revert-layer;
+    font-feature-settings: revert-layer;
+    font-variation-settings: revert-layer;
+    font-size: revert-layer;
+  }
+  small {
+    font-size: revert-layer;
+  }
+  sub,
+  sup {
+    font-size: revert-layer;
+    line-height: revert-layer;
+    position: revert-layer;
+    vertical-align: revert-layer;
+  }
+  sub {
+    bottom: revert-layer;
+  }
+  sup {
+    top: revert-layer;
+  }
+  table {
+    text-indent: revert-layer;
+    border-color: revert-layer;
+    border-collapse: revert-layer;
+  }
+  :-moz-focusring:where(:not(iframe)) {
+    outline: revert-layer;
+  }
+  progress {
+    vertical-align: revert-layer;
+  }
+  summary {
+    display: revert-layer;
+  }
+  ol,
+  ul,
+  menu {
+    list-style: revert-layer;
+  }
+  img,
+  svg,
+  video,
+  canvas,
+  audio,
+  iframe,
+  embed,
+  object {
+    display: revert-layer;
+    vertical-align: revert-layer;
+  }
+  img,
+  video {
+    max-width: revert-layer;
+    height: revert-layer;
+  }
+  button,
+  input,
+  select,
+  optgroup,
+  textarea,
+  ::file-selector-button {
+    font: revert-layer;
+    font-feature-settings: revert-layer;
+    font-variation-settings: revert-layer;
+    letter-spacing: revert-layer;
+    color: revert-layer;
+    border-radius: revert-layer;
+    background-color: revert-layer;
+    opacity: revert-layer;
+  }
+  :where(select:is([multiple],
+  [size])) optgroup {
+    font-weight: revert-layer;
+  }
+  :where(select:is([multiple],
+  [size])) optgroup option {
+    padding-inline-start: revert-layer;
+  }
+  ::file-selector-button {
+    margin-inline-end: revert-layer;
+  }
+  ::placeholder {
+    opacity: revert-layer;
+  }
+  @supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px) {
+    ::placeholder {
+      color: revert-layer;
+    }
+  }
+  textarea {
+    resize: revert-layer;
+  }
+  ::-webkit-search-decoration {
+    -webkit-appearance: revert-layer;
+  }
+  ::-webkit-date-and-time-value {
+    min-height: revert-layer;
+    text-align: revert-layer;
+  }
+  ::-webkit-datetime-edit {
+    display: revert-layer;
+  }
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: revert-layer;
+  }
+  ::-webkit-datetime-edit,
+  ::-webkit-datetime-edit-year-field,
+  ::-webkit-datetime-edit-month-field,
+  ::-webkit-datetime-edit-day-field,
+  ::-webkit-datetime-edit-hour-field,
+  ::-webkit-datetime-edit-minute-field,
+  ::-webkit-datetime-edit-second-field,
+  ::-webkit-datetime-edit-millisecond-field,
+  ::-webkit-datetime-edit-meridiem-field {
+    padding-block: revert-layer;
+  }
+  ::-webkit-calendar-picker-indicator {
+    line-height: revert-layer;
+  }
+  :-moz-ui-invalid {
+    box-shadow: revert-layer;
+  }
+  button,
+  input:where([type='button'],
+  [type='reset'],
+  [type='submit']),
+  ::file-selector-button {
+    appearance: revert-layer;
+  }
+  ::-webkit-inner-spin-button,
+  ::-webkit-outer-spin-button {
+    height: revert-layer;
+  }
+  [hidden]:where(:not([hidden='until-found'])) {
+    display: revert-layer !important;
+  }
+}
+/* END cancel-preflight */
+
+/* The overlay's own palette, as theme variables in the `--color-*` namespace
+   (https://tailwindcss.com/docs/colors#customizing-your-colors). Only the colour picker's panel uses it so far: these are
+   the values the original's jscolor was configured with (`borderColor:'#212121'`, `insetColor:'#161616'`,
+   `backgroundColor:'#212121'`, `pointerColor:'#4C4C4C'`), set inline by src/presentation/ui/settings_screens/js_color.rs.
+   `static` because Tailwind only writes out a theme variable that its own output uses, and a `var(--color-panel)` inside a
+   Rust `style` string is invisible to it: without `static` the variable would not exist at runtime.
+   Not moved here on purpose: the legacy block's 80 literal colours (kept verbatim, that is what makes it the original), the
+   colours users pick in the settings (runtime values, set inline / as `--accent` etc.), and the picker's canvas gradient
+   stops (the Canvas API cannot read a CSS variable). Utilities such as `bg-panel` also exist for these, but the picker sets
+   `border: 1px solid` inline, which would reset a `border-panel` class, so it uses the variables directly. */
+@theme static {
+  --color-panel: #212121;
+  --color-panel-inset: #161616;
+  --color-pointer: #4c4c4c;
+}
+
+@layer legacy {
+/* ===================================================================================================
+   The original overlay's stylesheet (was assets/mopimopi.css), moved here as plain, un-layered CSS.
+   Order and selectors are unchanged. Cleanups made in the move (all no-ops for a browser):
+   - `@charset` dropped (the file is ASCII).
+   - Vendor aliases that duplicate a standard property in the same rule (`-webkit-animation-*`, `-webkit-transition` next to `transition`, `-ms-/-moz-/-khtml-/-webkit-user-select` next to `user-select`) are dropped; Tailwind's Lightning CSS adds prefixes itself when a target needs them.
+   - `-webkit-transition` / `-webkit-filter` / `-webkit-appearance` that had NO standard twin are renamed to the standard property (Blink treats them as aliases).
+   - `-webkit-transition:all 03s` (an invalid time, ignored by every browser) dropped; the valid `transition:all 0.3s` next to it is kept.
+   - `@-webkit-keyframes flash` dropped (`@keyframes flash` is right next to it).
+   - The selector `input [type="file"]` (a descendant of an <input>, which matches nothing) and the type selector `scrollbar` (no such element) dropped.
+   - Stray `;;` removed.
+   - Kept as they are, because they mean something: `-webkit-app-region`, `-webkit-linear-gradient(...)` (legacy start-side direction), `-webkit-tap-highlight-color`, `-webkit-font-smoothing`, `-moz-osx-font-smoothing`, and the `-webkit-scrollbar` / `-webkit-slider-*` pseudo-elements.
+   =================================================================================================== */
+
+/* ...the first part of this stylesheet (reset and page, helper classes, the window and top bar, the start screen, the tables) is in
+   public/base.css, a plain `<link>` in the page's head, so it is there when the app first paints. It is the same `legacy` layer and it
+   comes before everything below, so the order of the rules is the order they had in this one block. */
+/* --- Menus, dropdown lists and the dimmed backdrop --- */
+.dropdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#gradD {
+  position: absolute;
+  z-index: 1001;
+  background: -webkit-linear-gradient(bottom,#000 0%,rgba(0,0,0,0) 100%);
+  width: 80%;
+  height: 3rem;
+  opacity: .6;
+  margin-top: 20.8rem;
+  border-bottom-left-radius: .25rem;
+  border-bottom-right-radius: .25rem;
+}
+#gradU {
+  position: relative;
+  z-index: 1001;
+  background: -webkit-linear-gradient(top,#000 0%,rgba(0,0,0,0) 100%);
+  width: 80%;
+  height: 3rem;
+  opacity: .6;
+  top: .4rem;
+  margin-bottom: 21.6rem;
+  border-top-left-radius: .25rem;
+  border-top-right-radius: .25rem;
+}
+#blackBg,
+#whiteBg {
+  position: absolute;
+  z-index: 999;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,.5);
+  cursor: pointer;
+}
+#whiteBg {
+  background: rgba(255,255,255,.75);
+}
+.dropdown ul {
+  display: flex;
+  width: 80%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  z-index: 1000;
+  flex-direction: column;
+  position: absolute;
+  color: #fff;
+  background: #424242;
+  border-radius: .25rem;
+  box-shadow: 0 .1rem .3rem .1rem rgba(0,0,0,.4);
+}
+.dropdown ul li {
+  font-size: 1.4rem;
+  line-height: 1.6rem;
+  padding: 1.5rem;
+  cursor: pointer;
+  list-style: none;
+}
+.dropdown ul li#fullscreen,
+.dropdown ul li#settings,
+.dropdown ul li#home {
+  padding: 1.65rem 1.5rem;
+}
+li>div {
+  float: left;
+  cursor: pointer;
+}
+.dropdown ul li:first-child:hover {
+  border-top-left-radius: .25rem;
+  border-top-right-radius: .25rem;
+  background: #616161;
+}
+.dropdown ul li:hover {
+  background: #616161;
+}
+.dropdown ul li:last-child:hover {
+  border-bottom-left-radius: .25rem;
+  border-bottom-right-radius: .25rem;
+  background: #616161;
+}
+li img {
+  width: 2.6rem;
+}
+
+/* --- Settings screens: preview, rows, tabs --- */
+.previewArea>div {
+  padding: 1rem 0;
+  border-right: solid .1rem #161616;
+  border-left: solid .1rem #161616;
+}
+.previewArea nav table {
+  cursor: default;
+}
+.previewArea .btn_wrap div:hover {
+  cursor: not-allowed;
+  background: inherit;
+}
+.scrollArea {
+  background: #161616;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+.group {
+  background: #212121;
+  color: #fff;
+  margin: 1rem 0;
+  padding: .1rem;
+}
+.group li {
+  padding: 1.5rem 0;
+}
+.group li:hover {
+  background: rgba(0,0,0,.25);
+  cursor: pointer;
+}
+#Version:hover,
+#About:hover,
+ul .li_box:hover,
+ul .li_text:hover {
+  background: rgba(0,0,0,0);
+  cursor: default;
+}
+.gIcon {
+  padding: .3rem 1rem;
+  color: rgba(255,255,255,.25);
+}
+.UBtn,
+.DBtn {
+  padding: .3rem 1rem;
+  margin: 1rem;
+  color: rgba(255,255,255,.25);
+}
+.gTitle {
+  width: 100%;
+  font-size: 1.4rem;
+}
+.gVal {
+  font-size: 1.2rem;
+  padding-top: .4rem;
+  line-height: 1.4rem;
+}
+.tabArea {
+  width: 100%;
+  background: #212121;
+  display: flex;
+  position: relative;
+  z-index: 997;
+  box-shadow: 0 .2rem .2rem 0 rgba(0,0,0,.14),0 .1rem .5rem 0 rgba(0,0,0,.12),0 .3rem .1rem -.2rem rgba(0,0,0,.2);
+}
+.tab_box {
+  cursor: pointer;
+}
+.tab_title {
+  color: #bdbdbd;
+  font-size: 1.2rem;
+  padding: 1.5rem 0;
+  text-align: center;
+}
+.tab_underBar {
+  position: relative;
+  width: 0;
+  height: .2rem;
+  margin: 0 auto;
+}
+.tab_box:hover,
+.on {
+  background: rgba(0,0,0,.25);
+  color: #03A9F4;
+  transition: .2s ease-in-out;
+}
+.on_bar {
+  width: 100%;
+  background: #03A9F4;
+  transition: .2s ease-in-out;
+}
+
+/* --- Animations --- */
+.animated {
+  animation-duration: .75s;
+  animation-fill-mode: both;
+}
+@keyframes flash {
+  from,50%,to{opacity:1}
+  25%,65%{opacity:0}
+}
+.flash {
+  animation-name: flash;
+}
+a:hover {
+  animation-duration: 2s;
+  animation-name: rainbowLink;
+  animation-iteration-count: infinite;
+}
+@keyframes rainbowLink {
+  0%{color:red}
+  15%{color:#FF5E00}
+  30%{color:#FB0}
+  45%{color:#FFE400}
+  60%{color:#ABF200}
+  75%{color:#1DDB16}
+  90%{color:#00D8FF}
+  100%{color:#DD7EFF}
+}
+
+/* --- Form controls: switch, text box, slider, colour box --- */
+input[type=checkbox],
+input[type=radio] {
+  display: none;
+  appearance: none;
+}
+input[type="range"] {
+  appearance: none;
+}
+.switch {
+  float: right;
+  width: 4.2rem;
+  padding: .2rem;
+  border: .2rem solid;
+  border-color: #03A9F4;
+  box-sizing: border-box;
+  opacity: .5;
+  filter: grayscale(100%);
+  transition: all 0.3s;
+  border-radius: 54rem;
+  cursor: pointer;
+}
+.toggle {
+  width: 1.1rem;
+  height: 1.1rem;
+  background: #03A9F4;
+  border-radius: 100%;
+  position: relative;
+  transition: transform .3s;
+}
+.switch.hover .toggle {
+  transform: translateX(2.3rem);
+}
+.switch.hover {
+  filter: none;
+  opacity: 1;
+}
+button {
+  background: transparent;
+  color: #fff;
+  border: none;
+  position: relative;
+  width: 100%;
+  padding: 1.5rem 0;
+  font-size: 1.4rem;
+  cursor: pointer;
+  outline: none;
+}
+:focus {
+  outline: none;
+}
+.inputBox {
+  float: left;
+  width: 100%;
+  position: relative;
+}
+input[type="text"] {
+  font-size: 1.4rem;
+  color: #fff;
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+}
+.inputEff {
+  border: 0;
+  padding: .8rem 0;
+  border-bottom: .1rem solid rgba(255,255,255,.38);
+}
+.focus-border {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: .2rem;
+  background: #03A9F4;
+  transform: scaleX(0);
+  transition: transform .3s;
+}
+.inputEff:focus~.focus-border {
+  transform: scaleX(1);
+}
+input.shadow.inputEff.jscolor {
+  width: 40vw;
+}
+#in_share.inputEff {
+  color: #bdbdbd;
+}
+input[type="range"] {
+  margin: auto;
+  position: relative;
+  overflow: hidden;
+  height: 1.8rem;
+  width: 40vw;
+  cursor: pointer;
+  border-radius: 0;
+  background: #161616;
+  color: #03A9F4;
+}
+::-webkit-slider-runnable-track {
+  background: rgba(255,255,255,.07);
+}
+::-webkit-slider-thumb {
+  appearance: none;
+  width: 1.2rem;
+  height: 1.8rem;
+  background: #161616;
+  box-shadow: -100vw 0 0 100vw;
+}
+
+/* --- Tooltip and toasts --- */
+#tooltip {
+  display: none;
+  animation: tooltipAni .3s;
+  transition: opacity .3s ease-in-out;
+  position: absolute;
+  z-index: 2000;
+  right: 1rem;
+  margin-top: 1rem;
+  background: rgba(0,0,0,.9);
+  color: #fff;
+  padding: 1rem;
+  border-radius: .25rem;
+  font-size: 1.2rem;
+  white-space: nowrap;
+}
+@keyframes tooltipAni {
+  100%{opacity:1}
+}
+.toast {
+  color: #000;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  padding: 1.5rem;
+  position: absolute;
+  z-index: 2001;
+  right: -365px;
+  bottom: 1rem;
+  transition: .3s ease-in-out;
+  width: 50vw;
+  border-radius: .25rem;
+  cursor: pointer;
+}
+.toast.on {
+  transform: translateX(-365px);
+}
+.jam {
+  color: #fff;
+  background: rgba(0,0,0,.9);
+  text-shadow: 0 0 .3rem #000;
+  font-family: 'Segoe UI','sans-serif';
+  font-size: 1.2rem;
+}
+input[type="file"] {
+  display: block;
+  visibility: hidden;
+  width: 0;
+  height: 0;
+}
+
+} /* end of @layer legacy */
+
+/* From here on: the utilities. They come from `@import "tailwindcss"` above (layer `utilities`, the top of the order), where every
+   `@utility` below is emitted; the rules after them are plain, un-layered CSS. */
+/* Class detection follows the Dioxus guide (https://dioxuslabs.com/learn/0.7/guides/utilities/tailwind): Tailwind reads the
+   Rust sources as plain text and generates what it finds, so a class written in an `rsx!` needs nothing else. (`dx serve`
+   runs Tailwind in watch mode, so a new class in a `.rs` file reaches the page without touching this file.) Automatic
+   detection stays off (`source(none)` above): the default scan reads every file in the project, tests, data and
+   translations included. Only `src/` is registered, with the guide's glob (Tailwind ignores CSS files anyway, and `src/` has
+   no HTML, so in practice this reads the `.rs` files). See https://tailwindcss.com/docs/detecting-classes-in-source-files.
+
+   Tailwind cannot parse Rust, it just looks for tokens that could be classes, so ordinary words in code, strings and
+   comments are candidates too. Most produce nothing. The ones that happen to be Tailwind utilities (`table`, `filter`,
+   `static`, `block`, `fixed`, ... from `"position:fixed"`, `.filter(..)`, doc comments) would add rules nobody asked
+   for, and three of them are also *legacy classes the markup really uses* (`flex`, `hidden`, `shadow`): Tailwind's
+   version would sit after the legacy rule and change it (`.shadow` would replace the overlay's three-layer Material
+   shadow; `.hidden` would turn `visibility:hidden` into `display:none`). `@source not inline()` is the documented way
+   to stop specific classes from being generated: https://tailwindcss.com/docs/detecting-classes-in-source-files#explicitly-excluding-classes
+   The list is checked by `npm run check:css` (tools/check-tailwind.mjs), which fails, naming the class, when a new
+   stray word starts generating a utility. Classes are written in full in the Rust source (never assembled with
+   `format!`), and values that depend on a setting are an inline `style` or an inline CSS variable, as before. */
+@source "./src/**/*.{rs,html,css}";
+@source not inline("{block,border,container,contents,filter,fixed,flex,grid,hidden,inline,italic,outline,relative,rounded,shadow,static,table,transform,transition,visible}");
+
+/* Page-level rules (app_shell.rs owns the variables -- see its root_style memo). :root *is* the
+   <html> element in an HTML document, so this needs no rsx! element of its own. The accent-colour
+   selectors below target class names already unconditionally present in the markup wherever
+   they're used (.ac, .switch, ...), so these are plain static rules too, not Tailwind utilities --
+   nothing to add to any element, nothing for the scanner to find. */
+:root {
+  font-size: var(--html-font-size);
+  background-image: var(--html-bg-image);
+  background-size: var(--html-bg-size);
+  background-repeat: var(--html-bg-repeat);
+}
+.ac, .tab_title.on, nav[name=settings] i, input[type=range] { color: var(--accent); }
+.on_bar, .focus-border, .toggle { background: var(--accent); }
+.switch { border-color: var(--accent); }
+#preview24.on td:first-child { color: var(--accent); }
+
+/* navigation_bar's migration. All of these variables are set once, on the `nav` element itself
+   (navigation_bar/mod.rs's nav_bar_style / history_screen/mod.rs's own nav) -- every descendant
+   here just inherits them through the normal CSS cascade, so these utilities only ever read
+   var(...), never declare a variable of their own. */
+@utility nav-bar {
+  background: var(--nav-bg);
+  height: var(--nav-height);
+  background-size: var(--nav-pattern-size) var(--nav-pattern-size);
+  background-repeat: repeat;
+  border: var(--nav-border);
+  border-radius: var(--nav-radius-tl) var(--nav-radius-tr) var(--nav-radius-br) var(--nav-radius-bl);
+}
+@utility nav-more-button {
+  border-top-right-radius: var(--nav-more-radius-tr);
+  border-bottom-right-radius: var(--nav-more-radius-br);
+}
+@utility nav-btn-wrap-bg {
+  background: var(--nav-btn-wrap-bg);
+}
+@utility nav-btn-wrap-position {
+  right: var(--nav-edge-width);
+  top: var(--nav-edge-width);
+}
+@utility nav-icon {
+  color: var(--nav-icon-color);
+  font-size: var(--nav-icon-size);
+}
+@utility nav-time {
+  color: var(--nav-time-color);
+  font-family: var(--nav-time-font);
+  font-size: var(--nav-time-size);
+  font-style: var(--nav-time-style);
+  padding-left: var(--nav-time-padding);
+}
+@utility nav-target {
+  color: var(--nav-target-color);
+  font-family: var(--nav-target-font);
+  font-size: var(--nav-target-size);
+  font-style: var(--nav-target-style);
+  padding-left: var(--nav-target-padding);
+}
+@utility nav-rps {
+  color: var(--nav-rps-color);
+  font-family: var(--nav-rps-font);
+  font-size: var(--nav-rps-size);
+  font-style: var(--nav-rps-style);
+}
+@utility nav-target-2line {
+  padding-bottom: var(--nav-gap);
+  vertical-align: bottom;
+}
+@utility nav-rps-2line {
+  padding-top: var(--nav-gap);
+  vertical-align: top;
+}
+@utility nav-target-1line {
+  padding-bottom: 0;
+  vertical-align: middle;
+}
+@utility nav-rps-1line {
+  padding-top: 0;
+  vertical-align: middle;
+}
+
+/* table_corners: header/body corner radii are now computed directly as Tailwind's own
+   rounded-tl-[value] etc. classes (see standard_table.rs's header_style/body_style), not carried
+   as CSS variables here at all. */
+
+/* table_text: own-row vs. other-rows text. Rust already knows which one applies when it builds
+   each row (id is "YOU", or it carries .myPet), so this is a plain either/or class on the row
+   wrapper rather than a `:not(#YOU):not(.myPet)` CSS selector. */
+@utility table-text-own {
+  & td {
+    color: var(--table-text-own-color);
+    opacity: var(--table-text-own-opacity);
+    font-family: var(--table-text-font);
+    font-weight: var(--table-text-own-weight);
+    font-size: var(--table-text-size);
+    text-shadow: var(--table-text-own-shadow);
+  }
+  & td .ex {
+    color: var(--table-text-own-ex-color);
+    opacity: var(--table-text-own-opacity);
+    text-shadow: var(--table-text-own-shadow);
+  }
+}
+@utility table-text-other {
+  & td {
+    color: var(--table-text-other-color);
+    opacity: var(--table-text-other-opacity);
+    font-family: var(--table-text-font);
+    font-weight: var(--table-text-other-weight);
+    font-size: var(--table-text-size);
+    text-shadow: var(--table-text-other-shadow);
+  }
+  & td .ex {
+    color: var(--table-text-other-ex-color);
+    opacity: var(--table-text-other-opacity);
+    text-shadow: var(--table-text-other-shadow);
+  }
+}
+
+/* raid_grid: the compact raid-mode cards. Two structural borders are positional (matching the
+   original's `.rRow:first-child .rCell` / `.rRow .rCell:last-child`): the last-card-in-its-row
+   border uses Tailwind's `last:` variant directly; the first-row-of-the-grid border can't be
+   (it depends on the *parent* row's position), so that one is a plain Rust-computed boolean
+   instead (see `combat_tables/raid_grid.rs`). */
+@utility raid-cell-other {
+  background: var(--raid-cell-bg-other);
+  border-bottom: var(--raid-cell-border);
+  height: var(--raid-cell-height);
+  & td {
+    font-weight: var(--raid-text-other-weight);
+    color: var(--raid-text-other-color);
+    opacity: var(--raid-text-other-opacity);
+    font-family: var(--raid-text-font);
+    font-style: var(--raid-text-style);
+    text-shadow: var(--raid-text-other-shadow);
+  }
+}
+@utility raid-cell-own {
+  background: var(--raid-cell-bg-own);
+  border-bottom: var(--raid-cell-border);
+  height: var(--raid-cell-height);
+  & td {
+    font-weight: var(--raid-text-own-weight);
+    color: var(--raid-text-own-color);
+    opacity: var(--raid-text-own-opacity);
+    font-family: var(--raid-text-font);
+    font-style: var(--raid-text-style);
+    text-shadow: var(--raid-text-own-shadow);
+  }
+}
+@utility raid-name {
+  font-size: var(--raid-name-size);
+}
+@utility raid-data {
+  font-size: var(--raid-data-size);
+}
+/* The strip's opacity is set inline (`opacity: var(--raid-idx-opacity)`): `.raid-cell-* td` sets the text
+   opacity on every cell of the card and is more specific than a utility class would be. */
+@utility raid-idx {
+  width: var(--raid-idx-width);
+}
+@utility raid-icon {
+  width: var(--raid-icon-width);
+  & img {
+    width: var(--raid-icon-width);
+  }
+}
+/* raid-row: now Tailwind's built-in `grid` display class plus a direct `grid-cols-[repeat(N,1fr)]`
+   arbitrary value (see combat_tables/raid_grid.rs) -- no CSS variable needed at all. */
+
+
+/* column_layout: per-column width/padding/alignment. Genuinely per-element (an independent value
+   per column, over a user-configurable, reorderable set of columns), so these read whatever CSS
+   variables the *specific* cell they land on currently holds -- set inline, per cell, by
+   `column_style_vars` in standard_table.rs -- rather than each column getting its own generated
+   selector. Only the italic/normal choice is genuinely global (same for every column), inherited
+   from the table's header/body wrapper. */
+/* column_layout: per-column width, padding and text-align are now computed directly as Tailwind's
+   own w-[...]/px-[...]/text-{left,center,right} classes (see standard_table.rs's
+   column_style_classes) -- genuinely per-element (an independent value per column, over a
+   user-configurable, reorderable set of columns), so each cell gets its own classes directly
+   rather than reading a variable. Only the italic/normal choice is genuinely global (the same
+   choice for every column), inherited from the table's header/body wrapper. */
+@utility col-cell-body {
+  font-style: var(--column-body-style);
+}
+@utility col-cell-header {
+  font-style: var(--column-header-style);
+}
+
+/* table_chrome: job icons, header, division lines. Job icon width and dimmed-text size, header
+   cell height/text-size, row height and all four bar heights/margins/opacities are now computed
+   directly as Tailwind's own w-[...]/text-[...]/h-[...]/mt-[...]/opacity-[...] classes (see
+   graph_bars.rs and standard_table.rs's header_style/body_style), not carried as CSS variables
+   here at all -- what's left below is what's genuinely a compound value (a whole rgba(...), a
+   quoted font-family list) rather than a single bracket-friendly property. */
+@utility chrome-header-table {
+  margin: var(--chrome-header-margin) 0;
+}
+@utility chrome-header-cell {
+  background: var(--chrome-header-bg);
+  color: var(--chrome-header-color);
+  font-family: var(--chrome-header-font);
+  height: var(--chrome-header-height);
+  font-size: var(--chrome-header-text-size);
+}
+@utility chrome-row {
+  border-bottom: var(--chrome-row-border);
+  height: var(--chrome-row-height);
+  margin-top: 0;
+}
+@utility chrome-bar-bg {
+  background: var(--chrome-bar-bg);
+}
+
+/* Values that are the same for a whole table are CSS variables set once on its wrapper
+   (standard_table.rs's header_style/body_style) and read by the static classes below -- the Dioxus
+   docs' recommended way to theme, rather than formatting a style string onto every element. */
+@utility chrome-icon {
+  width: var(--chrome-icon-size);
+}
+@utility chrome-ex {
+  font-size: var(--chrome-ex-size);
+}
+@utility corner-header-left {
+  border-top-left-radius: var(--table-radius-header-tl);
+  border-bottom-left-radius: var(--table-radius-header-bl);
+}
+@utility corner-header-right {
+  border-top-right-radius: var(--table-radius-header-tr);
+  border-bottom-right-radius: var(--table-radius-header-br);
+}
+@utility corner-body {
+  border-radius: var(--table-radius-body-tl) var(--table-radius-body-tr) var(--table-radius-body-br) var(--table-radius-body-bl);
+}
+@utility raid-row {
+  display: grid;
+  grid-template-columns: repeat(var(--raid-cards-per-row), 1fr);
+}
+
+/* Graph bars (combat_tables/graph_bars.rs). The per-kind classes hold size, opacity and corners. */
+@utility chrome-bar-main {
+  height: var(--chrome-bar-main-height);
+  margin-top: var(--chrome-bar-main-margin);
+  opacity: var(--chrome-bar-main-opacity);
+  border-radius: var(--chrome-bar-radius);
+}
+@utility chrome-bar-pet {
+  height: var(--chrome-bar-pet-height);
+  margin-top: var(--chrome-bar-pet-margin);
+  opacity: var(--chrome-bar-pet-opacity);
+  border-radius: var(--chrome-bar-radius);
+}
+@utility chrome-bar-ds {
+  height: var(--chrome-bar-ds-height);
+  margin-top: var(--chrome-bar-ds-margin);
+  opacity: var(--chrome-bar-ds-opacity);
+  border-radius: var(--chrome-bar-radius);
+}
+@utility chrome-bar-oh {
+  height: var(--chrome-bar-oh-height);
+  margin-top: var(--chrome-bar-oh-margin);
+  opacity: var(--chrome-bar-oh-opacity);
+  border-radius: var(--chrome-bar-radius);
+}
+
+/* The original animates a bar's width with jQuery's `.animate()`: 400 ms, "swing" easing (half a cosine,
+   which is the ease-in-out-sine curve), and a bar that appears for the first time grows from 0
+   (graphAnimate in process.js sets width 0 first). `chrome-bar-animated` is both: the transition covers
+   a width change, the animation covers the first appearance. */
+@keyframes chrome-bar-flip-a {
+  from {
+    transform: translateX(var(--bar-dx, 0%)) scaleX(var(--bar-sx, 1));
+  }
+}
+@keyframes chrome-bar-flip-b {
+  from {
+    transform: translateX(var(--bar-dx, 0%)) scaleX(var(--bar-sx, 1));
+  }
+}
+/* A bar's move is played as a transform, on the compositor thread (see graph_bars.rs): it starts at the bar's previous
+   position and size (`--bar-dx`, `--bar-sx`, set inline) and ends at no transform. The move restarts by switching to the
+   other of two identical keyframe sets, so `-a` and `-b` alternate. Timing is what the original's jQuery `swing` easing is. */
+@utility chrome-bar-animated {
+  transform-origin: var(--bar-origin, left) 50%;
+  animation-duration: 0.4s;
+  animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+}
+@utility chrome-bar-flip-a {
+  animation-name: chrome-bar-flip-a;
+}
+@utility chrome-bar-flip-b {
+  animation-name: chrome-bar-flip-b;
+}

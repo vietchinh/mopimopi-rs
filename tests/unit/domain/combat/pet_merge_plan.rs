@@ -21,7 +21,15 @@ fn plans_pets_only() {
     ];
     let mut plan = plan_pet_merges(identities(&combatants), Some("Future Fade"));
     plan.sort_by(|a, b| a.pet.cmp(&b.pet));
-    assert_eq!(plan, [merge("Demi-Bahamut (Kay Lionheart)", "Kay Lionheart"), merge("Eos (Future Fade)", "YOU")]);
+    assert_eq!(
+        plan,
+        [
+            merge("Demi-Bahamut (Kay Lionheart)", "Kay Lionheart"),
+            merge("Eos (Future Fade)", "YOU"),
+            merge("Mystery Pet (Kay Lionheart)", "Kay Lionheart"),
+        ],
+        "an unrecognized owned companion defaults to a (Beastmaster) pet now, not Unknown, so it merges too"
+    );
 }
 
 #[test]

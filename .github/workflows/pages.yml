@@ -46,7 +46,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@main
         with:
-          path: pages/public
+          path: pages/assets
 
   deploy:
     needs: build

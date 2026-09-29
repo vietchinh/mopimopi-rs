@@ -26,7 +26,9 @@ impl Settings {
                 _ => &[],
             };
             for key in excluded {
-                entries.remove(*key);
+                // `shift_remove`, not `remove`: with order preservation on, `remove` swaps the last entry into the
+                // gap, which reorders the exported code (the original deletes keys in place).
+                entries.shift_remove(*key);
             }
             shared.insert(section.to_string(), Value::Object(entries));
         }

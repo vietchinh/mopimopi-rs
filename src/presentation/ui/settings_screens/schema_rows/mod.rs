@@ -17,7 +17,7 @@ mod value_rows;
 
 use super::page_content::SchemaEntry;
 use super::row_context::RowContext;
-use crate::domain::translations::translate;
+use crate::application::i18n::translate;
 use dioxus::prelude::*;
 
 use choice_rows::{radio_row, switch_row, column_switch_row};
@@ -25,15 +25,15 @@ use link_and_action_rows::{link_row, action_row};
 use text_rows::{share_row, text_row, add_button_row, file_row};
 use value_rows::{color_row, slider_setting_row, value_row, info_row};
 
-pub(super) fn title(page_context: &RowContext, entry: &SchemaEntry) -> String {
-    translate(&entry.definition["tt"], page_context.language_code)
+pub(super) fn title(entry: &SchemaEntry) -> String {
+    translate(&entry.definition["tt"])
 }
 pub(super) fn icon(entry: &SchemaEntry) -> String {
     entry.definition["i"].as_str().unwrap_or("").to_string()
 }
 /// The grey explanation text (`m`) in the current language.
-pub(super) fn note(page_context: &RowContext, entry: &SchemaEntry) -> String {
-    translate(&entry.definition["m"], page_context.language_code)
+pub(super) fn note(entry: &SchemaEntry) -> String {
+    translate(&entry.definition["m"])
 }
 
 pub(super) fn render_schema_row(page_context: &RowContext, entry: &SchemaEntry) -> Element {
@@ -46,7 +46,7 @@ pub(super) fn render_schema_row(page_context: &RowContext, entry: &SchemaEntry) 
         "li_color" => color_row(page_context, entry),
         "li_slider" => slider_setting_row(page_context, entry),
         "li_pn" => value_row(page_context, entry),
-        "li_box" => info_row(page_context, entry),
+        "li_box" => info_row(entry),
         "li_text" if entry.id == "in_share" => share_row(page_context, entry),
         "li_text" => text_row(page_context, entry, false),
         "li_text_inbtn" => text_row(page_context, entry, true),

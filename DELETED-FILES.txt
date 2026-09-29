@@ -1,0 +1,16 @@
+Delete these files from your tree (removed or moved since the last commit):
+assets/app.css
+public/app.css
+public/mopimopi.css
+src/presentation/theme/color_conversion.rs
+src/presentation/theme/column_layout.rs
+src/presentation/theme/mod.rs
+src/presentation/theme/navigation_bar.rs
+src/presentation/theme/page_background.rs
+src/presentation/theme/raid_grid.rs
+src/presentation/theme/style_inputs.rs
+src/presentation/theme/table_chrome.rs
+src/presentation/theme/table_corners.rs
+src/presentation/theme/table_text.rs
+tests/unit/presentation/theme/color_conversion.rs
+tests/unit/presentation/theme/mod.rs

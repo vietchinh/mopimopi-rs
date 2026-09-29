@@ -1,3 +1,10 @@
 target
 dist
 pages
+
+# Playwright end-to-end tests
+playwright-tests/node_modules/
+playwright-tests/test-results/
+playwright-tests/playwright-report/
+playwright-tests/goldens/*.png
+/node_modules/

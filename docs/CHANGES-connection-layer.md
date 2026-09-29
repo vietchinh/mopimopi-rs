@@ -59,7 +59,7 @@ UI (`presentation/ui`)
   Enable SSL / Generate SSL Certificate. Connected but silent: `YOU`, the FFXIV plugin options, Parse Filter.
 - `navigation_bar/mod.rs`: while disconnected, the target text becomes "Disconnected from ACT, retrying in N s".
 - `combat_tables/setup_hint.rs` (new): shown instead of the tables when data has no row named `YOU`.
-- `public/app.css`: styles for the checklist.
+- `../assets`: styles for the checklist.
 
 ### 3.2 Removal of the legacy MiniParse / ACTWebSocket protocol
 

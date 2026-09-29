@@ -14,12 +14,10 @@ impl Settings {
         self.json_document[OPTIONS_SECTION][key] = json!(i32::from(enabled));
     }
 
-    /// Sets an option from the text of a picked list entry, keeping the stored type
-    /// (a number stays a number, text stays text).
+    /// Sets an option from the key of a picked list entry. Stored as text whatever the entry looks like,
+    /// as the original does (`"dpsType": "1"`): the readers (`option_number`, `option_text`) accept either.
     pub fn set_option_from_text(&mut self, key: &str, text: &str) {
-        let is_number_option = self.json_document[OPTIONS_SECTION][key].is_number();
-        self.json_document[OPTIONS_SECTION][key] =
-            if is_number_option { number_to_json(text.parse().unwrap_or(0.0)) } else { json!(text) };
+        self.json_document[OPTIONS_SECTION][key] = json!(text);
     }
 
     pub fn set_slider_value(&mut self, key: &str, value: f64) {
@@ -36,7 +34,7 @@ impl Settings {
 
     pub fn remove_action_abbreviation(&mut self, action_name: &str) {
         if let Some(entries) = self.json_document[ABBREVIATIONS_SECTION].as_object_mut() {
-            entries.remove(action_name);
+            entries.shift_remove(action_name); // keeps the remaining abbreviations in order, like the original's `delete`
         }
     }
 

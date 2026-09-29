@@ -1,11 +1,13 @@
 //! Top bar of the settings screen.
 
 use crate::application::app_state::{AppContext, go_back_in_settings, Dropdown};
-use crate::domain::translations::{translate, translations};
+use crate::application::i18n::translate;
+use crate::domain::translations::translations;
 use dioxus::prelude::*;
+use dioxus_material_icons::MaterialIcon;
 use serde_json::Value;
 
-pub(super) fn page_title(page: &str, lang: &str) -> String {
+pub(super) fn page_title(page: &str) -> String {
     let schema = &translations().ui_schema;
     let title_entry = match page {
         "Settings" => &schema["NAV"]["settings"]["tt"],
@@ -16,18 +18,18 @@ pub(super) fn page_title(page: &str, lang: &str) -> String {
         "custom" => &schema["Tool"]["custom"]["tt"],
         _ => &Value::Null,
     };
-    translate(title_entry, lang)
+    translate(title_entry)
 }
 
 #[component]
 pub fn SettingsNavigationBar() -> Element {
     let context = use_context::<AppContext>();
-    let title = page_title(&context.settings_location.read().page, &context.language_code());
+    let title = page_title(&context.settings_location.read().page);
     rsx! {
         nav { "name": "settings", class: "shadow",
             div { class: "left top btn_wrap",
                 div { "name": "Back", class: "btn flex", onclick: move |_| go_back_in_settings(context),
-                    i { class: "material-icons", "arrow_back" }
+                    MaterialIcon { name: "arrow_back" }
                 }
             }
             table { class: "nav_title", tbody { tr { td { "{title}" } } } }
@@ -39,7 +41,7 @@ pub fn SettingsNavigationBar() -> Element {
                         let mut open_dropdown = context.open_dropdown;
                         open_dropdown.set(Some(Dropdown::Navigation));
                     },
-                    i { class: "material-icons", "more_vert" }
+                    MaterialIcon { name: "more_vert" }
                 }
             }
         }

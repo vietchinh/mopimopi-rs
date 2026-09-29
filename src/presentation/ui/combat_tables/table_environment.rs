@@ -2,7 +2,8 @@
 
 use crate::domain::formatting::CellContext;
 use crate::domain::settings::Settings;
-use crate::domain::translations::translations;
+use crate::application::i18n::dictionary_title;
+use crate::domain::formatting::LIMIT_BREAK_JOB_CODE;
 use std::collections::HashSet;
 
 pub(super) struct TableEnvironment<'a> {
@@ -28,7 +29,7 @@ impl<'a> TableEnvironment<'a> {
         TableEnvironment {
             settings,
             element_id_suffix: if is_settings_preview { "_P" } else { "" },
-            cell_context: CellContext::new(settings, translations(), local_player_name),
+            cell_context: CellContext::new(settings, dictionary_title(LIMIT_BREAK_JOB_CODE), local_player_name),
             blurred_rows,
             can_blur_names: !is_settings_preview && !fight_is_running,
             animate_bars: settings.option_enabled("ani") && !is_settings_preview,

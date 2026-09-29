@@ -5,7 +5,9 @@ use crate::presentation::ui::settings_screens::form_actions::submit_text;
 use crate::presentation::ui::settings_screens::text_box::{text_box, typed_text};
 use crate::presentation::ui::settings_screens::row_context::RowContext;
 use crate::presentation::ui::settings_screens::row_layout::settings_row;
-use crate::domain::translations::{translate, translations};
+use crate::application::i18n::translate;
+use crate::domain::translations::translations;
+use crate::presentation::ui::shared::safe_markup::markup_view;
 use crate::presentation::ui::shared::switch_and_icon::RowIcon;
 use dioxus::prelude::*;
 
@@ -13,10 +15,30 @@ use dioxus::prelude::*;
 pub(super) fn header_text_page(page_context: &RowContext) -> Element {
     let (context, inputs) = (page_context.context, page_context.typed_texts);
     let d = &translations().dictionary;
-    let placeholder = translate(&d["headerText"], page_context.language_code);
+    let placeholder = translate(&d["headerText"]);
 
-    let boxes = active_columns(page_context).into_iter().map(|col| {
-        let label = translate(&d[col.as_str()]["tt"], page_context.language_code);
+    let columns = active_columns(page_context);
+    // The original puts a "Read Me First" box (typing needs the overlay to take keyboard focus) in a list of its
+    // own above the first column's, and only when some column is shown (`createCellPageDOM`, ui.js).
+    let caution = (!columns.is_empty()).then(|| {
+        let title = translate(&d["caution_tt"]);
+        let note = translate(&d["caution_m1"]);
+        rsx! {
+            ul { class: "group shadow",
+                li { class: "li_box",
+                    table { tbody {
+                        tr {
+                            td { class: "gIcon", rowspan: "2", RowIcon { icon: "priority_high".to_string() } }
+                            td { class: "gTitle", {markup_view(&title)} }
+                        }
+                        tr { td { class: "gVal ex", style: "padding-right:1.4rem; text-align:justify", {markup_view(&note)} } }
+                    } }
+                }
+            }
+        }
+    });
+    let boxes = columns.into_iter().map(|col| {
+        let label = translate(&d[col.as_str()]["tt"]);
         let current = page_context.settings.column_text(&col, "tt");
         let box_id = format!("headerText_{col}");
         let on_enter = {
@@ -42,6 +64,7 @@ pub(super) fn header_text_page(page_context: &RowContext) -> Element {
         }
     });
     rsx! {
+        {caution}
         {boxes}
     }
 }

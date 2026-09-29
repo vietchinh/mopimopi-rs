@@ -17,6 +17,7 @@ pub(super) fn LanguageLinks() -> Element {
         for (index , (language_code , language_name)) in LANGUAGES.into_iter().enumerate() {
             if index > 0 { " ❘ " }
             a {
+                id: "{language_code}",
                 href: "#",
                 onclick: move |event| {
                     event.prevent_default();

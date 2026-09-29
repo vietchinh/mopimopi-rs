@@ -20,3 +20,38 @@ fn prints_integers_without_decimals() {
     assert_eq!(number_to_javascript_string(35.0), "35");
     assert_eq!(number_to_javascript_string(35.5), "35.5");
 }
+
+/// Every expected value below was produced by real JavaScript (`(x).toFixed(d)`), not derived.
+#[test]
+fn to_fixed_matches_javascript_including_exact_ties() {
+    // exact ties: JavaScript takes the larger candidate, Rust's `{:.N}` takes the even one
+    assert_eq!(to_fixed(12.25, 1), "12.3");
+    assert_eq!(to_fixed(12.75, 1), "12.8");
+    assert_eq!(to_fixed(0.125, 2), "0.13");
+    assert_eq!(to_fixed(2.5, 0), "3");
+    assert_eq!(to_fixed(0.5, 0), "1");
+    assert_eq!(to_fixed(-2.5, 0), "-3");
+    assert_eq!(to_fixed(9.5, 0), "10");
+    assert_eq!(to_fixed(99.95, 1), "100.0"); // not a tie in binary (99.9500000000000028...) but carries
+    // not ties: decided by the exact binary value, which both agree on
+    assert_eq!(to_fixed(21.15, 1), "21.1");
+    assert_eq!(to_fixed(28.85, 1), "28.9");
+    assert_eq!(to_fixed(3.85, 1), "3.9");
+    assert_eq!(to_fixed(1.005, 2), "1.00");
+    // zero and sign
+    assert_eq!(to_fixed(0.0, 2), "0.00");
+    assert_eq!(to_fixed(-0.0, 2), "0.00");
+    assert_eq!(to_fixed(0.0001, 2), "0.00");
+    assert_eq!(to_fixed(-0.0001, 2), "-0.00");
+    assert_eq!(to_fixed(1234.5678, 0), "1235");
+}
+
+#[test]
+fn p_float_rounds_first_so_the_second_rounding_sees_two_decimals() {
+    // The original shows 11/52 as "21.1", not "21.2": 21.1538... -> 21.15 (pFloat) -> "21.1" (toFixed(1)).
+    assert_eq!(to_fixed(p_float(11.0 / 52.0 * 100.0), 1), "21.1");
+    assert_eq!(to_fixed(p_float(15.0 / 52.0 * 100.0), 1), "28.9"); // 28.846 -> 28.85 -> 28.9
+    assert_eq!(to_fixed(p_float(2.0 / 52.0 * 100.0), 1), "3.9"); // 3.846 -> 3.85 -> 3.9
+    assert_eq!(p_float(f64::NAN), 0.0);
+    assert_eq!(p_float(f64::INFINITY), f64::INFINITY);
+}

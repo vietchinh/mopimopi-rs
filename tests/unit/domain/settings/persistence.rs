@@ -20,10 +20,12 @@ fn restores_from_json_text_and_rejects_garbage() {
 }
 
 #[test]
-fn list_choices_keep_their_stored_type() {
+fn list_choices_are_stored_as_text_like_the_original_does() {
     let mut settings = Settings::defaults();
     settings.set_option_from_text("dpsType", "1");
-    assert!(settings.option_value("dpsType").is_number());
+    // the original stores the picked entry's key as text ("1"), and every reader accepts that
+    assert_eq!(settings.option_value("dpsType"), &serde_json::json!("1"));
+    assert_eq!(settings.option_number("dpsType"), 1.0);
     settings.set_option_from_text("ds", ",");
     assert_eq!(settings.option_text("ds"), ",");
 }
