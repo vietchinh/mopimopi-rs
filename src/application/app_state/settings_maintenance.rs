@@ -4,12 +4,12 @@ use dioxus::prelude::*;
 use super::app_context::AppContext;
 use super::toast_notifications::show_toast_message;
 use crate::domain::settings::{read_local_storage, write_local_storage, Settings, BACKUP_STORAGE_KEY};
-use crate::domain::translations::translations;
+use crate::application::i18n::message;
 use serde_json::Value;
 
 /// Asks for confirmation, then restores all settings to the defaults (keeping the language).
 pub fn reset_settings_to_defaults(context: AppContext) {
-    let question = translations().message("initConfirm", &context.language_code());
+    let question = message("initConfirm");
     let confirmed = web_sys::window().and_then(|window| window.confirm_with_message(&question).ok()).unwrap_or(false);
     if !confirmed {
         return;

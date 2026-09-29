@@ -33,7 +33,13 @@ impl<'a> CombatantKind<'a> {
             "" if combatant.name == "Limit Break" => Self::LimitBreak,
             "" => match owner_name {
                 Some(owner_name) => Self::Pet { owner_name, job: job_of_pet(base_name).unwrap_or(PetJob::Beastmaster) },
-                None => Self::Unknown,
+                // A known pet's name with no owner in it: not something ACT sends, kept as it was.
+                None if job_of_pet(base_name).is_some() => Self::Unknown,
+                // The original (core.js, the end of the pet lists in `Combatant`) turns every other combatant with a blank
+                // job and no `(owner)` in its name into Limit Break: its icon, its colour, its label when names are
+                // hidden. That is how it draws trust and duty-support NPCs (which ACT sends with no job) as well as the
+                // Limit Break gauge itself.
+                None => Self::LimitBreak,
             },
             _ => Self::Player,
         }

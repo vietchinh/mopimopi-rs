@@ -1,7 +1,7 @@
 //! Short messages that slide in from the right ("Backup completed").
 
 use super::app_context::AppContext;
-use crate::domain::translations::translations;
+use crate::application::i18n::message;
 use dioxus::prelude::*;
 use gloo_timers::callback::Timeout;
 
@@ -11,14 +11,11 @@ const SLIDE_OUT_MILLISECONDS: u32 = 200;
 /// Shows the translated message `message_id` after `delay_milliseconds` for
 /// `visible_until_milliseconds` (measured from now). Does nothing when toasts are disabled.
 pub fn show_toast_message(context: AppContext, message_id: &str, delay_milliseconds: u32, visible_until_milliseconds: u32) {
-    let (toasts_enabled, language) = {
-        let settings = context.settings.peek();
-        (settings.option_enabled("toast"), settings.language_code())
-    };
+    let toasts_enabled = context.settings.peek().option_enabled("toast");
     if !toasts_enabled {
         return;
     }
-    let text = translations().message(message_id, &language);
+    let text = message(message_id);
     let mut toast = context.toast_message;
     if toast.peek().is_slid_in {
         toast.write().is_slid_in = false;

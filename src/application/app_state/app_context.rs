@@ -97,9 +97,6 @@ pub struct AppContext {
 }
 
 impl AppContext {
-    pub fn language_code(&self) -> String {
-        self.settings.read().language_code()
-    }
 
     /// Applies a change to the settings (they are saved automatically).
     pub fn edit_settings(&self, change: impl FnOnce(&mut Settings)) {

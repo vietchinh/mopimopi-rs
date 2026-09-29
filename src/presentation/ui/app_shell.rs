@@ -10,7 +10,7 @@ use super::settings_screens::{SettingsNavigationBar, SettingsScreen};
 use super::start_screen::MainScreen;
 use crate::application::app_state::{AppContext, Screen, SettingsLocation, Dropdown, ToastState, on_combat_data_changed, register_save_on_page_hide, schedule_settings_save, restart_standby_timer};
 use crate::domain::settings::Settings;
-use crate::presentation::theme::build_theme_css;
+use crate::presentation::ui::shared::style_values::StyleValues;
 use dioxus::prelude::*;
 use std::collections::HashSet;
 
@@ -42,6 +42,44 @@ fn create_app_context() -> AppContext {
     }
 }
 
+// tailwind.css is a Dioxus asset, so `dx` minifies it and gives it a content-hashed file name (long-term
+// cacheable). It is the generated part of the CSS: the Preflight undo, the utilities, and the parts of the
+// original overlay's stylesheet that do not paint on a refresh (menus, settings screens, forms, tooltip).
+//
+// The base layout is NOT here. It is `public/base.css`, a static, render-blocking `<link>` in the page's head
+// (`style` in Dioxus.toml, `<link>` in web/index.html), because a `document::Stylesheet` only reaches the page
+// after the wasm has run and drawn its first frame, and until then that frame has no app CSS at all: the page
+// bounced on every refresh. Bare local paths in `[web.resource] style` are not processed by `dx`, which is why
+// this one is still a runtime asset: it needs the hashing, and a static file cannot have it. The layer order
+// (app < legacy < utilities) is what keeps the two files' rules in the right order; the header of tailwind.css
+// has the whole picture.
+// Generated from `tailwind.css` at the project root: by `dx` (it writes this file itself) or by
+// `build.sh`.
+const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
+
+/// The URL of an asset. Under `dx` that is the processed file (minified and content-hashed for CSS,
+/// prefixed with the app's base path). A plain `cargo` build (`build.sh`) has no `dx` to process
+/// assets, so `asset!` yields a placeholder instead of a path; then the plain file that `build.sh`
+/// copies next to the page is used, relative so that hosting under a sub-path still works.
+fn asset_url(asset: Asset, plain_file: &'static str) -> String {
+    let url = asset.to_string();
+    if url.contains(manganis::BundledAsset::PLACEHOLDER_HASH) { plain_file.to_string() } else { url }
+}
+
+// The clock font. Its `@font-face` can't stay in the stylesheet: the stylesheet is served from a hashed
+// `/assets/` URL, so a relative `url(font/...)` inside it would point at `/assets/font/...`. As an
+// asset the font gets a URL that is correct wherever the app is hosted.
+const CLOCK_FONT_WOFF: Asset = asset!("/assets/font/DS-DIGIB.woff");
+const CLOCK_FONT_TTF: Asset = asset!("/assets/font/DS-DIGIB.ttf");
+
+fn clock_font_face() -> String {
+    format!(
+        "@font-face{{font-family:'DS-Digital';src:url({}) format('woff'),url({}) format('truetype')}}",
+        asset_url(CLOCK_FONT_WOFF, "assets/font/DS-DIGIB.woff"),
+        asset_url(CLOCK_FONT_TTF, "assets/font/DS-DIGIB.ttf"),
+    )
+}
+
 #[component]
 pub fn App() -> Element {
     let context = create_app_context();
@@ -57,6 +95,19 @@ pub fn App() -> Element {
     overlay_plugin_context::spawn_connection_task(connection_status, combat_data_message, player_name_signal, connection_error, merge_pets_into_owner);
 
     use_context_provider(|| context);
+    let color_picker = use_context_provider(super::settings_screens::ColorPickerState::new);
+    // Where each graph bar was last drawn, so the next change of a bar can be animated from there.
+    use_context_provider(super::combat_tables::BarHistory::default);
+    // Text in the language of the `Lang` setting (see application::i18n). It follows the setting; the memo means
+    // only a change of language (not every settings change) gets as far as the bundle.
+    let mut translations = crate::application::i18n::use_init_translations(&context.settings.peek().language_code());
+    let language_code = use_memo(move || context.settings.read().language_code());
+    use_effect(move || {
+        let tag = crate::application::i18n::language_tag(&language_code.read());
+        if translations.language() != tag {
+            translations.set_language(tag);
+        }
+    });
     use_context_provider(|| overlay_plugin_context);
 
     use_hook(|| restart_standby_timer(context));
@@ -95,13 +146,48 @@ pub fn App() -> Element {
         }
     });
 
-    // Rebuilt only when the settings change, not when the screen or a dropdown does.
-    let theme_css = use_memo(move || build_theme_css(&context.settings.read()));
+    // Page-wide variables (font size, background image, accent colour): owned here since
+    // app_shell is the page's actual root, and `:root` in an HTML document *is* the `<html>`
+    // element -- there's no other `rsx!` element this could attach to. Rebuilt only when the
+    // settings change, not when the screen or a dropdown does. Everything else styling-related
+    // is computed inline by whichever component owns the element it styles; this is the one
+    // exception, because nothing else in the render tree is html's actual owner.
+    let root_style = use_memo(move || {
+        let settings = context.settings.read();
+        let values = StyleValues::new(&settings);
+        let background_image = if values.enabled("overlayBg") { values.text("overlayBgImg") } else { String::new() };
+        let background_image_rule = if background_image.is_empty() {
+            "none".to_string()
+        } else {
+            format!("url('{}')", background_image.replace('\'', "%27"))
+        };
+        format!(
+            ":root{{--html-font-size:{};--html-bg-image:{};--html-bg-size:{};--html-bg-repeat:{};--accent:#{}}}",
+            values.text("resolution"),
+            background_image_rule,
+            values.text("overlayBgSize"),
+            values.text("overlayBgRepeat"),
+            values.color("accent"),
+        )
+    });
     let screen = *context.current_screen.read();
+    let font_face = clock_font_face();
+    let show_resize_handle = screen != Screen::Settings && context.settings.read().option_enabled("arrow");
 
     rsx! {
-        style { "{theme_css}" }
-        div { id: "wrap",
+        // The Material Icons font (Google's stylesheet), from dioxus-material-icons.
+        dioxus_material_icons::MaterialIconStylesheet {}
+        document::Stylesheet { href: asset_url(TAILWIND_CSS, "assets/tailwind.css") }
+        style { "{font_face}" }
+        style { "{root_style}" }
+        // "Resizing Arrow" (`arrow`): the original sets the handle image on #wrap at start-up and when it
+        // returns from the settings, and clears it when the settings open (ui.js), so: on unless in settings.
+        super::settings_screens::JsColorPicker {}
+        div {
+            id: "wrap",
+            background_image: if show_resize_handle { "url(images/handle.svg)" },
+            // Pressing anywhere but on the picker or its boxes closes the picker (they stop the event).
+            onmousedown: move |_| color_picker.hide(),
             if context.open_dropdown.read().is_some() {
                 DropdownMenu {}
                 div {

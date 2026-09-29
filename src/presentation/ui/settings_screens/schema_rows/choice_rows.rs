@@ -4,7 +4,7 @@ use super::{icon, note, title};
 use crate::presentation::ui::settings_screens::row_context::RowContext;
 use crate::presentation::ui::settings_screens::row_layout::settings_row;
 use crate::application::app_state::Dropdown;
-use crate::domain::translations::translate;
+use crate::application::i18n::translate;
 use crate::presentation::ui::shared::option_choice::choice_key_of_value;
 use crate::presentation::ui::shared::switch_and_icon::SwitchToggle;
 use dioxus::prelude::*;
@@ -14,9 +14,9 @@ use crate::presentation::ui::settings_screens::page_content::SchemaEntry;
 pub(super) fn radio_row(page_context: &RowContext, entry: &SchemaEntry) -> Element {
     let context = page_context.context;
     let current = choice_key_of_value(page_context.settings.option_value(&entry.id));
-    let label = translate(&entry.definition["m"][current.as_str()], page_context.language_code);
+    let label = translate(&entry.definition["m"][current.as_str()]);
     // `li_radio_change` puts the label inside a sentence: "... ★ ..." -> "... label ..."
-    let second_line = if entry.definition["e"] == "li_radio_change" { translate(&entry.definition["msg"], page_context.language_code).replace('★', &label) } else { label };
+    let second_line = if entry.definition["e"] == "li_radio_change" { translate(&entry.definition["msg"]).replace('★', &label) } else { label };
     let (id, options) = (entry.id.clone(), entry.definition["m"].clone());
     rsx! {
         li { key: "{entry.id}", id: "{entry.id}", class: "radio",
@@ -24,7 +24,7 @@ pub(super) fn radio_row(page_context: &RowContext, entry: &SchemaEntry) -> Eleme
                 let mut open_dropdown = context.open_dropdown;
                 open_dropdown.set(Some(Dropdown::ChooseOption { setting_key: id.clone(), choices: options.clone() }));
             },
-            {settings_row(&icon(entry), &title(page_context, entry), Some(("ac", &second_line)), None)}
+            {settings_row(&icon(entry), &title(entry), Some(("ac", &second_line)), None)}
         }
     }
 }
@@ -33,7 +33,7 @@ pub(super) fn radio_row(page_context: &RowContext, entry: &SchemaEntry) -> Eleme
 pub(super) fn switch_row(page_context: &RowContext, entry: &SchemaEntry) -> Element {
     let (context, id) = (page_context.context, entry.id.clone());
     let on = page_context.settings.option_enabled(&entry.id);
-    let explanation = note(page_context, entry);
+    let explanation = note(entry);
     let sub = if entry.definition["e"] == "li_checkbox" { None } else { Some(("ac", explanation.as_str())) };
     rsx! {
         li { key: "{entry.id}", id: "{entry.id}",
@@ -41,7 +41,7 @@ pub(super) fn switch_row(page_context: &RowContext, entry: &SchemaEntry) -> Elem
                 let was_enabled = settings.option_enabled(&id);
                 settings.set_option_enabled(&id, !was_enabled);
             }),
-            {settings_row(&icon(entry), &title(page_context, entry), sub, Some(rsx! { SwitchToggle { is_on: on } }))}
+            {settings_row(&icon(entry), &title(entry), sub, Some(rsx! { SwitchToggle { is_on: on } }))}
         }
     }
 }
@@ -56,7 +56,7 @@ pub(super) fn column_switch_row(page_context: &RowContext, entry: &SchemaEntry) 
     rsx! {
         li { key: "{flag}-{entry.id}", id: "{flag}-{entry.id}",
             onclick: move |_| context.edit_settings(|settings| settings.set_column_enabled(&column, &table, !on)),
-            {settings_row("arrow_right", &name, Some(("ex", &note(page_context, entry))), Some(rsx! { SwitchToggle { is_on: on } }))}
+            {settings_row("arrow_right", &name, Some(("ex", &note(entry))), Some(rsx! { SwitchToggle { is_on: on } }))}
         }
     }
 }

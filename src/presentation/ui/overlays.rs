@@ -15,7 +15,7 @@ pub fn Tooltip() -> Element {
         span {
             class: "shadow",
             id: "tooltip",
-            style: if is_visible { "display:block" } else { "display:none" },
+            display: if is_visible { "block" } else { "none" },
             {markup_view(&html)}
         }
     }
@@ -29,7 +29,7 @@ pub fn Toast() -> Element {
     rsx! {
         div {
             class: if toast.is_slid_in { "toast jam shadow on" } else { "toast jam shadow" },
-            style: if toast.is_visible { "display:block" } else { "display:none" },
+            display: if toast.is_visible { "block" } else { "none" },
             onclick: move |_| dismiss_toast_message(context),
             {markup_view(&toast.text)}
         }

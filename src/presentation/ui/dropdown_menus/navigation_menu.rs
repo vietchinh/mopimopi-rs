@@ -2,7 +2,8 @@
 
 use super::menu_item::menu_item;
 use crate::application::app_state::{AppContext, Screen, toggle_fullscreen_mode, open_settings_screen, return_to_main_screen};
-use crate::domain::translations::{translate, translations};
+use crate::application::i18n::translate;
+use crate::domain::translations::translations;
 use dioxus::prelude::*;
 
 /// One entry of the schema's menu definition.
@@ -14,7 +15,6 @@ struct MenuEntry {
 }
 
 pub(super) fn navigation_menu_items(context: AppContext) -> Element {
-    let language = context.language_code();
     let screen = *context.current_screen.read();
     let menu_key = if screen == Screen::Settings { "settings" } else { "main" };
     let entries: Vec<MenuEntry> = translations().ui_schema["NAV"][menu_key]["dr"]
@@ -25,7 +25,7 @@ pub(super) fn navigation_menu_items(context: AppContext) -> Element {
                 .map(|(id, definition)| MenuEntry {
                     id: id.clone(),
                     kind: definition["e"].as_str().unwrap_or("").to_string(),
-                    label_html: translate(&definition["tt"], &language),
+                    label_html: translate(&definition["tt"]),
                 })
                 .collect()
         })

@@ -1,12 +1,16 @@
 //! One entry of the `Combatant` object: a player, a pet, a chocobo or the Limit Break.
 
 use super::lenient_values::{lenient_number, lenient_rate, lenient_text, lenient_action_name};
-use crate::domain::combat::{percent_of, CombatantIdentity, CombatantKind, Healing};
+use crate::domain::combat::{percent_of, CombatantIdentity, CombatantKind, Healing, PetJob};
 use serde::Deserialize;
 
 /// Field names follow ACT's JSON (see the `rename` attributes); Rust names say what the value is.
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 pub struct CombatantRecord {
+    /// Position in ACT's message (0 = first). Not part of the JSON. Rows that tie on the value a table
+    /// is sorted by keep this order, which is what the original's stable sort does.
+    #[serde(skip)]
+    pub arrival_index: usize,
     #[serde(default, rename = "name", deserialize_with = "lenient_text")]
     pub name: String,
     #[serde(default, rename = "Job", deserialize_with = "lenient_text")]
@@ -111,16 +115,61 @@ impl CombatantRecord {
         CombatantKind::classify(self.identity())
     }
 
+    /// The original's `Class`: what a bar's colour is looked up by. (The job *icon* is looked up by the
+    /// raw job instead, see `job_icon_view`.) The two differ for the base classes, which take their
+    /// advanced job's colour (`GLA` -> `PLD`), for pets, which take their owner's job, and for the
+    /// Limit Break and chocobo rows, whose job text is blank or `0`.
+    pub fn class_code(&self) -> String {
+        use crate::domain::combat::PetJob::*;
+        match self.kind() {
+            CombatantKind::LimitBreak => "LMB".into(),
+            CombatantKind::Chocobo { .. } => "CBO".into(),
+            CombatantKind::Pet { job, .. } => match job {
+                Summoner => "SMN",
+                Scholar => "SCH",
+                Machinist => "MCH",
+                DarkKnight => "DRK",
+                Ninja => "NIN",
+                Astrologian => "AST",
+                WhiteMage => "WHM",
+                Sage => "SGE",
+                Beastmaster => "AVA",
+            }
+            .into(),
+            _ => match self.job_text.to_uppercase().as_str() {
+                "GLD" | "GLA" => "PLD".into(),
+                "MRD" => "WAR".into(),
+                "PUG" | "PGL" => "MNK".into(),
+                "LNC" => "DRG".into(),
+                "ROG" => "NIN".into(),
+                "ARC" => "BRD".into(),
+                "THM" => "BLM".into(),
+                "ACN" => "SMN".into(),
+                "CNJ" => "WHM".into(),
+                other => other.to_string(),
+            },
+        }
+    }
+
     /// Whether this combatant counts as a tank / healer / crafter-or-gatherer for the job-filter
     /// settings ("`DPS_T`", "`HPS_H`", ... in `visible_players`) and the "role" palette mode. Checked
     /// directly against `job_text` (base classes included as their own entries, not remapped to
-    /// their advanced job), the same way the icon is looked up (`job_text.to_uppercase()`).
+    /// their advanced job), the same way the icon is looked up (`job_text.to_uppercase()`) --
+    /// except for a handful of specific pets the original also hardcodes a role for (`core.js`:
+    /// `schPetsList`/`astPetsList`/`whmPetsList`/`sgePetsList` -> `role = "Healer"`,
+    /// `drkPetsList` -> `role = "Tanker"`). Without this, a pet like Scholar's fairy has blank
+    /// job text, matches neither list, and silently falls out of both the "Healer" filter
+    /// checkbox and the "Healer" role colour -- the original explicitly avoids that for these
+    /// specific pets; every other pet (Summoner's, Machinist's, ...) is *not* hardcoded this way
+    /// in the original either, and stays plain DPS here too.
     pub fn is_tank(&self) -> bool {
         matches!(self.job_text.to_uppercase().as_str(), "PLD" | "WAR" | "DRK" | "GNB" | "GLA" | "MRD")
+            || matches!(self.kind(), CombatantKind::Pet { job: PetJob::DarkKnight, .. })
     }
 
     pub fn is_healer(&self) -> bool {
         matches!(self.job_text.to_uppercase().as_str(), "SCH" | "WHM" | "AST" | "SGE" | "CNJ")
+            || matches!(self.kind(), CombatantKind::Pet { job: PetJob::Scholar | PetJob::Astrologian | PetJob::WhiteMage | PetJob::Sage, .. })
     }
 
     pub fn is_crafter(&self) -> bool {
@@ -136,8 +185,10 @@ impl CombatantRecord {
     }
 
     /// The colour key for the "role" palette mode (settings: `Color.Tanker`, `.Healer`,
-    /// `.Crafter`, `.Gathering`). Empty for anything else (pets, chocobos, Limit Break), which
-    /// then fall back to their own job-code colour instead (see `presentation::ui::shared::palette`).
+    /// `.Crafter`, `.Gathering`). Empty for most pets, chocobos and Limit Break, which fall back
+    /// to their own job-code colour instead (see `presentation::ui::shared::palette`) -- except
+    /// the specific healing/tanking pets `is_tank`/`is_healer` already account for, which get the
+    /// same "Tanker"/"Healer" role colour their owner's job would, matching the original.
     pub fn role_palette_key(&self) -> &'static str {
         if self.is_tank() {
             "Tanker"
@@ -147,8 +198,11 @@ impl CombatantRecord {
             "Crafter"
         } else if self.is_gatherer() {
             "Gathering"
-        } else if matches!(self.kind(), CombatantKind::Player) {
+        } else if matches!(self.kind(), CombatantKind::Player | CombatantKind::Pet { .. }) {
+            // A pet is a plain "DPS" unless it is one of the healing/tanking pets handled above.
             "DPS"
+        } else if matches!(self.kind(), CombatantKind::Chocobo { .. }) {
+            "CBO"
         } else {
             ""
         }

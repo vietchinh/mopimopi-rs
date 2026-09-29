@@ -10,8 +10,9 @@
 //! * `setup_hint`         – what to check in ACT when no row named YOU arrives
 
 mod graph_bars;
+pub use graph_bars::BarHistory;
 mod raid_grid;
-mod standard_table;
+pub(crate) mod standard_table;
 mod table_environment;
 mod visible_players;
 
@@ -27,6 +28,14 @@ fn table_label(is_healing: bool) -> &'static str {
     if is_healing { "HPS" } else { "DPS" }
 }
 
+/// Height in rem of a table body: rows are `sizeBody + sizeLine` tall, up to the configured row limit.
+pub(super) fn table_body_height_rem(settings: &crate::domain::settings::Settings, table_label: &str, row_count: usize) -> f64 {
+    let row_limit_key = if table_label == "HPS" { "sizeHPSTable" } else { "sizeDPSTable" };
+    let row_limit = settings.slider_value(row_limit_key).max(0.0);
+    let visible_rows = (row_count as f64).min(row_limit);
+    visible_rows * (settings.slider_value("sizeBody") + settings.slider_value("sizeLine")) / 10.0
+}
+
 /// Shows the tables in the order and combination the user configured.
 #[component]
 pub fn CombatTables(is_settings_preview: bool) -> Element {
@@ -39,12 +48,18 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
     // The real tables draw whatever is currently displayed (live, a history entry, or frozen
     // while settings are open); the settings preview always draws the built-in sample fight.
     let (combatants, encounter) = if is_settings_preview {
-        let sample = crate::application::app_state::sample_combat_message();
+        let sample = crate::application::app_state::sample_combat_message(settings.option_enabled("pets"));
         (sample.combatants.clone(), sample.encounter.clone())
     } else {
         let Some(message) = context.displayed_combat_data.read().clone() else { return rsx! {} };
         (message.combatants.clone(), message.encounter.clone())
     };
+
+    // The original only builds its tables when the data has a combatant named "YOU" (`onCombatDataUpdate`
+    // starts with that check); without one both tables stay empty.
+    if !combatants.iter().any(|combatant| combatant.name == "YOU") {
+        return rsx! {};
+    }
 
     let is_encounter_active = if is_settings_preview { true } else { overlay_plugin_context.get_is_encounter_active() };
     let environment = TableEnvironment::new(is_encounter_active, &settings, &local_player_name, &blurred_rows, is_settings_preview);

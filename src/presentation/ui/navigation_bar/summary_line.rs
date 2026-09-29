@@ -1,9 +1,12 @@
 //! The summary text in the top bar.
 
 use crate::application::app_state::AppContext;
+use crate::common::javascript_compat::p_float;
 use crate::domain::formatting::{cell_plain_text, CellContext, NumberFormat};
 use crate::domain::settings::Settings;
-use crate::domain::translations::{translate, translations};
+use crate::application::i18n::{dictionary_title, translate};
+use crate::domain::formatting::LIMIT_BREAK_JOB_CODE;
+use crate::domain::translations::translations;
 use crate::infrastructure::act::data::{CombatantRecord, EncounterRecord};
 use dioxus::prelude::*;
 use std::fmt::Write;
@@ -13,36 +16,37 @@ use std::fmt::Write;
 pub(super) fn summary_line(
     context: AppContext,
     settings: &Settings,
-    language: &str,
     combatants: &[CombatantRecord],
     encounter: &EncounterRecord,
     is_settings_preview: bool,
 ) -> Element {
-    let waiting_hint = translate(&translations().ui_schema["NAV"]["main"]["tt"]["rps"], language);
+    let waiting_hint = translate(&translations().ui_schema["NAV"]["main"]["tt"]["rps"]);
 
     let Some(damage_rank) = combatants.iter().position(|c| c.name == "YOU") else { return rsx! { "{waiting_hint}" } };
     let player = &combatants[damage_rank];
     let number_format = NumberFormat::from_settings(settings);
-    let rate = |value: f64| number_format.format_number(value, 1.0, number_format.rate_decimals);
+    // The top bar always shows whole numbers (the original's `addComma(x)` with no decimals), whatever
+    // the DPS/HPS decimals setting says for the tables.
+    let whole = |value: f64| number_format.format_number(value, 1.0, 0);
     let local_player_name = context.local_player_name.read().clone();
-    let cell_context = CellContext::new(settings, translations(), &local_player_name);
+    let cell_context = CellContext::new(settings, dictionary_title(LIMIT_BREAK_JOB_CODE), &local_player_name);
 
     let mut summary = String::new();
     if settings.option_enabled("act_rd") {
-        let _ = write!(summary, "Total DPS {}　", rate(encounter.damage_per_second));
+        let _ = write!(summary, "Total DPS {}　", whole(encounter.damage_per_second_whole));
     }
     if settings.option_enabled("act_rh") {
-        let _ = write!(summary, "Total HPS {}　", rate(encounter.heal_per_second));
+        let _ = write!(summary, "Total HPS {}　", whole(encounter.heal_per_second_whole));
     }
     if settings.option_enabled("act_md") {
         // Recomputed from the raw accumulator and the encounter's own duration, same as the
         // "encdps" table column and for the same reason (see `column_cell::cell_fragments`): the
         // local player's own raw rate field can go stale while they aren't dealing damage, but the
         // encounter's duration keeps advancing every message.
-        let _ = write!(summary, "My DPS {}　", rate(player.damage / encounter.duration_seconds));
+        let _ = write!(summary, "My DPS {}　", whole(p_float(player.damage / encounter.duration_seconds)));
     }
     if settings.option_enabled("act_mh") {
-        let _ = write!(summary, "My HPS {}　", rate(player.healed / encounter.duration_seconds));
+        let _ = write!(summary, "My HPS {}　", whole(p_float(player.healed / encounter.duration_seconds)));
     }
     if settings.option_enabled("act_rank") {
         let mut by_healing: Vec<&CombatantRecord> = combatants.iter().collect();

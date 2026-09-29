@@ -13,6 +13,7 @@
 mod base64_encoding;
 mod column_pages;
 mod form_actions;
+pub mod js_color;
 mod live_preview;
 mod navigation_bar;
 mod page_content;
@@ -25,6 +26,7 @@ mod tab_bar;
 mod text_box;
 
 pub use navigation_bar::SettingsNavigationBar;
+pub use js_color::{JsColorPicker, ColorPickerState};
 
 use crate::application::app_state::{AppContext, PAGES_WITH_LIVE_PREVIEW};
 use dioxus::prelude::*;
@@ -43,9 +45,8 @@ pub fn SettingsScreen() -> Element {
     let settings = context.settings.read();
     let location = context.settings_location.read().clone();
     let show_preview = PAGES_WITH_LIVE_PREVIEW.contains(&location.page.as_str()) && *context.settings_preview_enabled.read();
-    let language_code = settings.language_code();
 
-    let page_context = RowContext { context, settings: &settings, language_code: &language_code, typed_texts };
+    let page_context = RowContext { context, settings: &settings, typed_texts };
     let body = match content_for(&settings, &location) {
         PageContent::SchemaRows(entries) => grouped_rows(&page_context, &entries),
         PageContent::Abbreviations(entries) => rsx! {

@@ -39,20 +39,30 @@ pub fn bar_color(settings: &Settings, color_key: &str, role_key: &str, row_id: &
     }
 }
 
-/// Colour of a player's main bar. `job_text` uppercased is the colour key (same lookup as the
-/// job icon); `role_palette_key()` is only used in the "role" palette mode.
+/// Colour of a player's main bar. The colour key is the row's `class_code()` (not the raw job text the
+/// icon uses); `role_palette_key()` is only used in the "role" palette mode.
 pub fn player_bar_color(settings: &Settings, player: &CombatantRecord, row_id: &str) -> String {
-    bar_color(settings, &player.job_text.to_uppercase(), player.role_palette_key(), row_id)
+    bar_color(settings, &player.class_code(), player.role_palette_key(), row_id)
 }
 
 /// Adds the fade-in gradient when the "gradient" option is on.
+///
+/// The original writes `-webkit-linear-gradient(<direction>, transparent, colour)`. In that legacy
+/// syntax the keyword names where the gradient *starts* (`top` = start at the top, end at the
+/// bottom), the opposite of the standard `linear-gradient(to top, ..)` which names where it *ends*.
+/// The setting's labels say "to Top", but what the original actually draws is the legacy meaning,
+/// so each direction is mirrored here to draw the same picture.
 pub fn with_optional_gradient(settings: &Settings, color: &str) -> String {
     if !settings.option_enabled("gradient") {
         return color.to_string();
     }
     let direction = match settings.option_text("direction").as_str() {
-        direction @ ("top" | "bottom" | "left" | "right") => direction.to_string(),
-        _ => "right".to_string(),
+        "top" => "bottom",
+        "bottom" => "top",
+        "left" => "right",
+        "right" => "left",
+        // an unknown value makes the whole legacy declaration invalid, so nothing is drawn
+        _ => return color.to_string(),
     };
     format!("linear-gradient(to {direction}, rgba(0,0,0,0), {color})")
 }

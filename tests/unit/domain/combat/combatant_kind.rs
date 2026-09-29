@@ -34,7 +34,21 @@ fn chocobo_limit_break_and_unknown() {
     );
     assert_eq!(classify("Limit Break", "Limit Break"), CombatantKind::LimitBreak);
     assert_eq!(classify("Limit Break", ""), CombatantKind::LimitBreak);
-    assert_eq!(classify("Mystery Pet (Future Fade)", ""), CombatantKind::Unknown);
+    assert_eq!(
+        classify("Mystery Pet (Future Fade)", ""),
+        CombatantKind::Pet { owner_name: "Future Fade", job: PetJob::Beastmaster },
+        "an owned companion with an unrecognized name defaults to Beastmaster, not Unknown"
+    );
+}
+
+#[test]
+fn a_blank_job_without_an_owner_is_limit_break_like_in_the_original() {
+    // trust / duty-support NPCs: ACT sends no job, and there is no "(owner)" in the name
+    assert_eq!(classify("Aw'aern", ""), CombatantKind::LimitBreak);
+    assert_eq!(classify("Aw'zdei", ""), CombatantKind::LimitBreak);
+    // ... but a name with an owner is a pet, and a known pet's name on its own stays as it was
+    assert!(matches!(classify("Aw'aern (Player)", ""), CombatantKind::Pet { .. }));
+    assert_eq!(classify("Eos", ""), CombatantKind::Unknown);
 }
 
 #[test]

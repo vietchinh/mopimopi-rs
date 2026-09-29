@@ -12,6 +12,5 @@ pub(super) type TypedTexts = Signal<HashMap<String, String>>;
 pub(super) struct RowContext<'a> {
     pub(super) context: AppContext,
     pub(super) settings: &'a Settings,
-    pub(super) language_code: &'a str,
     pub(super) typed_texts: TypedTexts,
 }

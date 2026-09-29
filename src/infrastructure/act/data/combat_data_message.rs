@@ -14,7 +14,7 @@ pub struct CombatDataMessage {
     pub encounter: EncounterRecord,
     /// ACT sends `Combatant` as an object keyed by name, but every record repeats its name,
     /// so the keys are skipped and the records kept as a list, in the order ACT sent them.
-    /// Look one up with `combatant(name)`; the GUI sorts for display.
+    /// Look one up with `combatant(name)`. `sort_by_damage` puts them in display order.
     #[serde(default, rename = "Combatant", deserialize_with = "deserialize_in_arrival_order")]
     pub combatants: Vec<CombatantRecord>,
     /// True while the fight is still running.
@@ -45,11 +45,16 @@ impl CombatDataMessage {
         for merge in &merges {
             self.fold_pet_into_owner(merge);
         }
+        // An owner that absorbed a pet may now out-damage a row that ranked above it.
+        self.sort_by_damage();
+    }
+
+    /// Puts the combatants in the order the damage table shows them: most damage first, rows with
+    /// equal damage in the order ACT sent them. The original always sorts (whether or not pets are
+    /// merged), and so must this: ACT's own order is arbitrary.
+    pub fn sort_by_damage(&mut self) {
         self.combatants.sort_by(|a, b| {
-            match (b.damage_per_second).partial_cmp(&(a.damage_per_second)) {
-                Some(std::cmp::Ordering::Equal) | None => b.damage.partial_cmp(&a.damage).unwrap_or(std::cmp::Ordering::Equal),
-                Some(order) => order,
-            }
+            b.damage.partial_cmp(&a.damage).unwrap_or(std::cmp::Ordering::Equal).then(a.arrival_index.cmp(&b.arrival_index))
         });
     }
 
@@ -90,7 +95,9 @@ fn deserialize_in_arrival_order<'de, D: Deserializer<'de>>(deserializer: D) -> R
             let mut combatants = Vec::with_capacity(entries.size_hint().unwrap_or(0));
             // the key repeats the combatant's name, so it is skipped without allocating
             while entries.next_key::<IgnoredAny>()?.is_some() {
-                combatants.push(entries.next_value::<CombatantRecord>()?);
+                let mut record = entries.next_value::<CombatantRecord>()?;
+                record.arrival_index = combatants.len();
+                combatants.push(record);
             }
             Ok(combatants)
         }

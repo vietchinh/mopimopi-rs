@@ -3,7 +3,7 @@
 //
 //   npm i puppeteer-core @sparticuz/chromium       (a Chromium binary that runs on Linux without installing anything)
 //   node chrome-buttons-test.mjs [path/to/dist] [output folder for the screenshot]
-//   BASE_PATH=/mopimopi-rs node chrome-buttons-test.mjs <dx bundle output>/public     (a site built with a base_path)
+//   BASE_PATH=/mopimopi-rs node chrome-buttons-test.mjs <dx bundle output>/assets     (a site built with a base_path)
 import puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import { WebSocketServer } from "ws";
