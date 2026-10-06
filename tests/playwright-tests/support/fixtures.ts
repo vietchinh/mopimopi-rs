@@ -19,6 +19,13 @@ export type Mode = "live" | "record" | "golden";
 export const MODE: Mode = (process.env.E2E_MODE as Mode) ?? (process.env.MOPIMOPI_ORIGINAL_DIR ? "live" : "golden");
 const GOLDENS = path.resolve(__dirname, "../goldens");
 const JQUERY = fs.readFileSync(require.resolve("jquery/dist/jquery.min.js"));
+// The real Material Icons font (support/material-icons.woff2) is served in place of Google's, together with Google's own
+// `.material-icons` rule, so icons are drawn as the glyphs people see and nothing needs the network. E2E_REAL_ICON_FONT=0
+// leaves the font out instead: icons then show as their names, and the browser's own defaults for `<i>` (italic) show through.
+const REAL_ICON_FONT = process.env.E2E_REAL_ICON_FONT !== "0";
+const ICON_FONT = fs.readFileSync(path.resolve(__dirname, "material-icons.woff2"));
+const ICON_FONT_CSS = `@font-face{font-family:'Material Icons';font-style:normal;font-weight:400;src:url(https://fonts.gstatic.com/e2e/material-icons.woff2) format('woff2')}
+.material-icons{font-family:'Material Icons';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased}`;
 
 export type Kind = "original" | "port";
 export type Handle = { kind: Kind; /** Feeds the page a further combat-data update, as ACT would. */ send(data: CombatData): Promise<void> };
@@ -26,6 +33,8 @@ export type Spec = {
   variant?: Partial<Variant>;
   settings?: Settings;
   data?: CombatData;
+  /** Send no combat data at all, so the page stays on its start screen. */
+  noData?: boolean;
   /** Runs after the data has arrived and before the screenshot; the same code drives both apps. */
   after?: (page: Page, handle: Handle) => Promise<void>;
 };
@@ -55,6 +64,8 @@ export class App {
   private async stubExternalResources() {
     await this.context.route("**/*", async (route) => {
       const url = route.request().url();
+      if (REAL_ICON_FONT && /fonts\.googleapis\.com\/icon\?family=Material\+Icons$/.test(url)) return route.fulfill({ contentType: "text/css", body: ICON_FONT_CSS });
+      if (REAL_ICON_FONT && /fonts\.gstatic\.com\/e2e\/material-icons\.woff2/.test(url)) return route.fulfill({ contentType: "font/woff2", body: ICON_FONT });
       if (/ajax\.googleapis\.com.*jquery/.test(url)) return route.fulfill({ contentType: "text/javascript", body: JQUERY });
       if (/common\.min\.js/.test(url)) return route.fulfill({ contentType: "text/javascript", body: "/* OverlayPlugin helper not available here */" });
       if (/^https?:\/\/(fonts\.|ngld\.|ajax\.)/.test(url)) return route.fulfill({ contentType: "text/css", body: "" });
@@ -83,7 +94,7 @@ export class App {
     await page.waitForTimeout(300); // the original finishes its own start-up (jQuery ready handlers) a moment after load
     const send = (payload: CombatData) => page.evaluate((m) => (window as any).onBroadcastMessage({ detail: { msgtype: "CombatData", msg: m } }), payload);
     const handle: Handle = { kind: "original", send };
-    await send(data);
+    if (!spec.noData) await send(data);
     await spec.after?.(page, handle);
     return { page, handle };
   }
@@ -94,7 +105,7 @@ export class App {
     const session = this.sessionId();
     const put = (method: "PUT" | "POST", kind: "session" | "push", payload: CombatData) =>
       fetch(`${SUPPORT_URL}/__${kind}/${session}`, { method, body: JSON.stringify({ type: "CombatData", ...payload }) });
-    await put("PUT", "session", data);
+    if (!spec.noData) await put("PUT", "session", data);
     // the support server plays OverlayPlugin: the page subscribes, and gets `data` back
     await page.goto(`${PORT_URL}/?OVERLAY_WS=${WS_URL}/${session}/ws`);
     await page.locator("#wrap, nav").first().waitFor();
@@ -107,6 +118,7 @@ export class App {
   /** A screenshot that has stopped changing (two identical frames in a row), with a fixed background and no caret. */
   async shoot(page: Page, settleMs = 400): Promise<Buffer> {
     await page.waitForTimeout(settleMs);
+    await page.evaluate(() => document.fonts.ready.then(() => true)); // icons are glyphs of a web font: wait until it is in
     await page.addStyleTag({ content: STYLE_FOR_SCREENSHOTS });
     let previous = await page.screenshot({ type: "png" });
     for (let attempt = 0; attempt < 8; attempt++) {

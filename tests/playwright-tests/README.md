@@ -59,6 +59,11 @@ official Playwright image (`mcr.microsoft.com/playwright:v1.49.1-jammy`) is the 
 | `tests/animation.spec.ts` | the bar-growth curve and its length |
 | `tests/performance.spec.ts` | layout budget for live updates; in live mode, at most half of the original's layout and script work |
 | `tests/comparator.spec.ts` | the comparison itself: a one-level colour difference and a size difference must be caught |
+| `tests/stylesheet.spec.ts` | Tailwind, reading `src/**/*.rs` as text, generates only the project's own classes (`tools/check-tailwind.mjs`); the block that undoes Preflight is current |
+| `tests/profiles.spec.ts` | the edge-case settings profiles in `tests/fixtures/settings` (applyScope 1/2/3, bold and italic, every gradient direction, raid mode, pets merged and not, outline and shadow text), against the original |
+| `tests/blur.spec.ts` | clicking a job icon hides that player's name, outside a fight only |
+| `tests/cascade-diff.spec.ts` | compares the computed style of every element on every screen between two builds (`CASCADE_BEFORE_URL` / `CASCADE_AFTER_URL`); for changes to how the CSS is assembled. Skipped without them |
+| `tests/first-paint.spec.ts` | the critical CSS is applied before the wasm loads; the base layout (`public/base.css`) is applied before the wasm loads, and the page does not shift on load |
 | `tests/smoke.spec.ts` | the port starts without errors; the settings preview folds pets into owners |
 
 The sweep is **generated from the app's own schema** (`src/data/l.json`, `src/data/defaults.json`) in
@@ -88,6 +93,7 @@ The sweep is **generated from the app's own schema** (`src/data/l.json`, `src/da
 | `E2E_CHROME` | use this browser instead of Playwright's download |
 | `E2E_DX_FLAGS` | flags for `dx serve` (default `--hot-reload false`); `--release` tests the optimized wasm |
 | `E2E_SERVE=dist` | serve an existing `dist/` instead of running `dx serve` |
+| `E2E_REAL_ICON_FONT=0` | leave the Material Icons font out (icons show as their names); by default the real font is served |
 | `E2E_PIXEL_THRESHOLD` | colour tolerance, default `0` (exact) |
 | `E2E_ARTIFACTS_DIR` | write original / port / difference images of failures here |
 | `E2E_GOLDEN_IMAGES=1` | also keep PNG goldens when recording |
