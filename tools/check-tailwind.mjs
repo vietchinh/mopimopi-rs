@@ -10,9 +10,10 @@
 //
 //   node tools/check-tailwind.mjs [path/to/tailwind.css]      (npm run check:css)
 //
-// A class the scan may produce: a custom `@utility` of tailwind.css (also behind a variant: `first:corner-header-left`),
-// or an arbitrary value / property / variant written on purpose (`not-last:[border-right:var(--x)]`, `w-(--x)`).
-// Anything else is a stray word.
+// A class the scan may produce: a custom `@utility` of tailwind.css (also behind a variant: `first:corner-header-left`), an arbitrary value /
+// property / variant written on purpose (`not-last:[border-right:var(--x)]`, `w-(--x)`), or a built-in utility with a value, written
+// as such (`w-15`, `text-accent`): a hyphenated name is a class somebody wrote, unless a stylesheet already defines a class of that name.
+// Anything else is a stray word: a bare word like `table` or `lowercase`, or a built-in that collides with a class of the stylesheets.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -51,7 +52,13 @@ const withoutScan = compile(source.replace(/^@source\b[^\n]*;[ \t]*$/gm, ""), ".
 const before = new Set(rulesOf(withoutScan));
 const generated = rulesOf(withScan).filter((rule) => !before.has(rule));
 
-const declared = new Set([...source.matchAll(/^@utility ([\w-]+)/gm)].map((m) => m[1]));
+// Our own utilities are `@utility` blocks in css/*.css (and, if any, in tailwind.css itself).
+const sheets = [source, ...fs.readdirSync(path.join(root, "css")).filter((f) => f.endsWith(".css")).map((f) => fs.readFileSync(path.join(root, "css", f), "utf8"))];
+const declared = new Set(sheets.flatMap((css) => [...css.matchAll(/^@utility ([\w-]+)/gm)].map((m) => m[1])));
+// Classes the stylesheets of the overlay define (the original's, the layout glue, the page rules): a built-in with the same name would change them.
+const definedClasses = new Set(
+  ["public/base.css", "css/legacy.css", "css/page.css"].flatMap((file) => [...fs.readFileSync(path.join(root, file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/\.([A-Za-z_][\w-]*)/g)].map((m) => m[1])),
+);
 const unescape = (name) => name.replace(/\\(.)/g, "$1");
 /** The utility a class is made of, without its variants (`first:corner-header-left` -> `corner-header-left`). */
 const utilityOf = (name) => name.replace(/^(?:[\w-]+:)+/, "");
@@ -67,7 +74,8 @@ for (const rule of generated) {
       if (!leading) continue;
       const name = unescape(leading[1]);
       seen.add(utilityOf(name));
-      const deliberate = declared.has(utilityOf(name)) || /[\[(]/.test(name);
+      const utility = utilityOf(name);
+      const deliberate = declared.has(utility) || /[\[(]/.test(name) || (utility.includes("-") && !definedClasses.has(utility));
       if (!deliberate && !strays.has(name)) {
         // the rule itself, not the start of the layer block it sits in
         const at = rule.indexOf(`${prelude}{`);
