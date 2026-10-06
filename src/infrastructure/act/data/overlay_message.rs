@@ -4,11 +4,8 @@
 //! * `{"type":"ChangePrimaryPlayer", "charID":..., "charName":"..."}`
 //! * Any other type, including `MiniParse`'s old `broadcast` messages, is `NotSupported`.
 
-use std::fmt;
 use super::combat_data_message::CombatDataMessage;
-use serde::{de, Deserialize, Deserializer};
-use serde::de::{IgnoredAny, MapAccess, Visitor};
-use serde::de::value::MapAccessDeserializer;
+use serde::Deserialize;
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(tag = "type")]
@@ -44,10 +41,7 @@ pub struct ParseOptions<'a> {
 
 impl OverlayMessage {
     pub fn parse(json_text: &str) -> Result<Self, serde_json::Error> {
-        match serde_json::from_str::<TagFirst>(json_text) {
-            Ok(TagFirst(message)) => Ok(message),
-            Err(error) => Err(error),
-        }
+        serde_json::from_str(json_text)
     }
 
     #[allow(dead_code)]
@@ -75,39 +69,6 @@ impl OverlayMessage {
         }
     }
 }
-
-pub struct TagFirst(pub OverlayMessage);
-
-impl<'de> Deserialize<'de> for TagFirst {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        struct V;
-        impl<'de> Visitor<'de> for V {
-            type Value = TagFirst;
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result { f.write_str("an OverlayPlugin message with \"type\" first") }
-            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<TagFirst, A::Error> {
-                let key: std::borrow::Cow<'de, str> = map.next_key()?.ok_or_else(|| de::Error::missing_field("type"))?;
-                if key != "type" { return Err(de::Error::custom("\"type\" is not the first key")); }
-                let kind: std::borrow::Cow<'de, str> = map.next_value()?;
-                let rest = MapAccessDeserializer::new(map);
-                Ok(TagFirst(match &*kind {
-                    "CombatData" => OverlayMessage::CombatData(CombatDataMessage::deserialize(rest)?),
-                    "ChangePrimaryPlayer" => OverlayMessage::ChangePrimaryPlayer(ChangePrimaryPlayer::deserialize(rest)?),
-                    _ => { IgnoredAny::deserialize(rest)?; OverlayMessage::NotSupported }
-                }))
-            }
-        }
-        deserializer.deserialize_map(V)
-    }
-}
-
-
-#[test]
-fn type_not_first_still_parses() {
-    let text = r#"{"charID":1,"charName":"Future Fade","type":"ChangePrimaryPlayer"}"#;
-    let message = OverlayMessage::parse(text).unwrap();
-    assert_eq!(message.change_primary_player().unwrap().char_name, "Future Fade");
-}
-
 
 #[cfg(test)]
 #[path = "../../../../tests/unit/infrastructure/act_data/overlay_message.rs"]

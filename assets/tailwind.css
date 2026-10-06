@@ -7,7 +7,7 @@
     'Noto Color Emoji';
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
-    --spacing: 0.25rem;
+    --spacing: 0.1rem;
     --default-font-family: var(--font-sans);
     --default-mono-font-family: var(--font-mono);
     --color-panel: #212121;
@@ -161,10 +161,6 @@
   }
 }
 @layer utilities {
-  .nav-btn-wrap-position {
-    right: var(--nav-edge-width);
-    top: var(--nav-edge-width);
-  }
   .top-\(--nav-edge-width\) {
     top: var(--nav-edge-width);
   }
@@ -179,30 +175,6 @@
   }
   .chrome-header-table {
     margin: var(--chrome-header-margin) 0;
-  }
-  .chrome-bar-ds {
-    height: var(--chrome-bar-ds-height);
-    margin-top: var(--chrome-bar-ds-margin);
-    opacity: var(--chrome-bar-ds-opacity);
-    border-radius: var(--chrome-bar-radius);
-  }
-  .chrome-bar-main {
-    height: var(--chrome-bar-main-height);
-    margin-top: var(--chrome-bar-main-margin);
-    opacity: var(--chrome-bar-main-opacity);
-    border-radius: var(--chrome-bar-radius);
-  }
-  .chrome-bar-oh {
-    height: var(--chrome-bar-oh-height);
-    margin-top: var(--chrome-bar-oh-margin);
-    opacity: var(--chrome-bar-oh-opacity);
-    border-radius: var(--chrome-bar-radius);
-  }
-  .chrome-bar-pet {
-    height: var(--chrome-bar-pet-height);
-    margin-top: var(--chrome-bar-pet-margin);
-    opacity: var(--chrome-bar-pet-opacity);
-    border-radius: var(--chrome-bar-radius);
   }
   .chrome-row {
     border-bottom: var(--chrome-row-border);
@@ -224,6 +196,12 @@
   .raid-row {
     display: grid;
     grid-template-columns: repeat(var(--raid-cards-per-row), 1fr);
+    &:first-child > .rCell {
+      border-top: var(--raid-cell-border);
+    }
+    & > .rCell:last-child {
+      border-right: var(--raid-cell-border);
+    }
   }
   .nav-bar {
     background: var(--nav-bg);
@@ -233,38 +211,19 @@
     border: var(--nav-border);
     border-radius: var(--nav-radius-tl) var(--nav-radius-tr) var(--nav-radius-br) var(--nav-radius-bl);
   }
-  .chrome-header-cell {
-    background: var(--chrome-header-bg);
-    color: var(--chrome-header-color);
-    font-family: var(--chrome-header-font);
-    height: var(--chrome-header-height);
-    font-size: var(--chrome-header-text-size);
-  }
   .raid-cell-other {
     background: var(--raid-cell-bg-other);
     border-bottom: var(--raid-cell-border);
     height: var(--raid-cell-height);
-    & td {
-      font-weight: var(--raid-text-other-weight);
-      color: var(--raid-text-other-color);
-      opacity: var(--raid-text-other-opacity);
-      font-family: var(--raid-text-font);
-      font-style: var(--raid-text-style);
-      text-shadow: var(--raid-text-other-shadow);
-    }
   }
   .raid-cell-own {
     background: var(--raid-cell-bg-own);
     border-bottom: var(--raid-cell-border);
     height: var(--raid-cell-height);
-    & td {
-      font-weight: var(--raid-text-own-weight);
-      color: var(--raid-text-own-color);
-      opacity: var(--raid-text-own-opacity);
-      font-family: var(--raid-text-font);
-      font-style: var(--raid-text-style);
-      text-shadow: var(--raid-text-own-shadow);
-    }
+  }
+  .chrome-header-cell {
+    background: var(--chrome-header-bg);
+    height: var(--chrome-header-height);
   }
   .h-\(--chrome-bar-ds-height\) {
     height: var(--chrome-bar-ds-height);
@@ -277,18 +236,6 @@
   }
   .h-\(--chrome-bar-pet-height\) {
     height: var(--chrome-bar-pet-height);
-  }
-  .raid-icon {
-    width: var(--raid-icon-width);
-    & img {
-      width: var(--raid-icon-width);
-    }
-  }
-  .chrome-icon {
-    width: var(--chrome-icon-size);
-  }
-  .raid-idx {
-    width: var(--raid-idx-width);
   }
   .w-\(--chrome-icon-size\) {
     width: var(--chrome-icon-size);
@@ -340,67 +287,26 @@
     vertical-align: bottom;
   }
   .nav-target {
-    color: var(--nav-target-color);
-    font-family: var(--nav-target-font);
-    font-size: var(--nav-target-size);
-    font-style: var(--nav-target-style);
     padding-left: var(--nav-target-padding);
   }
   .nav-time {
-    color: var(--nav-time-color);
-    font-family: var(--nav-time-font);
-    font-size: var(--nav-time-size);
-    font-style: var(--nav-time-style);
     padding-left: var(--nav-time-padding);
   }
-  .table-text-other {
-    & td {
-      color: var(--table-text-other-color);
-      opacity: var(--table-text-other-opacity);
-      font-family: var(--table-text-font);
-      font-weight: var(--table-text-other-weight);
-      font-size: var(--table-text-size);
-      text-shadow: var(--table-text-other-shadow);
+  .themed-text {
+    &:where(td), & :where(td) {
+      color: var(--text-color);
+      opacity: var(--text-opacity, 1);
+      font-family: var(--text-font);
+      font-size: var(--text-size, inherit);
+      font-style: var(--text-style, normal);
+      font-weight: var(--text-weight, normal);
+      text-shadow: var(--text-shadow, none);
     }
-    & td .ex {
-      color: var(--table-text-other-ex-color);
-      opacity: var(--table-text-other-opacity);
-      text-shadow: var(--table-text-other-shadow);
+    &:where(td) .ex, & :where(td) .ex {
+      color: var(--text-ex-color, var(--text-color));
+      opacity: var(--text-opacity, 1);
+      text-shadow: var(--text-shadow, none);
     }
-  }
-  .table-text-own {
-    & td {
-      color: var(--table-text-own-color);
-      opacity: var(--table-text-own-opacity);
-      font-family: var(--table-text-font);
-      font-weight: var(--table-text-own-weight);
-      font-size: var(--table-text-size);
-      text-shadow: var(--table-text-own-shadow);
-    }
-    & td .ex {
-      color: var(--table-text-own-ex-color);
-      opacity: var(--table-text-own-opacity);
-      text-shadow: var(--table-text-own-shadow);
-    }
-  }
-  .nav-rps {
-    color: var(--nav-rps-color);
-    font-family: var(--nav-rps-font);
-    font-size: var(--nav-rps-size);
-    font-style: var(--nav-rps-style);
-  }
-  .nav-icon {
-    color: var(--nav-icon-color);
-    font-size: var(--nav-icon-size);
-  }
-  .chrome-ex {
-    font-size: var(--chrome-ex-size);
-  }
-  .raid-data {
-    font-size: var(--raid-data-size);
-  }
-  .raid-name {
-    font-size: var(--raid-name-size);
   }
   .text-\(length\:--chrome-ex-size\) {
     font-size: var(--chrome-ex-size);
@@ -417,14 +323,8 @@
   .text-\[rgba\(189\,189\,189\,\.5\)\] {
     color: rgba(189,189,189,.5);
   }
-  .lowercase {
-    text-transform: lowercase;
-  }
-  .col-cell-body {
-    font-style: var(--column-body-style);
-  }
-  .col-cell-header {
-    font-style: var(--column-header-style);
+  .text-accent {
+    color: var(--accent);
   }
   .opacity-\(--chrome-bar-ds-opacity\) {
     opacity: var(--chrome-bar-ds-opacity);
@@ -438,8 +338,15 @@
   .opacity-\(--chrome-bar-pet-opacity\) {
     opacity: var(--chrome-bar-pet-opacity);
   }
-  .chrome-bar-bg {
-    background: var(--chrome-bar-bg);
+  .text-own {
+    --text-color: var(--own-color);
+    --text-opacity: var(--own-opacity);
+    --text-ex-color: var(--own-ex-color);
+    --text-font: var(--own-font);
+    --text-size: var(--own-size);
+    --text-style: var(--own-style);
+    --text-weight: var(--own-weight);
+    --text-shadow: var(--own-shadow);
   }
   .chrome-bar-flip-a {
     animation-name: chrome-bar-flip-a;
@@ -447,8 +354,11 @@
   .chrome-bar-flip-b {
     animation-name: chrome-bar-flip-b;
   }
-  .nav-btn-wrap-bg {
-    background: var(--nav-btn-wrap-bg);
+  .raid-data {
+    --text-size: var(--raid-data-size);
+  }
+  .raid-name {
+    --text-size: var(--raid-name-size);
   }
   .not-last\:\[border-right\:var\(--chrome-cell-border\)\] {
     &:not(*:last-child) {
