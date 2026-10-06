@@ -10,7 +10,7 @@ use serde_json::{json, Value};
 
 /// Pick one value of a setting. `choices` maps each stored value to its translated label.
 pub(super) fn option_choice_items(context: AppContext, setting_key: &str, choices: &Value) -> Element {
-    let current_value = choice_key_of_value(context.settings.read().option_value(setting_key));
+    let current_value = choice_key_of_value(&context.settings.read().option_value(setting_key));
     let lines = choices.as_object().into_iter().flatten().map(|(value, label)| {
         let (setting_key, value) = (setting_key.to_string(), value.clone());
         let is_current = current_value == value;

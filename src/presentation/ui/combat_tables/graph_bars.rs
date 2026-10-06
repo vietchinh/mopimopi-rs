@@ -22,33 +22,12 @@
 
 use super::table_environment::TableEnvironment;
 use crate::infrastructure::act::data::CombatantRecord;
-use crate::presentation::ui::shared::palette::{bar_color, percent_of_whole, player_bar_color, with_optional_gradient};
-use crate::presentation::ui::shared::style_values::StyleValues;
+use crate::presentation::ui::areas::Side;
+use crate::presentation::ui::shared::palette::percent_of_whole;
 use dioxus::prelude::*;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
-
-/// The graph-bar corner radius (`rd_graph*` x `sizeRadiusGraph`) as a `border-radius` value.
-pub(super) fn graph_bar_radius(values: &StyleValues) -> String {
-    let [top_left, top_right, bottom_left, bottom_right] = values.corner_radius("rd_graph", "sizeRadiusGraph");
-    format!("{top_left} {top_right} {bottom_right} {bottom_left}")
-}
-
-/// What is the same for every bar of one table, worked out once instead of once per bar.
-pub(super) struct BarSettings {
-    animate: bool,
-    /// The small bars float against the right edge instead of the left (the HPS and DPS tables
-    /// each have their own setting).
-    float_side: &'static str,
-}
-
-impl BarSettings {
-    pub(super) fn new(environment: &TableEnvironment, _values: &StyleValues, is_healing: bool) -> Self {
-        let position_key = if is_healing { "bar_position" } else { "bar_position_DPS" };
-        BarSettings { animate: environment.animate_bars, float_side: if environment.settings.option_text(position_key) == "right" { "right" } else { "left" } }
-    }
-}
 
 /// Bar widths in whole percent, truncated like the original's `parseInt`.
 struct BarWidths {
@@ -74,12 +53,15 @@ fn bar_widths(combatant: &CombatantRecord, top_value: f64, is_healing: bool) -> 
     }
 }
 
-/// The `chrome-bar-*` class holding a small bar kind's height, margin, opacity and corners.
-fn chrome_class(kind: &str) -> &'static str {
+/// The size, margin, opacity and corners of the bar of a kind, as utility classes reading the variables the table sets
+/// (`--chrome-bar-{kind}-height`, `-margin`, `-opacity`, and `--chrome-bar-radius`, from `TableSettings::body_vars`). One literal string each,
+/// since Tailwind finds a class by reading the source text, and a name assembled at runtime is not in it.
+fn bar_classes(kind: &str) -> &'static str {
     match kind {
-        "oh" => "chrome-bar-oh",
-        "ds" => "chrome-bar-ds",
-        _ => "chrome-bar-pet",
+        "main" => "h-(--chrome-bar-main-height) mt-(--chrome-bar-main-margin) opacity-(--chrome-bar-main-opacity) rounded-(--chrome-bar-radius)",
+        "oh" => "h-(--chrome-bar-oh-height) mt-(--chrome-bar-oh-margin) opacity-(--chrome-bar-oh-opacity) rounded-(--chrome-bar-radius)",
+        "ds" => "h-(--chrome-bar-ds-height) mt-(--chrome-bar-ds-margin) opacity-(--chrome-bar-ds-opacity) rounded-(--chrome-bar-radius)",
+        _ => "h-(--chrome-bar-pet-height) mt-(--chrome-bar-pet-margin) opacity-(--chrome-bar-pet-opacity) rounded-(--chrome-bar-radius)",
     }
 }
 
@@ -186,44 +168,46 @@ pub(super) fn graph_bars(
     top_value: f64,
     is_healing: bool,
     row_id: &str,
-    bars: &BarSettings,
 ) -> Element {
-    let settings = environment.settings;
+    let bars = environment.bars;
     let widths = bar_widths(combatant, top_value, is_healing);
-    let animated = bars.animate;
+    let animated = environment.animate_bars;
+    let side = bars.side(is_healing);
 
-    let main_background = with_optional_gradient(settings, &player_bar_color(settings, combatant, row_id));
+    let main_background = bars.fade.apply(&bars.palette.player_color(combatant, row_id));
 
     // The small bars, in the original's DOM order (each floats to the configured side, so the
     // first one sits at the edge). A row whose small bars add up to more than the container wraps
     // its last one onto a second line, exactly as it does in the original: that is the browser's
     // float layout, not something computed here.
-    let small_bars: &[(&str, i32, &str)] = if is_healing {
-        &[("oh", widths.overheal, "bar_oh"), ("ds", widths.shield, "bar_ds"), ("pet", widths.pet, "bar_pet")]
+    let small_bars: Vec<(&str, i32, bool)> = if is_healing {
+        vec![("oh", widths.overheal, bars.overheal), ("ds", widths.shield, bars.shield), ("pet", widths.pet, bars.pet)]
     } else {
-        &[("pet", widths.pet, "bar_pet")]
+        vec![("pet", widths.pet, bars.pet)]
     };
-    let shown: Vec<(&str, i32, &str)> = small_bars.iter().copied().filter(|&(_, _, option_key)| settings.option_enabled(option_key)).collect();
-    let on_right = bars.float_side == "right";
+    let shown: Vec<(&str, i32, bool)> = small_bars.into_iter().filter(|&(_, _, enabled)| enabled).collect();
+    let on_right = side == Side::Right;
     let shown_widths: Vec<i32> = shown.iter().map(|&(_, width, _)| width).collect();
     let small_geometry = small_bar_geometry(f64::from(widths.main), &shown_widths, on_right);
     let mut small_elements = Vec::new();
     for (index, &(kind, width, _)) in shown.iter().enumerate() {
-        let background = with_optional_gradient(settings, &bar_color(settings, kind, "", row_id));
-        let chrome = chrome_class(kind);
+        let background = bars.fade.apply(&bars.palette.color_of(kind, "", row_id));
+        let chrome = bar_classes(kind);
         let motion = if animated { animation_of(&format!("{is_healing}|{row_id}|{kind}"), small_geometry.as_ref().map(|g| g[index]), on_right) } else { BarAnimation::default() };
         small_elements.push(rsx! {
             div {
                 key: "{kind}",
                 class: "{kind}",
                 class: "{chrome}",
+                class: "{side.float_class()}",
                 class: if animated { "chrome-bar-animated" },
                 class: "{motion.keyframes_class}",
-                style: "float:{bars.float_side};width:{width}%;background:{background};{motion.custom_properties}",
+                style: "width:{width}%;background:{background};{motion.custom_properties}",
             }
         });
     }
 
+    let main_classes = bar_classes("main");
     let main_motion = if animated {
         animation_of(&format!("{is_healing}|{row_id}|main"), Some(BarGeometry { edge: 0.0, width: f64::from(widths.main) }), false)
     } else {
@@ -232,7 +216,7 @@ pub(super) fn graph_bars(
 
     rsx! {
         div {
-            class: "bar chrome-bar-main",
+            class: "bar {main_classes}",
             class: if animated { "chrome-bar-animated" },
             class: "{main_motion.keyframes_class}",
             style: "width:{widths.main}%;background:{main_background};{main_motion.custom_properties}",

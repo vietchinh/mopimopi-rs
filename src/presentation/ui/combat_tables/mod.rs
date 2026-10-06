@@ -12,6 +12,7 @@
 mod graph_bars;
 pub use graph_bars::BarHistory;
 mod raid_grid;
+pub(crate) mod cell_classes;
 pub(crate) mod standard_table;
 mod table_environment;
 mod visible_players;
@@ -28,19 +29,14 @@ fn table_label(is_healing: bool) -> &'static str {
     if is_healing { "HPS" } else { "DPS" }
 }
 
-/// Height in rem of a table body: rows are `sizeBody + sizeLine` tall, up to the configured row limit.
-pub(super) fn table_body_height_rem(settings: &crate::domain::settings::Settings, table_label: &str, row_count: usize) -> f64 {
-    let row_limit_key = if table_label == "HPS" { "sizeHPSTable" } else { "sizeDPSTable" };
-    let row_limit = settings.slider_value(row_limit_key).max(0.0);
-    let visible_rows = (row_count as f64).min(row_limit);
-    visible_rows * (settings.slider_value("sizeBody") + settings.slider_value("sizeLine")) / 10.0
-}
-
 /// Shows the tables in the order and combination the user configured.
 #[component]
 pub fn CombatTables(is_settings_preview: bool) -> Element {
     let overlay_plugin_context = use_context::<OverlayPluginContext>();
     let context = use_context::<AppContext>();
+    let view = use_context::<crate::presentation::ui::areas::SettingsView>();
+    let (table, columns, bars, raid) = (view.table.read().clone(), view.columns.read().clone(), view.bars.read().clone(), view.raid.read().clone());
+    let merge_pets = view.page.read().merge_pets;
     let settings = context.settings.read();
     let local_player_name = context.local_player_name.read().clone();
     let blurred_rows = context.blurred_player_rows.read().clone();
@@ -48,7 +44,7 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
     // The real tables draw whatever is currently displayed (live, a history entry, or frozen
     // while settings are open); the settings preview always draws the built-in sample fight.
     let (combatants, encounter) = if is_settings_preview {
-        let sample = crate::application::app_state::sample_combat_message(settings.option_enabled("pets"));
+        let sample = crate::application::app_state::sample_combat_message(merge_pets);
         (sample.combatants.clone(), sample.encounter.clone())
     } else {
         let Some(message) = context.displayed_combat_data.read().clone() else { return rsx! {} };
@@ -62,16 +58,13 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
     }
 
     let is_encounter_active = if is_settings_preview { true } else { overlay_plugin_context.get_is_encounter_active() };
-    let environment = TableEnvironment::new(is_encounter_active, &settings, &local_player_name, &blurred_rows, is_settings_preview);
+    let environment = TableEnvironment::new(is_encounter_active, &settings, &table, &columns, &bars, &raid, &local_player_name, &blurred_rows, is_settings_preview);
 
-    let raid_mode = (settings.option_enabled("view24") && combatants.len() as f64 >= settings.option_number("view24_Number"))
-        || (is_settings_preview && *context.settings_preview_raid_mode.read());
-    let damage_table_first = settings.option_number("tableOrder") as i32 == 1;
-    let tables = if damage_table_first { [false, true] } else { [true, false] };
+    let raid_mode = table.raid_mode(combatants.len()) || (is_settings_preview && *context.settings_preview_raid_mode.read());
 
-    let sections = tables
+    let sections = table
+        .tables_in_order()
         .into_iter()
-        .filter(|&is_healing| settings.option_enabled(&format!("view{}", table_label(is_healing))))
         .map(|is_healing| {
             if raid_mode {
                 raid_grid::raid_grid(&environment, &combatants, &encounter, is_healing)

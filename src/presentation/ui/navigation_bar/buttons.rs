@@ -13,11 +13,16 @@ use crate::presentation::ui::overlay_plugin_context::OverlayPluginContext;
 pub(super) fn NavigationButtons(is_settings_preview: bool) -> Element {
     let overlay_plugin_context = use_context::<OverlayPluginContext>();
     let context = use_context::<AppContext>();
-    let settings = context.settings.read();
+    let nav = use_context::<crate::presentation::ui::areas::SettingsView>().nav.read().clone();
     let mouse_is_over_menu_button = *context.nav_buttons_expanded.read();
     let is_encounter_active = overlay_plugin_context.get_is_encounter_active();
     let is_shown = |button: &str| {
-        let is_pinned = settings.option_enabled(&format!("btn_{button}"));
+        let is_pinned = match button {
+            "Capture" => nav.pinned.capture,
+            "History" => nav.pinned.history,
+            "RequestEnd" => nav.pinned.request_end,
+            _ => false,
+        };
         let history_is_available = !(button == "History" && is_encounter_active);
         is_pinned || (mouse_is_over_menu_button && history_is_available)
     };
@@ -28,9 +33,9 @@ pub(super) fn NavigationButtons(is_settings_preview: bool) -> Element {
     // `.previewArea nav[name=main] .btn_wrap{right:0;top:0}` rule) -- done as explicit inline `right`/`top`
     // rather than relying on class order, since inline styles win regardless of stylesheet load order.
     let class = if is_settings_preview {
-        "right btn_wrap nav-btn-wrap-bg"
+        "right btn_wrap bg-(--nav-btn-wrap-bg)"
     } else {
-        "right top btn_wrap nav-btn-wrap-bg nav-btn-wrap-position"
+        "right top btn_wrap bg-(--nav-btn-wrap-bg) right-(--nav-edge-width) top-(--nav-edge-width)"
     };
 
     rsx! {
@@ -87,10 +92,10 @@ fn NavigationButton(name: &'static str, icon: &'static str, is_settings_preview:
                     press_button(context, name)
                 }
             },
-            // `MaterialIcon` takes no class, so the classes live on a wrapper that draws no box (`display: contents`, see app.css)
+            // `MaterialIcon` takes no class, so the classes live on a wrapper that draws no box (`display: contents`, see `.nav-icon` in public/base.css)
             // and the stylesheet reaches the icon inside it. The animation's end event bubbles up to the wrapper.
             span {
-                class: "nav-icon",
+                class: "nav-icon text-(color:--nav-icon-color) text-(length:--nav-icon-size)",
                 class: if is_blinking { "flash animated" },
                 onanimationend: move |_| flash_once.set(false),
                 MaterialIcon { name: icon }
@@ -126,7 +131,7 @@ fn request_end_encounter() {
 }
 
 fn show_button_tooltip(context: AppContext, button_name: &str) {
-    let tooltips_enabled = context.settings.peek().option_enabled("tooltips");
+    let tooltips_enabled = consume_context::<crate::presentation::ui::areas::SettingsView>().page.peek().tooltips;
     if tooltips_enabled {
         let text = translate(&translations().ui_schema["NAV"]["main"]["btn"][button_name]["m"]);
         let mut tooltip = context.tooltip_html;

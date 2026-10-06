@@ -1,19 +1,18 @@
 //! Which combatants a table shows, in the order it should show them.
 
 use crate::domain::combat::CombatantKind;
-use crate::domain::settings::Settings;
+use crate::presentation::ui::areas::JobFilter;
 use crate::infrastructure::act::data::CombatantRecord;
 
-/// The job-filter options ("`DPS_T`" = tanks in the DPS table, "`HPS_H`" = healers in the HPS table ...).
-fn passes_job_filter(settings: &Settings, is_healing: bool, combatant: &CombatantRecord) -> bool {
+/// The job filter of the table ("tanks in the damage table", "healers in the healing table", ...).
+fn passes_job_filter(filter: &JobFilter, combatant: &CombatantRecord) -> bool {
     let is_chocobo = matches!(combatant.kind(), CombatantKind::Chocobo { .. });
-    let filter_enabled = |suffix: &str| settings.option_enabled(&format!("{}_{suffix}", super::table_label(is_healing)));
-    (filter_enabled("T") && combatant.is_tank())
-        || (filter_enabled("H") && combatant.is_healer())
+    (filter.tanks && combatant.is_tank())
+        || (filter.healers && combatant.is_healer())
         // "DPS" in the original is the default role: everyone who is not a tank, healer, crafter, gatherer or chocobo
-        || (filter_enabled("D") && !combatant.is_tank() && !combatant.is_healer() && !combatant.is_crafter_or_gatherer() && !is_chocobo)
-        || (filter_enabled("C") && is_chocobo)
-        || (filter_enabled("M") && combatant.is_crafter_or_gatherer())
+        || (filter.damage_dealers && !combatant.is_tank() && !combatant.is_healer() && !combatant.is_crafter_or_gatherer() && !is_chocobo)
+        || (filter.chocobos && is_chocobo)
+        || (filter.crafters_and_gatherers && combatant.is_crafter_or_gatherer())
 }
 
 /// A row of a table together with its rank in that table (0 = first), which is what `rank` in the
@@ -28,7 +27,7 @@ pub(super) struct RankedPlayer<'a> {
 /// Combatants this table shows, in the order it should draw them, after the job filter. The damage
 /// table takes ACT's list as `CombatDataMessage::sort_by_damage` left it; the healing table sorts
 /// it by healed, best first, rows that tie in arrival order (as the original's stable sort does).
-pub(super) fn visible_players<'a>(settings: &Settings, combatants: &'a [CombatantRecord], is_healing: bool) -> Vec<RankedPlayer<'a>> {
+pub(super) fn visible_players<'a>(filter: &JobFilter, combatants: &'a [CombatantRecord], is_healing: bool) -> Vec<RankedPlayer<'a>> {
     let mut ordered: Vec<&CombatantRecord> = combatants.iter().collect();
     if is_healing {
         ordered.sort_by(|a, b| b.healed.partial_cmp(&a.healed).unwrap_or(std::cmp::Ordering::Equal).then(a.arrival_index.cmp(&b.arrival_index)));
@@ -36,7 +35,7 @@ pub(super) fn visible_players<'a>(settings: &Settings, combatants: &'a [Combatan
     ordered
         .into_iter()
         .enumerate()
-        .filter(|(_, combatant)| passes_job_filter(settings, is_healing, combatant))
+        .filter(|(_, combatant)| passes_job_filter(filter, combatant))
         .map(|(rank, combatant)| RankedPlayer { rank, combatant })
         .collect()
 }

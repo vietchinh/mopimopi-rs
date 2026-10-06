@@ -9,7 +9,7 @@ use dioxus_material_icons::MaterialIcon;
 /// Up / down buttons to reorder the columns that are switched on for a table.
 pub(in crate::presentation::ui::settings_screens) fn column_order_page(page_context: &RowContext, table: &str) -> Element {
     let context = page_context.context;
-    let columns: Vec<String> = page_context.settings.column_order(table).into_iter().filter(|c| page_context.settings.column_enabled_in_table(c, table)).collect();
+    let columns: Vec<String> = page_context.settings.file().enabled_columns(table).into_iter().map(String::from).collect();
     let rows = columns.into_iter().map(|col| {
         let name = page_context.settings.column_text(&col, "tt");
         let (up_col, down_col) = (col.clone(), col.clone());

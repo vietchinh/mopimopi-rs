@@ -3,17 +3,10 @@
 use crate::presentation::ui::settings_screens::row_context::RowContext;
 use crate::application::i18n::translate;
 use crate::domain::translations::translations;
-use crate::domain::settings::is_truthy;
 
 /// Columns that are switched on in at least one table.
 pub(super) fn active_columns(page_context: &RowContext) -> Vec<String> {
-    page_context
-        .settings
-        .column_definitions()
-        .iter()
-        .filter(|(_, definition)| is_truthy(&definition["DPS"]) || is_truthy(&definition["HPS"]))
-        .map(|(column, _)| column.clone())
-        .collect()
+    page_context.settings.columns_enabled_anywhere()
 }
 
 /// "Job  ❙ description of the column" – title used on all four column pages.

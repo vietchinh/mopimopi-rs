@@ -13,7 +13,7 @@ use crate::presentation::ui::settings_screens::page_content::SchemaEntry;
 /// "Pick one of several": shows the current choice, opens a radio dropdown on click.
 pub(super) fn radio_row(page_context: &RowContext, entry: &SchemaEntry) -> Element {
     let context = page_context.context;
-    let current = choice_key_of_value(page_context.settings.option_value(&entry.id));
+    let current = choice_key_of_value(&page_context.settings.option_value(&entry.id));
     let label = translate(&entry.definition["m"][current.as_str()]);
     // `li_radio_change` puts the label inside a sentence: "... ★ ..." -> "... label ..."
     let second_line = if entry.definition["e"] == "li_radio_change" { translate(&entry.definition["msg"]).replace('★', &label) } else { label };

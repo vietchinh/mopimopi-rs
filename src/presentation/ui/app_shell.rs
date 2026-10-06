@@ -10,7 +10,6 @@ use super::settings_screens::{SettingsNavigationBar, SettingsScreen};
 use super::start_screen::MainScreen;
 use crate::application::app_state::{AppContext, Screen, SettingsLocation, Dropdown, ToastState, on_combat_data_changed, register_save_on_page_hide, schedule_settings_save, restart_standby_timer};
 use crate::domain::settings::Settings;
-use crate::presentation::ui::shared::style_values::StyleValues;
 use dioxus::prelude::*;
 use std::collections::HashSet;
 
@@ -83,12 +82,15 @@ fn clock_font_face() -> String {
 #[component]
 pub fn App() -> Element {
     let context = create_app_context();
+    // Each area of the settings as a typed value, for the components that draw it (see `areas`). Created first: what is set up below
+    // already needs the page's settings.
+    let view = super::areas::provide_settings_view(context.settings);
 
     let connection_status = use_signal(|| overlay_plugin_context::ConnectionStatus::NotConfigured);
     let combat_data_message = use_signal(|| None);
     let player_name_signal = use_signal(String::new);
     let connection_error = use_signal(|| None);
-    let merge_pets_into_owner = use_signal(|| context.settings.peek().option_enabled("pets"));
+    let merge_pets_into_owner = use_signal(|| view.page.peek().merge_pets);
 
     let overlay_plugin_context =
         OverlayPluginContext::new(connection_status, combat_data_message, player_name_signal, connection_error, merge_pets_into_owner);
@@ -100,8 +102,8 @@ pub fn App() -> Element {
     use_context_provider(super::combat_tables::BarHistory::default);
     // Text in the language of the `Lang` setting (see application::i18n). It follows the setting; the memo means
     // only a change of language (not every settings change) gets as far as the bundle.
-    let mut translations = crate::application::i18n::use_init_translations(&context.settings.peek().language_code());
-    let language_code = use_memo(move || context.settings.read().language_code());
+    let mut translations = crate::application::i18n::use_init_translations(&view.page.peek().language_code);
+    let language_code = use_memo(move || view.page.read().language_code.clone());
     use_effect(move || {
         let tag = crate::application::i18n::language_tag(&language_code.read());
         if translations.language() != tag {
@@ -113,7 +115,7 @@ pub fn App() -> Element {
     use_hook(|| restart_standby_timer(context));
 
     use_effect(move || {
-        let merge_pets = context.settings.read().option_enabled("pets");
+        let merge_pets = view.page.read().merge_pets;
         overlay_plugin_context.set_merge_pets_into_owner(merge_pets);
     });
 
@@ -152,27 +154,10 @@ pub fn App() -> Element {
     // settings change, not when the screen or a dropdown does. Everything else styling-related
     // is computed inline by whichever component owns the element it styles; this is the one
     // exception, because nothing else in the render tree is html's actual owner.
-    let root_style = use_memo(move || {
-        let settings = context.settings.read();
-        let values = StyleValues::new(&settings);
-        let background_image = if values.enabled("overlayBg") { values.text("overlayBgImg") } else { String::new() };
-        let background_image_rule = if background_image.is_empty() {
-            "none".to_string()
-        } else {
-            format!("url('{}')", background_image.replace('\'', "%27"))
-        };
-        format!(
-            ":root{{--html-font-size:{};--html-bg-image:{};--html-bg-size:{};--html-bg-repeat:{};--accent:#{}}}",
-            values.text("resolution"),
-            background_image_rule,
-            values.text("overlayBgSize"),
-            values.text("overlayBgRepeat"),
-            values.color("accent"),
-        )
-    });
+    let root_style = use_memo(move || view.page.read().root_rule());
     let screen = *context.current_screen.read();
     let font_face = clock_font_face();
-    let show_resize_handle = screen != Screen::Settings && context.settings.read().option_enabled("arrow");
+    let show_resize_handle = screen != Screen::Settings && view.page.read().corner_handle;
 
     rsx! {
         // The Material Icons font (Google's stylesheet), from dioxus-material-icons.

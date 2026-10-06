@@ -11,6 +11,7 @@
 //! * `shared`             – helpers used by several of the above
 
 mod app_shell;
+mod areas;
 pub(crate) mod combat_tables;
 mod dropdown_menus;
 mod history_screen;
