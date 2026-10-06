@@ -1,7 +1,6 @@
 //! Cell text and job icons as DOM.
 
 use crate::domain::formatting::TextFragment;
-use crate::domain::settings::Settings;
 use dioxus::prelude::*;
 use crate::domain::combat::CombatantKind;
 use crate::infrastructure::act::data::CombatantRecord;
@@ -14,7 +13,7 @@ pub fn text_fragments_view(fragments: Vec<TextFragment>, sized_by_table: bool) -
         for fragment in fragments {
             match fragment {
                 TextFragment::Plain(text) => rsx! { "{text}" },
-                TextFragment::Dimmed(text) => rsx! { span { class: "ex", class: if sized_by_table { "chrome-ex" }, "{text}" } },
+                TextFragment::Dimmed(text) => rsx! { span { class: "ex", class: if sized_by_table { "text-(length:--chrome-ex-size)" }, "{text}" } },
             }
         }
     }
@@ -38,7 +37,7 @@ fn icon_code(job_code: &str) -> &str {
 /// whether the image takes the table's icon width (`chrome-icon`, from `--chrome-icon-size`) --
 /// raid mode's cards size their icon through the parent `.rIcon`'s own nested `& img` rule
 /// instead, so they pass `false`.
-pub fn job_icon_view(settings: &Settings, combatant: &CombatantRecord, sized_by_table: bool) -> Element {
+pub fn job_icon_view(icon_set: &str, combatant: &CombatantRecord, sized_by_table: bool) -> Element {
     let job_code = match combatant.kind() {
         CombatantKind::LimitBreak => "LMB".to_string(),
         CombatantKind::Pet { .. } => "AVA".to_string(),
@@ -46,8 +45,8 @@ pub fn job_icon_view(settings: &Settings, combatant: &CombatantRecord, sized_by_
         _ => combatant.job_text.to_uppercase(),
     };
 
-    let source = format!("images/icon/{}/{}.png", settings.option_text("iconSet"), icon_code(&job_code));
-    rsx! { img { class: if sized_by_table { "chrome-icon" }, src: "{source}" } }
+    let source = format!("images/icon/{icon_set}/{}.png", icon_code(&job_code));
+    rsx! { img { class: if sized_by_table { "w-(--chrome-icon-size)" }, src: "{source}" } }
 }
 
 #[cfg(test)]

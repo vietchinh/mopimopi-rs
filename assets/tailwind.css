@@ -253,6 +253,9 @@
   .raid-idx {
     width: var(--raid-idx-width);
   }
+  .w-\(--chrome-icon-size\) {
+    width: var(--chrome-icon-size);
+  }
   .chrome-bar-animated {
     transform-origin: var(--bar-origin, left) 50%;
     animation-duration: 0.4s;
@@ -343,6 +346,12 @@
   }
   .raid-name {
     font-size: var(--raid-name-size);
+  }
+  .text-\(length\:--chrome-ex-size\) {
+    font-size: var(--chrome-ex-size);
+  }
+  .lowercase {
+    text-transform: lowercase;
   }
   .col-cell-body {
     font-style: var(--column-body-style);
