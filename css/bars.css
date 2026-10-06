@@ -1,0 +1,33 @@
+/* bars.css: the animation that moves the graph bars behind each row (graph_bars.rs). The per-bar values (width, colour and the animation's starting
+   transform) are inline on each bar; the size, margin, opacity and corners of the bar of each kind are utility classes in graph_bars.rs (`bar_classes`),
+   reading the variables `TableSettings::body_vars` sets.
+
+   Variables read here, and the Rust that sets them (tests/unit/presentation/ui/areas/contract.rs checks both ways):
+     presentation/ui/combat_tables/graph_bars.rs (per bar, where it is drawn):
+       --bar-dx, --bar-sx, --bar-origin */
+
+/* Graph bars (combat_tables/graph_bars.rs). The per-kind classes hold size, opacity and corners. */
+/* A bar's move is played as a transform, on the compositor thread (see graph_bars.rs): it starts at the bar's previous
+   position and size (`--bar-dx`, `--bar-sx`, set inline) and ends at no transform. The move restarts by switching to the
+   other of two identical keyframe sets, so `-a` and `-b` alternate. Timing is what the original's jQuery `swing` easing is. */
+@keyframes chrome-bar-flip-a {
+  from {
+    transform: translateX(var(--bar-dx, 0%)) scaleX(var(--bar-sx, 1));
+  }
+}
+@keyframes chrome-bar-flip-b {
+  from {
+    transform: translateX(var(--bar-dx, 0%)) scaleX(var(--bar-sx, 1));
+  }
+}
+@utility chrome-bar-animated {
+  transform-origin: var(--bar-origin, left) 50%;
+  animation-duration: 0.4s;
+  animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+}
+@utility chrome-bar-flip-a {
+  animation-name: chrome-bar-flip-a;
+}
+@utility chrome-bar-flip-b {
+  animation-name: chrome-bar-flip-b;
+}

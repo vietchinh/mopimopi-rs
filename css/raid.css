@@ -1,0 +1,40 @@
+/* raid.css: raid mode, the compact grid of player cards.
+
+   Variables read here, and the Rust that sets them (tests/unit/presentation/ui/areas/contract.rs checks both ways):
+     presentation/ui/areas/raid.rs:
+       --raid-cell-bg-other, --raid-cell-border, --raid-cell-height, --raid-cell-bg-own, --raid-name-size,
+       --raid-data-size, --raid-idx-width, --raid-icon-width, --raid-cards-per-row */
+
+@utility raid-cell-other {
+  background: var(--raid-cell-bg-other);
+  border-bottom: var(--raid-cell-border);
+  height: var(--raid-cell-height);
+}
+@utility raid-cell-own {
+  background: var(--raid-cell-bg-own);
+  border-bottom: var(--raid-cell-border);
+  height: var(--raid-cell-height);
+}
+/* The name and the data have a text size each. The text rules (`themed-text`, text.css) read `--text-size`, so it is that variable they set. */
+@utility raid-name {
+  --text-size: var(--raid-name-size);
+}
+@utility raid-data {
+  --text-size: var(--raid-data-size);
+}
+/* The strip's opacity is set inline (`opacity: var(--raid-idx-opacity)`): `themed-text` sets the text opacity on every cell of the card, and as
+   a class this would only tie with it. */
+/* `--raid-cards-per-row` is set once on the container (raid_grid.rs). `grid` is one of the Tailwind names excluded by `@source not inline`, so
+   this is a utility of our own rather than `grid` plus an arbitrary `grid-cols`. */
+@utility raid-row {
+  display: grid;
+  grid-template-columns: repeat(var(--raid-cards-per-row), 1fr);
+  /* Two borders depend on where a card sits in the grid (the original's `.rRow:first-child .rCell` and `.rRow .rCell:last-child`): the
+     first row's top border and each row's last card's right border. */
+  &:first-child > .rCell {
+    border-top: var(--raid-cell-border);
+  }
+  & > .rCell:last-child {
+    border-right: var(--raid-cell-border);
+  }
+}

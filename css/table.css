@@ -1,0 +1,21 @@
+/* table.css: the DPS and HPS tables and the history list: header, rows, the job icon and the bars' size. Set once on each table's wrapper
+   (`TableSettings::header_vars` and `body_vars`, areas/table.rs); the texts are `themed-text` (text.css).
+
+   Variables read here, and the Rust that sets them (tests/unit/presentation/ui/areas/contract.rs checks both ways):
+     presentation/ui/areas/table.rs:
+       --chrome-header-margin, --chrome-header-bg, --chrome-header-height, --chrome-row-border, --chrome-row-height,
+       --chrome-bar-bg, --chrome-icon-size, --chrome-ex-size */
+
+/* The header, the rows' division lines and height, the job icon. */
+@utility chrome-header-table {
+  margin: var(--chrome-header-margin) 0;
+}
+@utility chrome-header-cell {
+  background: var(--chrome-header-bg);
+  height: var(--chrome-header-height);
+}
+@utility chrome-row {
+  border-bottom: var(--chrome-row-border);
+  height: var(--chrome-row-height);
+  margin-top: 0;
+}

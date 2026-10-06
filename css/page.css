@@ -1,0 +1,18 @@
+/* page.css: rules for the whole document rather than one area: the page's font size and background (from the settings), and the
+   accent colour. Plain rules, un-layered, so they beat every layer. They target classes the markup always has (.ac, .switch, ...),
+   so there is nothing for Tailwind to scan.
+
+   Variables read here, and the Rust that sets them (tests/unit/presentation/ui/areas/contract.rs checks both ways):
+     presentation/ui/areas/page.rs:
+       --html-font-size, --html-bg-image, --html-bg-size, --html-bg-repeat, --accent */
+
+:root {
+  font-size: var(--html-font-size);
+  background-image: var(--html-bg-image);
+  background-size: var(--html-bg-size);
+  background-repeat: var(--html-bg-repeat);
+}
+.ac, .tab_title.on, nav[name=settings] i, input[type=range] { color: var(--accent); }
+.on_bar, .focus-border, .toggle { background: var(--accent); }
+.switch { border-color: var(--accent); }
+#preview24.on td:first-child { color: var(--accent); }

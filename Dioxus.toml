@@ -18,7 +18,7 @@ base_path = "mopimopi-rs"
 #   (a layout shift of ~0.9 measured in a DevTools trace), after which `html{transition:.3s}` slides the font-size from 16px to 10px, resizing
 #   everything for another 300 ms. It is a *relative* path on purpose: `dx` does not process a file listed here, it only writes the
 #   string into a <link href>, so the file has to be one `dx` already serves, and files in `public/` are (next to the page, under
-#   `base_path`). An absolute one ("/assets/app.css") is emitted as it is, without the base path, and 404s: the page then has no styling
+#   `base_path`). An absolute one ("/assets/base.css") is emitted as it is, without the base path, and 404s: the page then has no styling
 #   at all (checked against this project's dx 0.7.10).
 # - the `data:` URI is the tiny reset that used to be all of this (body margin 0, #main filling the window). base.css covers it; it stays as a
 #   second line of defence, because it cannot fail to load.
