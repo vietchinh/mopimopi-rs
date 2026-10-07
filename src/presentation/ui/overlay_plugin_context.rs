@@ -188,8 +188,9 @@ fn handle_message(
     mut error_signal: Signal<Option<String>>,
     merge_pets_into_owner: Signal<bool>,
 ) {
-    if peek_combat_data(text).is_some_and(|peek| !peek.has_combatants) {
-        return; // an empty "still connected" heartbeat: nothing to show
+    let fight_was_running = combat_data_message.peek().as_ref().is_some_and(|previous| previous.is_encounter_active);
+    if peek_combat_data(text).is_some_and(|peek| !peek.has_combatants && !peek.is_active && !fight_was_running) {
+        return;
     }
     let player_name = player_name_signal.peek().clone();
     let options = ParseOptions {
