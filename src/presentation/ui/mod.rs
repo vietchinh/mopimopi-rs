@@ -19,5 +19,6 @@ mod overlays;
 mod settings_screens;
 mod shared;
 mod start_screen;
+mod overlay_plugin_context;
 
 pub use app_shell::App;

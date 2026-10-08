@@ -14,8 +14,7 @@ fn language_code_for_browser_language(browser_language: &str) -> &'static str {
     PREFIX_TO_CODE
         .iter()
         .find(|(prefix, _)| browser_language.starts_with(prefix))
-        .map(|(_, code)| *code)
-        .unwrap_or("EN")
+        .map_or("EN", |(_, code)| *code)
 }
 
 #[cfg(test)]

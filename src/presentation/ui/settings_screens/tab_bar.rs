@@ -2,14 +2,14 @@
 
 use super::page_content::{current_tab, tabs_of};
 use super::row_context::RowContext;
-use crate::application::app_state::*;
+use crate::application::app_state::{SettingsLocation, select_settings_tab};
 use crate::domain::translations::translate;
 use crate::presentation::ui::shared::safe_markup::markup_view;
 use dioxus::prelude::*;
 
 pub(super) fn tab_bar(page_context: &RowContext, nav: &SettingsLocation) -> Element {
     let context = page_context.context;
-    let selected = current_tab(&nav.page, &nav.tab);
+    let selected = current_tab(&nav.page, nav.tab.as_ref());
     let buttons = tabs_of(&nav.page).into_iter().map(|(id, def)| {
         let on = selected.as_deref() == Some(id.as_str());
         let width = def["w"].as_f64().unwrap_or(25.0);

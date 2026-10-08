@@ -3,7 +3,7 @@
 use super::{icon, note, title};
 use crate::presentation::ui::settings_screens::row_context::RowContext;
 use crate::presentation::ui::settings_screens::row_layout::settings_row;
-use crate::application::app_state::*;
+use crate::application::app_state::Dropdown;
 use crate::domain::translations::translate;
 use crate::presentation::ui::shared::option_choice::choice_key_of_value;
 use crate::presentation::ui::shared::switch_and_icon::SwitchToggle;

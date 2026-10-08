@@ -2,6 +2,7 @@
 
 use super::app_context::{AppContext, Screen};
 use super::toast_notifications::{dismiss_toast_message, show_toast_message};
+use dioxus::core::Runtime;
 use dioxus::prelude::*;
 use gloo_timers::callback::Timeout;
 use std::cell::RefCell;
@@ -33,16 +34,19 @@ pub fn restart_standby_timer(context: AppContext) {
     if *is_hidden.peek() {
         is_hidden.set(false); // only write when it changes: every write redraws the readers
     }
-    let fight_is_running = context.latest_combat_data.peek().as_ref().map(|data| data.is_encounter_active).unwrap_or(false);
-    if fight_is_running {
-        return; // never hide during a fight
-    }
+    // let fight_is_running = context.latest_combat_data.peek().as_ref().map(|data| data.is_encounter_active).unwrap_or(false);
+    // if fight_is_running {
+    //     return; // never hide during a fight
+    // }
     let delay = (standby_minutes * MILLISECONDS_PER_MINUTE).clamp(MINIMUM_STANDBY_MILLISECONDS, MAXIMUM_TIMER_MILLISECONDS);
+    let runtime = Runtime::current();
     let timer = Timeout::new(delay as u32, move || {
-        let mut dropdown = context.open_dropdown;
-        dropdown.set(None);
-        is_hidden.set(true);
-        show_toast_message(context, "hiddenTable", 0, 3000);
+        runtime.in_scope(ScopeId::APP, || {
+            let mut dropdown = context.open_dropdown;
+            dropdown.set(None);
+            is_hidden.set(true);
+            show_toast_message(context, "hiddenTable", 0, 3000);
+        });
     });
     STANDBY_TIMER.with(|slot| *slot.borrow_mut() = Some(timer));
 }

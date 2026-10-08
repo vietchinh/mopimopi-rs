@@ -3,7 +3,7 @@
 use super::browser_storage::{read_local_storage, write_local_storage};
 use super::default_settings::default_settings_document;
 use super::language_detection::detect_language_code;
-use super::user_settings::*;
+use super::user_settings::{OPTIONS_SECTION, COLORS_SECTION, SLIDERS_SECTION, ABBREVIATIONS_SECTION, COLUMN_ORDER_SECTION, COLUMN_DEFINITIONS_SECTION};
 use super::Settings;
 use serde_json::{json, Value};
 
@@ -61,7 +61,7 @@ impl Settings {
 /// Brings a possibly old or partial settings document up to the current shape.
 fn normalize_document(document: &mut Value, defaults: &Value) {
     for section in [OPTIONS_SECTION, COLORS_SECTION, SLIDERS_SECTION, ABBREVIATIONS_SECTION] {
-        if !document.get(section).map(Value::is_object).unwrap_or(false) {
+        if !document.get(section).is_some_and(Value::is_object) {
             document[section] = defaults[section].clone();
         }
     }
@@ -73,8 +73,8 @@ fn normalize_document(document: &mut Value, defaults: &Value) {
         }
         entries.retain(|key, _| !key.contains("Cell")); // removed in an old version of the original
     }
-    let has_column_widths = document.pointer("/ColData/Class/width").map(|width| !width.is_null()).unwrap_or(false);
-    let has_column_order = document.get(COLUMN_ORDER_SECTION).map(Value::is_object).unwrap_or(false);
+    let has_column_widths = document.pointer("/ColData/Class/width").is_some_and(|width| !width.is_null());
+    let has_column_order = document.get(COLUMN_ORDER_SECTION).is_some_and(Value::is_object);
     if !has_column_widths || !has_column_order {
         document[COLUMN_DEFINITIONS_SECTION] = defaults[COLUMN_DEFINITIONS_SECTION].clone();
         document[COLUMN_ORDER_SECTION] = defaults[COLUMN_ORDER_SECTION].clone();

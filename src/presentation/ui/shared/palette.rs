@@ -1,7 +1,7 @@
 //! Colours of the graph bars, following the "Palette" setting (job, role, or me / others).
 
-use crate::domain::combat::Player;
 use crate::domain::settings::Settings;
+use crate::infrastructure::act::data::CombatantRecord;
 
 const PET_BAR: &str = "pet";
 const OVERHEAL_BAR: &str = "oh";
@@ -39,9 +39,10 @@ pub fn bar_color(settings: &Settings, color_key: &str, role_key: &str, row_id: &
     }
 }
 
-/// Colour of a player's main bar.
-pub fn player_bar_color(settings: &Settings, player: &Player, row_id: &str) -> String {
-    bar_color(settings, &player.class_code, player.role.palette_key(), row_id)
+/// Colour of a player's main bar. `job_text` uppercased is the colour key (same lookup as the
+/// job icon); `role_palette_key()` is only used in the "role" palette mode.
+pub fn player_bar_color(settings: &Settings, player: &CombatantRecord, row_id: &str) -> String {
+    bar_color(settings, &player.job_text.to_uppercase(), player.role_palette_key(), row_id)
 }
 
 /// Adds the fade-in gradient when the "gradient" option is on.

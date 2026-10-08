@@ -18,7 +18,7 @@ src/
   application/      application state and actions (Dioxus signals live here)
     app_state/
   infrastructure/   the outside world
-    network/          WebSocket / OverlayPlugin connection to ACT
+    overlay_plugin_socket/   OverlayPlugin's WebSocket: the only source of combat data
   domain/           business domain: rules + the objects they work on (no Dioxus)
     combat/           players, roles, pets, rankings, pet merging
     formatting/       how values become table text
@@ -42,9 +42,9 @@ Known impurity: `domain/settings` still contains `browser_storage.rs`, `language
 
 ```
  ACT / OverlayPlugin
-        │  WebSocket text  (or OverlayPluginApi callback, or DOM event)
+        │  WebSocket text (the address comes from the page URL: ?OVERLAY_WS= or ?HOST_PORT=)
         ▼
- network/            open socket, reconnect, keep-alive, hand each text to the parser
+ overlay_plugin_socket/   created once in main; connects, subscribes, reconnects; sends data down three channels
         │  &str
         ▼
  act_data/           serde: text -> typed ActEvent (CombatDataMessage | LocalPlayerName)
@@ -68,12 +68,12 @@ Settings (`settings/`) and translations (`translations/`) sit beside this flow a
 ```
 ui
 app_state                 (Dioxus signals)
-formatting   theme   network
+formatting   theme   overlay_plugin_socket
 combat       settings  translations
 act_data
 javascript_compat
 ```
-`network` uses `act_data` and the `settings` browser-storage helpers; `formatting` uses `combat`,
+`overlay_plugin_socket` uses `act_data` only; `formatting` uses `combat`,
 `settings` and `translations`; `theme` uses only `settings`.
 
 ---------------------------------------------------------------------------------------------------
@@ -100,9 +100,9 @@ arrive as `"true"`. All of that is absorbed here, so the rest of the program see
 | `encounter_record.rs` | `EncounterRecord` – the `Encounter` object (title, duration text/seconds, total damage/healed, encounter DPS/HPS, zone). Verbose Rust names mapped to ACT keys with `rename`. | `lenient_values` |
 | `combatant_record.rs` | `CombatantRecord` – one player/pet/NPC entry: name, `Job`, own duration, ~20 counters, last-10/30/60/180 s DPS, strongest hit/heal (text + amount), parry/block, deaths. | `lenient_values` |
 | `combat_data_message.rs` | `CombatDataMessage { encounter, combatants, is_encounter_active }`. `Combatant` is a JSON object keyed by name; a custom visitor turns it into a `Vec` **in arrival order** (ties in ranking depend on it). `Encounter` is required, so non-combat objects fail to parse. | the two record files |
-| `incoming_message.rs` | Every wire shape: OverlayPlugin `CombatData` / `ChangePrimaryPlayer` (internally tagged enum on `type`), MiniParse `broadcast` (envelope with `msgtype` + free-form `msg`, read in a second serde step so unknown message types with any payload are ignored). Output is `ActEvent::{CombatData, LocalPlayerName}`. `Ok(None)` = valid but uninteresting, `Err` = malformed. `parse_bare_combat_data` handles the legacy DOM event. Includes tests with a real MiniParse capture. | `combat_data_message` |
+| `incoming_message.rs` | The WebSocket message shapes of OverlayPlugin: `CombatData` and `ChangePrimaryPlayer`; everything else (including the legacy MiniParse `broadcast` envelope) is ignored. Two passes: a first serde pass reads only the `type`, the second reads the payload straight into its final type. `parse_bare_combat_data` handles the legacy DOM event. Includes tests with a real capture. |
 
-Test fixture: `src/data/captures/mini_parse_beastmaster.json` (a real capture).
+Test fixture: `src/data/captures/overlay_plugin_beastmaster.json` (a real capture).
 
 ---------------------------------------------------------------------------------------------------
 
@@ -144,7 +144,7 @@ by string key because the settings pages are generated from `data/l.json`, which
 | `option_updates.rs` | Writers: `set_option`, `set_option_enabled`, `set_option_from_text` (keeps number vs text type), `set_slider_value`, `set_color_hex`, abbreviation add/remove, `column_number`. |
 | `column_layout.rs` | Columns: definitions, per-table enable flag, order, `set_column_enabled`, `move_column`. |
 | `persistence.rs` | `defaults`, `load_from_browser` (falls back to defaults + detected language), `from_json_text`, `save_to_browser`, and `normalize_document` which fills options added by newer versions and migrates old data. Storage key constants. |
-| `browser_storage.rs` | `localStorage` get/set, errors ignored. Also used by `network` for the saved address. |
+| `browser_storage.rs` | `localStorage` get/set, errors ignored. |
 | `language_detection.rs` | Browser language -> KR/JP/CN/DE/FR/EN. |
 | `shareable_code.rs` | "Custom UI Data" export (skips personal/technical options) and import. |
 | `json_coercion.rs` | JavaScript truthiness and number coercion for the mixed-type values the original stored. |
@@ -192,19 +192,44 @@ as one `<style>` string whenever settings change.
 
 ---------------------------------------------------------------------------------------------------
 
-## 9. `network/` – talking to ACT
+## 9. `overlay_plugin_socket/` – OverlayPlugin's WebSocket
+
+The only source of combat data. One socket exists per page. `main` creates it (`start_from_page_url()`); it reads its address
+from the page's own URL, connects at once, subscribes, and reconnects on its own. Everything it receives goes down channels
+that the application reads later.
+
+```
+page URL  ?OVERLAY_WS=ws://127.0.0.1:10501/ws      (?HOST_PORT= works too; /ws is added when the path lacks it)
+   │  start_from_page_url()  (main, once)
+   ▼
+OverlayPluginSocket ── connects, subscribes, reconnects, reports its own status
+   ├─ combat_data        UnboundedReceiver<CombatDataMessage>
+   ├─ local_player_name  UnboundedReceiver<String>
+   └─ connection_status  UnboundedReceiver<ConnectionStatus>
+```
 
 | File | What it does |
 |---|---|
-| `mod.rs` | Public entry points: `start_listening(callbacks)` (legacy DOM event, discovered endpoint, else poll for the in-game API) and `connect_to_address(text, callbacks)` (start-screen box). |
-| `act_endpoint.rs` | `ActEndpoint::{MiniParse, OverlayPlugin}`; discovery from `?HOST_PORT=`, `?OVERLAY_WS=` or the saved address; `from_user_text`; saved address helpers. Tested. |
-| `websocket_connection.rs` | Opens the socket, sends the OverlayPlugin subscription or MiniParse `set_id`, answers keep-alive `.`, reconnects every 5 s, sends `overlayAPI` requests. Keeps the socket and endpoint in `thread_local!` statics (wasm is single-threaded). `handle_incoming_text` calls `act_data::parse_incoming_message` and dispatches or logs an error. |
-| `overlay_plugin_bridge.rs` | Inside OverlayPlugin's browser: finds `OverlayPluginApi`, installs `__OverlayCallback`, polls up to 5 s for the API, finds the overlay window id (global or GUID in the user agent), `endEncounter`, and the legacy `onOverlayDataUpdate` DOM event. |
-| `callbacks.rs` | `ActEventCallbacks`: three `Rc<dyn Fn>` (combat data, local name, status) that `app_state` provides; `dispatch(ActEvent)`. |
-| `connection_status.rs` | `ConnectionStatus` enum. |
-| `javascript_json.rs` | JS value -> JSON text; console warning for unparseable messages. |
+| `mod.rs` | `start_from_page_url()` (once; later calls do nothing), `take_streams()` (the receiving ends, handed out once), `server_url()`, `request_end_encounter()` (async; `Ok` = the request reached the server, which does not answer it). Holds the socket in a `thread_local` so it lives as long as the page. |
+| `server_url.rs` | Pure address rules. Reads `OVERLAY_WS` (first) or `HOST_PORT` from a query string, decodes `%3A%2F%2F` escapes, and turns the value into a WebSocket URL that ends with `/ws` (added unless already there; a trailing `/` is ignored; no scheme = `ws://`; `http(s)://` becomes `ws(s)://`). Empty or unusable = no address. `legacy_endpoint_url` gives the `/MiniParse` URL of the same server. Tested. |
+| `retry_delay.rs` | 1, 1, 2, 4, 8, then 15 seconds between failed attempts; 1 second after an open connection dropped. Tested. |
+| `connection_status.rs` | `NotConfigured`, `Connecting { attempt }`, `Connected`, `Disconnected { retry_in_seconds }`. |
+| `streams.rs` | `OverlayPluginStreams` (receivers) and the private senders. `receive_text` parses a message with serde and sends it down the matching channel; unknown messages are ignored, malformed ones go to the console. Messages sent before the app reads are kept. Tested without a browser. |
+| `legacy_command.rs` | The end-encounter request. OverlayPlugin's `/ws` has no such call, but its legacy `/MiniParse` endpoint (`LegacyHandler` in `WSServer.cs`) handles `{"type":..., "msgtype":"RequestEnd"}` by ending the ACT encounter. So this opens a short-lived connection to `/MiniParse` on the same server, sends the request and closes it (gives up after 5 s). |
+| `socket.rs` | The WebSocket itself: opens the connection, subscribes to `CombatData` and `ChangePrimaryPlayer`, and retries on its own. Only the `close` listener drives retries (browsers fire `close` after `error`). Closures of a finished socket are dropped from a zero-delay timer, never from inside themselves. |
 
----------------------------------------------------------------------------------------------------
+The application side is `application/app_state/overlay_plugin_events.rs`: `use_overlay_plugin_events(context)` (called once in
+`App`) starts one task per channel and applies each value to the state.
+
+What the user sees: with no address in the URL the start screen says how to add `?OVERLAY_WS=...` and lists the WSServer
+steps (`start_screen/connection_panel.rs`, `connection_help.rs`); while connecting or disconnected it says to which URL and
+when the next attempt is; once data is on screen a lost connection shows in the top bar; data without a row named `YOU` shows a
+hint (`combat_tables/setup_hint.rs`).
+
+`tools/chrome-buttons-test.mjs` tests the Capture and End-encounter buttons in real headless Chrome (`npm i puppeteer-core @sparticuz/chromium`).
+`tools/websocket-e2e-test.mjs` runs the built app in jsdom against a real local WebSocket server that behaves like the WSServer
+(`?OVERLAY_WS=`, `?HOST_PORT=` without `/ws`, an escaped address, no address, server down then up, connection lost mid-session,
+missing `YOU`, an empty parameter).
 
 ## 10. `app_state/` – shared state and actions
 
@@ -213,6 +238,7 @@ as one `<style>` string whenever settings change.
 | `mod.rs` | Docs and re-exports. |
 | `app_context.rs` | `AppContext`: a `Copy` bundle of ~20 Dioxus signals/memos (settings, current screen, latest vs displayed combat data, rankings memo, sample rankings memo, local name, connection status, history, dropdown, toast, tooltip, standby, blurred rows...). Also `Screen`, `Dropdown`, `SettingsLocation`, `ToastState`; `language_code()` and `edit_settings()`. |
 | `sample_fight.rs` | Parses `previewLog.json` once (settings previews, "Show sample data"). |
+| `overlay_plugin_events.rs` | `use_overlay_plugin_events`: one task per channel of the socket; applies status, combat data and player name to the state. |
 | `data_ingestion.rs` | `handle_combat_data_received`: always store as latest; display while a fight runs and once when it ends (then also record history); leave the display alone while the settings screen is open. |
 | `encounter_history.rs` | `HistoryEntry`, open/close the history screen, show an entry. |
 | `screen_navigation.rs` | Settings page/tab navigation, back behaviour, which pages have previews/tabs. |
@@ -226,12 +252,12 @@ as one `<style>` string whenever settings change.
 
 | Area | Files | What they do |
 |---|---|---|
-| root | `mod.rs`, `app_shell.rs`, `overlays.rs` | `App` creates the `AppContext`, starts the network once, saves settings after each change, injects the theme `<style>`, and picks the screen. `make_act_callbacks` connects `network` to `app_state`. `Tooltip` and `Toast` components. |
+| root | `mod.rs`, `app_shell.rs`, `overlays.rs` | `App` creates the `AppContext`, starts the network once, saves settings after each change, injects the theme `<style>`, and picks the screen. `Tooltip` and `Toast` components. |
 | `shared/` | `palette`, `row_identity`, `text_display`, `rankings_source`, `switch_and_icon`, `option_choice`, `safe_markup/` | Bar colours by palette mode; element ids of rows; fragments/job icons as DOM; live vs sample rankings; on/off switch and row icon; setting values as list keys; `safe_markup` renders the HTML fragments of the translation files (see below). |
 | `dropdown_menus/` | `mod`, `menu_item`, `navigation_menu`, `choice_menus` | The open `Dropdown` variant becomes a list: the ⋮ menu, single choice, several toggles, column alignment. |
-| `navigation_bar/` | `mod`, `summary_line`, `buttons` | Time, target, summary text, Capture/History/End/⋮ buttons; `capture_screenshot` is shared with the history screen. |
+| `navigation_bar/` | `mod`, `summary_line`, `buttons` | Time, target, summary text, the buttons (Capture, History, End encounter, ⋮) and `screenshot.rs` + `page_screenshot.js` (Capture). |
 | `combat_tables/` | `mod`, `table_environment`, `visible_players`, `standard_table`, `graph_bars`, `raid_grid` | `CombatTables` chooses raid grid or normal tables in the configured order; job filters; header, rows, cells; coloured and small pet/overheal/shield bars; blur names by clicking the icon. |
-| `start_screen/` | `mod`, `language_links`, `connect_box` | Notice before data arrives, language links, ACT address box and "Show sample data". |
+| `start_screen/` | `mod`, `language_links`, `connection_panel`, `connection_help` | Notice before data arrives, language links, connection status with checklists, and "Show sample data". |
 | `history_screen/` | `mod`, `history_row` | Finished-encounter list. |
 | `settings_screens/` | see below | All settings pages. |
 
@@ -263,7 +289,7 @@ Pages come from `l.json`; these files decide what to show and how to render each
 
 **A combat data message arrives**
 1. `websocket_connection` receives text -> `act_data::parse_incoming_message` -> `ActEvent::CombatData`.
-2. `callbacks.dispatch` -> `on_combat_data` (from `app_shell::make_act_callbacks`) -> `app_state::handle_combat_data_received`.
+2. The socket sends the parsed message down the `combat_data` channel; the task started by `use_overlay_plugin_events` reads it and `handle_combat_data_received` runs.
 3. It stores the message in `latest_combat_data`, and (if allowed) in `displayed_combat_data`.
 4. The `rankings` memo in `app_shell` recomputes `combat::build_rankings`.
 5. `CombatTables` and `NavigationBar` read the memo, call `formatting::cell_fragments` per cell, and render. The `<style>` from `theme::build_theme_css` styles it.
@@ -302,14 +328,20 @@ values themselves stay untranslated.
 
 - **Support a new ACT field:** add it to `CombatantRecord` (with `rename` + `lenient_*`), then to `PlayerStats`/`Player` if it needs summing, then a match arm in `formatting/column_cell.rs`, and a column in `defaults.json`/`l.json`.
 - **New pet:** add its names to `combat/pet_names.rs`.
-- **New job icon:** add `<JOB>.png` to each set in `public/images/icon/` (currently missing: `BST`).
+- **New job icon:** add `<JOB>.png` to each set in `public/images/icon/` (a test fails if a set is missing one). `tools/make_bst_icons.py --source <icon.png>` draws one job's icon in every set's style (framed game icon of any square size, or a bare glyph); it made the Beastmaster icons and can be reused for other new jobs.
 - **New setting:** add it to `defaults.json` and `l.json`; read it with `option_*`; style-related ones go into a `theme/` section.
 - **New protocol message:** add a variant in `act_data/incoming_message.rs` and a test with a captured line.
 
 ## 15. Gotchas
 
+- `mopimopi.css` and `app.css` are linked in the `<head>` through `Dioxus.toml` (`[web.resource] style`), not by the app.
+  Adding them at runtime made the first frame unstyled and caused a layout shift of 0.95. `web/index.html` (used only by
+  `build.sh`) has the same two links.
+- `tracing` is capped at WARN in release builds (`release_max_level_warn` in `Cargo.toml`). Without it Dioxus's signal and memo
+  spans become `PerformanceMark`/`PerformanceMeasure` entries that the browser never frees (about 1 MB per hour of combat).
 - Dioxus mounts into `#main`; it must fill `#wrap` (see `app.css`) or percentage layouts collapse.
-- Do not write signals while rendering; network startup is deferred with `spawn` for that reason.
+- Do not modify signals while rendering (Dioxus, "Intro to Reactivity": it queues re-renders and can loop). Network start-up
+  therefore runs in a `use_effect`, which runs after the first render; it reads no signals, so it runs once.
 - The WebSocket `error` event is intentionally not handled: `close` always follows and would recurse.
 - Ties in rankings depend on ACT's combatant order, so the parser preserves arrival order.
 - Settings stay JSON-shaped on purpose (original compatibility, schema-driven pages).
@@ -322,4 +354,71 @@ so the tests keep access to private items. `cargo test` runs 58 tests: serde len
 shapes, a real capture, classification, pet merging on the sample fight, number/name formatting,
 endpoint parsing, GUID finding, the safe-markup allowlist, settings round-trips, theme output. `tests/unit/benchmarks.rs` holds
 ignored timing benchmarks (`cargo test --release --offline benchmarks -- --ignored --nocapture`).
-Browser behaviour is checked with `tools/smoke-test.mjs`.
+Parity with the original overlay is checked by `tools/original-comparison/compare-tables.mjs` (three fights, every table cell; see its README).
+Browser behaviour is checked with `tools/smoke-test.mjs`, and the connection layer with `tools/websocket-e2e-test.mjs`
+(both need `npm i jsdom ws`).
+
+## 17. CI, deploying to GitHub Pages, requiring green tests
+
+Repository: `vietchinh/<repository>`, branch `dioxus`, site `https://vietchinh.github.io/<repository>/` (the site
+currently lives under `mopimopi-rs`).
+
+* `.github/workflows/ci.yml` – job **Tests**: `cargo test --locked` and `cargo check --target wasm32-unknown-unknown`.
+  Runs on every pull request into `dioxus`, and is reused by the deploy workflow.
+* `.github/workflows/pages.yml` - on every push to `dioxus`: runs the tests first (`needs: test`), then builds
+  with the Dioxus CLI and publishes with the Pages actions (no build output is committed):
+  1. reads the `dioxus` version from `Cargo.lock` and downloads the prebuilt `dx` of the same version on every
+     run (`dx-x86_64-unknown-linux-gnu.zip` from the GitHub release; nothing is compiled, nothing of `dx` is
+     cached; `dx` fetches wasm-bindgen, esbuild and wasm-opt itself). Only the Rust build is cached (rust-cache),
+  2. sets `base_path` in `Dioxus.toml` to the repository name with `tools/set_base_path.py` (only in CI, so `dx serve`
+     still serves at the root; works whether or not the file already has a `base_path` line),
+  3. `dx bundle --platform web --release --out-dir pages` - the finished site is `pages/public`,
+  4. uploads `pages/public` and deploys it. (The deploy guide's "move `public/*` up" and `404.html` steps are
+     for publishing from a `docs/` folder and for client-side routing; neither applies here.)
+
+One-time setup:
+1. Settings -> Pages -> Source: **GitHub Actions**.
+2. Settings -> Environments -> `github-pages` -> Deployment branches: allow `dioxus` (by default only the
+   default branch may deploy; skip this if `dioxus` is the default branch).
+3. **Requiring green tests:** the workflow file cannot forbid merging, that is a repository setting. Run
+   `tools/protect-branch.sh` (needs the GitHub CLI and admin rights) or set it by hand: Settings -> Branches ->
+   add a rule for `dioxus` -> "Require a pull request before merging" and "Require status checks to pass" ->
+   select **Tests** (the check appears in the list after the workflow has run once) -> "Require branches to
+   be up to date". Also tick "Do not allow bypassing the above settings" to bind admins.
+
+`build.sh` (plain cargo + wasm-bindgen) still works for local builds; `dx` uses its own HTML template, not
+`web/index.html`.
+
+## 18. Only OverlayPlugin's WebSocket is supported
+
+Removed: the legacy ACTWebSocket / MiniParse *data* protocol (the `{"type":"broadcast"}` messages, the `set_id` handshake, the
+`.` keep-alive), OverlayPlugin's in-game `OverlayPluginApi` and the legacy DOM event, the address box and the saved address,
+and the `wss`/`ws` candidate fallback.
+
+Consequence: an overlay added inside OverlayPlugin needs the address in its URL too, for example
+`https://vietchinh.github.io/mopimopi-rs/?OVERLAY_WS=ws://127.0.0.1:10501/ws` (the WSServer tab's URL generator produces it).
+Old `?HOST_PORT=ws://127.0.0.1:10501` links keep working.
+
+### The two buttons that used the old protocol
+
+Both original buttons sent an `overlayAPI` request to the ACTWebSocket-style endpoint. What OverlayPlugin's `WSServer.cs`
+does with it:
+
+| Request | OverlayPlugin (`LegacyHandler`, path `/MiniParse`) | What the port does |
+|---|---|---|
+| `RequestEnd` | `ActGlobals.oFormActMain.EndCombat(true)`, so it works | End encounter opens a short-lived connection to `/MiniParse` on the same server and sends `{"type":"overlayAPI","msgtype":"RequestEnd"}` (`legacy_command.rs`). A toast reports success or failure. |
+| `Capture` | only logs "ACTWS Capture is not supported outside of overlays" | Capture is done in the browser: the page draws itself to a PNG and downloads it (`navigation_bar/screenshot.rs`, `page_screenshot.js`). |
+
+`/ws` (`SocketHandler`) only understands `{"call": ...}` messages and ignores everything else; no end-encounter call is
+documented for it (the docs list `getLanguage` and say others, such as `getCombatants`, `saveData`, `say`, exist).
+
+How the screenshot works: the overlay element is cloned with every computed style copied into it, the buttons, menus, tooltip
+and toast are left out, images and the page's own `@font-face` fonts are embedded as data URLs, and the clone is wrapped in an
+SVG `<foreignObject>`, drawn onto a canvas and downloaded. The image is cropped below the last row. Fonts from other sites (the
+Google fonts) are not embedded, so the screenshot uses the next font in the stack for them. It downloads through the browser,
+which may not be possible inside OverlayPlugin's own overlay window (untested).
+
+What "MiniParse" meant (from OverlayPlugin's source and docs): OverlayPlugin's WSServer serves `/ws` (the current API) and
+also `/MiniParse` and `/BeforeLogLineRead` through a `LegacyHandler`, kept for overlays written for the old ACTWebSocket plugin
+(archived in 2019). Separately, "MiniParse" is the name of OverlayPlugin's generic overlay *type* (the "Type" dropdown), which
+has nothing to do with the WebSocket protocol.

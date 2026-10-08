@@ -26,7 +26,7 @@ mod text_box;
 
 pub use navigation_bar::SettingsNavigationBar;
 
-use crate::application::app_state::*;
+use crate::application::app_state::{AppContext, PAGES_WITH_LIVE_PREVIEW};
 use dioxus::prelude::*;
 use live_preview::LivePreview;
 use page_content::{content_for, PageContent};

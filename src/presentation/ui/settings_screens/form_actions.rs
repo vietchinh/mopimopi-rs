@@ -3,7 +3,7 @@
 use super::base64_encoding::base64_encode;
 use super::row_context::TypedTexts;
 use super::text_box::clear_typed_text;
-use crate::application::app_state::*;
+use crate::application::app_state::{AppContext, show_toast_message};
 use dioxus::prelude::*;
 use serde_json::json;
 
@@ -11,7 +11,7 @@ use serde_json::json;
 /// * `in_apply`          – paste of a shared "Custom UI Data" code
 /// * `headerText_<col>`  – custom title of a table column
 /// * `in_<setting>`      – any other setting (fonts)
-pub(super) fn submit_text(context: AppContext, inputs: TypedTexts, box_id: &str, text: String) {
+pub(super) fn submit_text(context: AppContext, inputs: TypedTexts, box_id: &str, text: &str) {
     let text = text.trim().to_string();
     if text.is_empty() {
         show_toast_message(context, "noInput", 500, 3000);

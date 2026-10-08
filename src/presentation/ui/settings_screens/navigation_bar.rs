@@ -1,6 +1,6 @@
 //! Top bar of the settings screen.
 
-use crate::application::app_state::*;
+use crate::application::app_state::{AppContext, go_back_in_settings, Dropdown};
 use crate::domain::translations::{translate, translations};
 use dioxus::prelude::*;
 use serde_json::Value;

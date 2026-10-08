@@ -68,7 +68,7 @@ impl<'a> StyleInputs<'a> {
         format!("'{}', {fallbacks}", self.text(font_option_key))
     }
 
-    /// Four `border-*-radius` rules; `key_prefix` such as "rd_nav" selects the corners
+    /// Four `border-*-radius` rules; `key_prefix` such as "`rd_nav`" selects the corners
     /// (`rd_navTL`, ...) and `size_key` the radius slider.
     pub fn corner_radius_rules(&self, key_prefix: &str, size_key: &str) -> String {
         let corner = |suffix: &str| rem(self.number(&format!("{key_prefix}{suffix}")) * self.slider(size_key));

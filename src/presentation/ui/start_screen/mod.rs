@@ -1,7 +1,7 @@
 //! The main screen before any data arrived (start screen), and the switch to the tables.
 //!
-//! * `language_links`  – "Please select your language: 한국어 | English | ..."
-//! * `connect_box`     – ACT address box for a hosted copy (not in the original)
+//! * `language_links`    – "Please select your language: 한국어 | English | ..."
+//! * `connection_panel`  – connection status and the sample-data button
 
 mod language_links;
 

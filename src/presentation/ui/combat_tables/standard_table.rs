@@ -3,21 +3,30 @@
 use super::graph_bars::graph_bars;
 use super::table_environment::TableEnvironment;
 use super::visible_players::visible_players;
-use crate::domain::combat::{EncounterRanking, Player, TableKind, COMBATANT_JOB_CODE, PET_JOB_CODE};
+use crate::application::app_state::AppContext;
+use crate::domain::combat::CombatantKind;
 use crate::domain::formatting::cell_fragments;
-use crate::presentation::theme::table_body_height_rem;
 use crate::domain::translations::{translate, translations};
+use crate::infrastructure::act::data::{CombatantRecord, EncounterRecord};
+use crate::presentation::theme::table_body_height_rem;
 use crate::presentation::ui::shared::row_identity::row_element_id;
 use crate::presentation::ui::shared::text_display::{job_icon_view, text_fragments_view};
 use dioxus::prelude::*;
 
-pub(super) fn standard_table(environment: &TableEnvironment, ranking: &EncounterRanking, table: TableKind) -> Element {
-    let players = visible_players(environment.settings, ranking, table);
-    let columns = environment.settings.column_order(table.short_label());
-    let label = table.short_label();
+pub(super) fn standard_table(environment: &TableEnvironment, combatants: &[CombatantRecord], encounter: &EncounterRecord, is_healing: bool) -> Element {
+    let players = visible_players(environment.settings, combatants, is_healing);
+    // The best value in this table; bar widths are relative to it. A plain scan, not the position
+    // of the first row, since a healing table's own order (sorted in `visible_players`, best first)
+    // would make that valid too, but a damage table's order is only usually already sorted this way.
+    let top_value = combatants
+        .iter()
+        .map(|combatant| if is_healing { combatant.healed } else { combatant.damage })
+        .fold(0.0, f64::max);
+    let label = super::table_label(is_healing);
+    let columns = environment.settings.column_order(label);
     let suffix = environment.element_id_suffix;
     let body_height = table_body_height_rem(environment.settings, label, players.len());
-    let rows = players.iter().map(|player| player_row(environment, ranking, table, player, &columns));
+    let rows = players.iter().map(|combatant| player_row(environment, combatant, top_value, encounter, is_healing, &columns));
 
     rsx! {
         if !players.is_empty() {
@@ -33,7 +42,6 @@ pub(super) fn standard_table(environment: &TableEnvironment, ranking: &Encounter
 
 fn header_table(environment: &TableEnvironment, columns: &[String]) -> Element {
     let language = environment.settings.language_code();
-    let context = environment.context;
     let cells = columns.iter().map(|column| {
         let title = environment.settings.column_text(column, "tt");
         // Explanation shown as a tooltip (from the dictionary), if there is one for this column.
@@ -45,6 +53,7 @@ fn header_table(environment: &TableEnvironment, columns: &[String]) -> Element {
             td {
                 key: "{column}",
                 class: "{column} cell",
+                title: hint,
                 "{title}"
             }
         }
@@ -52,14 +61,22 @@ fn header_table(environment: &TableEnvironment, columns: &[String]) -> Element {
     rsx! { table { class: "tableHeader", tbody { tr { {cells} } } } }
 }
 
-fn player_row(environment: &TableEnvironment, ranking: &EncounterRanking, table: TableKind, player: &Player, columns: &[String]) -> Element {
-    let row_id = row_element_id(&player.name);
-    let blur_key = format!("{}{row_id}", table.short_label());
-    let is_local_players_pet = (player.job_code == PET_JOB_CODE || player.job_code == COMBATANT_JOB_CODE) && row_id.contains("YOU");
+fn player_row(
+    environment: &TableEnvironment,
+    combatant: &CombatantRecord,
+    top_value: f64,
+    encounter: &EncounterRecord,
+    is_healing: bool,
+    columns: &[String],
+) -> Element {
+    let label = super::table_label(is_healing);
+    let row_id = row_element_id(&combatant.name);
+    let blur_key = format!("{label}{row_id}");
+    let is_local_players_pet = matches!(combatant.kind(), CombatantKind::Pet { owner_name, .. } if owner_name == "YOU");
     let cells = columns
         .iter()
-        .filter(|column| environment.settings.column_enabled_in_table(column, table.short_label()))
-        .map(|column| cell(environment, ranking, player, column, &blur_key));
+        .filter(|column| environment.settings.column_enabled_in_table(column, label))
+        .map(|column| cell(environment, combatant, encounter, column, &blur_key));
 
     rsx! {
         div {
@@ -67,28 +84,28 @@ fn player_row(environment: &TableEnvironment, ranking: &EncounterRanking, table:
             id: "{row_id}",
             class: if is_local_players_pet { "tableWrap myPet" } else { "tableWrap" },
             table { class: "tableBody", tbody { tr { {cells} } } }
-            {graph_bars(environment, ranking, table, player, &row_id)}
+            {graph_bars(environment, combatant, top_value, is_healing, &row_id)}
             div { class: "barBg" }
         }
     }
 }
 
-fn cell(environment: &TableEnvironment, ranking: &EncounterRanking, player: &Player, column: &str, blur_key: &str) -> Element {
+fn cell(environment: &TableEnvironment, combatant: &CombatantRecord, encounter: &EncounterRecord, column: &str, blur_key: &str) -> Element {
     if column == "Class" {
-        return job_icon_cell(environment, player, blur_key);
+        return job_icon_cell(environment, combatant, blur_key);
     }
     let is_blurred = column == "name" && environment.blurred_rows.contains(blur_key);
     let class = if is_blurred { format!("{column} cell hidden") } else { format!("{column} cell") };
-    let content = text_fragments_view(cell_fragments(column, player, ranking, &environment.cell_context));
+    let content = text_fragments_view(cell_fragments(column, combatant, encounter, &environment.cell_context));
     rsx! { td { key: "{column}", class: "{class}", {content} } }
 }
 
 /// The job icon cell. Clicking it blurs / unblurs the player's name (only outside of fights).
-fn job_icon_cell(environment: &TableEnvironment, player: &Player, blur_key: &str) -> Element {
-    let context = environment.context;
+fn job_icon_cell(environment: &TableEnvironment, combatant: &CombatantRecord, blur_key: &str) -> Element {
+    let context = use_context::<AppContext>();
     let can_blur = environment.can_blur_names;
     let blur_key = blur_key.to_string();
-    let icon = job_icon_view(environment.settings, player);
+    let icon = job_icon_view(environment.settings, combatant);
     rsx! {
         td {
             key: "{blur_key}",

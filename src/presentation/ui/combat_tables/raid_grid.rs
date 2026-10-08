@@ -2,36 +2,33 @@
 
 use super::table_environment::TableEnvironment;
 use super::visible_players::visible_players;
-use crate::domain::combat::{EncounterRanking, Player, TableKind};
 use crate::domain::formatting::cell_fragments;
+use crate::infrastructure::act::data::{CombatantRecord, EncounterRecord};
 use crate::presentation::ui::shared::palette::player_bar_color;
 use crate::presentation::ui::shared::row_identity::row_element_id;
 use crate::presentation::ui::shared::text_display::{job_icon_view, text_fragments_view};
 use dioxus::prelude::*;
 
-pub(super) fn raid_grid(environment: &TableEnvironment, ranking: &EncounterRanking, table: TableKind) -> Element {
-    let players = visible_players(environment.settings, ranking, table);
+pub(super) fn raid_grid(environment: &TableEnvironment, combatants: &[CombatantRecord], encounter: &EncounterRecord, is_healing: bool) -> Element {
+    let players = visible_players(environment.settings, combatants, is_healing);
     let cards_per_row = (environment.settings.slider_value("size24TableSlice") as usize).max(1);
-    let value_column = match table {
-        TableKind::Damage => "encdps",
-        TableKind::Healing => "enchps",
-    };
-    let label = table.short_label();
+    let value_column = if is_healing { "enchps" } else { "encdps" };
+    let label = super::table_label(is_healing);
     let suffix = environment.element_id_suffix;
 
     let rows = players.chunks(cards_per_row).map(|row_players| {
-        let cards = row_players.iter().map(|player| raid_card(environment, ranking, player, value_column));
+        let cards = row_players.iter().map(|combatant| raid_card(environment, combatant, encounter, value_column));
         rsx! { div { class: "rRow", {cards} } }
     });
     rsx! { div { id: "{label}Body{suffix}", {rows} } }
 }
 
-fn raid_card(environment: &TableEnvironment, ranking: &EncounterRanking, player: &Player, value_column: &str) -> Element {
-    let row_id = row_element_id(&player.name);
-    let color_strip = player_bar_color(environment.settings, player, &row_id);
-    let icon = job_icon_view(environment.settings, player);
-    let name = text_fragments_view(cell_fragments("name", player, ranking, &environment.cell_context));
-    let value = text_fragments_view(cell_fragments(value_column, player, ranking, &environment.cell_context));
+fn raid_card(environment: &TableEnvironment, combatant: &CombatantRecord, encounter: &EncounterRecord, value_column: &str) -> Element {
+    let row_id = row_element_id(&combatant.name);
+    let color_strip = player_bar_color(environment.settings, combatant, &row_id);
+    let icon = job_icon_view(environment.settings, combatant);
+    let name = text_fragments_view(cell_fragments("name", combatant, encounter, &environment.cell_context));
+    let value = text_fragments_view(cell_fragments(value_column, combatant, encounter, &environment.cell_context));
     rsx! {
         table { key: "{row_id}", id: "{row_id}", class: "rCell",
             tbody {
