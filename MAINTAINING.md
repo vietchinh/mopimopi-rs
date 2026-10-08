@@ -281,7 +281,8 @@ missing `YOU`, an empty parameter).
 | File | What it does |
 |---|---|
 | `mod.rs` | Docs and re-exports. |
-| `app_context.rs` | `AppContext`: a `Copy` bundle of ~20 Dioxus signals/memos (settings, current screen, latest vs displayed combat data, rankings memo, sample rankings memo, local name, connection status, history, dropdown, toast, tooltip, standby, blurred rows...). Also `Screen`, `Dropdown`, `SettingsLocation`, `ToastState`; `language_code()` and `edit_settings()`. |
+| `contexts/` | One context per section of the page, each a `Copy` bundle of signals: `SettingsContext` (settings, `edit_settings()`), `ScreenContext` (`Screen`), `TablesContext` (displayed data, local player, standby flag, blurred rows), `HistoryContext`, `SettingsScreenContext` (`SettingsLocation`, sample tables), `NavigationBarContext`, `DropdownContext` (`Dropdown`), `NoticesContext` (toast, tooltip). A component reads only its own section's context. |
+| `app_actions.rs` | `AppActions`: holds the contexts that the multi-section actions change (opening the settings, a new fight, standby) but keeps them private, so a component can start an action and cannot read state through it. |
 | `sample_fight.rs` | Parses `previewLog.json` once (settings previews, "Show sample data"). |
 | `overlay_plugin_events.rs` | `use_overlay_plugin_events`: one task per channel of the socket; applies status, combat data and player name to the state. |
 | `data_ingestion.rs` | `handle_combat_data_received`: always store as latest; display while a fight runs and once when it ends (then also record history); leave the display alone while the settings screen is open. |
@@ -297,7 +298,7 @@ missing `YOU`, an empty parameter).
 
 | Area | Files | What they do |
 |---|---|---|
-| root | `mod.rs`, `app_shell.rs`, `overlays.rs` | `App` creates the `AppContext`, starts the network once, saves settings after each change, injects the theme `<style>`, and picks the screen. `Tooltip` and `Toast` components. |
+| root | `mod.rs`, `app_shell.rs`, `overlays.rs` | `App` provides every section context (and `AppActions`), starts the network once, saves settings after each change, injects the theme `<style>`, and picks the screen. `Tooltip` and `Toast` components. |
 | `shared/` | `palette`, `row_identity`, `text_display`, `rankings_source`, `switch_and_icon`, `option_choice`, `safe_markup/` | Bar colours by palette mode; element ids of rows; fragments/job icons as DOM; live vs sample rankings; on/off switch and row icon; setting values as list keys; `safe_markup` renders the HTML fragments of the translation files (see below). |
 | `dropdown_menus/` | `mod`, `menu_item`, `navigation_menu`, `choice_menus` | The open `Dropdown` variant becomes a list: the ⋮ menu, single choice, several toggles, column alignment. |
 | `navigation_bar/` | `mod`, `summary_line`, `buttons` | Time, target, summary text, the buttons (Capture, History, End encounter, ⋮) and `screenshot.rs` + `page_screenshot.js` (Capture). |

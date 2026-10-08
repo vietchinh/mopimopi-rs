@@ -30,7 +30,7 @@ pub(super) fn share_row(page_context: &RowContext, entry: &SchemaEntry) -> Eleme
 
 /// Text box, optionally with a send button. The abbreviation boxes only submit together.
 pub(super) fn text_row(page_context: &RowContext, entry: &SchemaEntry, with_button: bool) -> Element {
-    let (context, inputs) = (page_context.context, page_context.typed_texts);
+    let (settings_context, actions, inputs) = (page_context.settings_context, page_context.actions, page_context.typed_texts);
     let box_id = entry.id.clone();
     let on_enter = {
         let box_id = box_id.clone();
@@ -38,10 +38,10 @@ pub(super) fn text_row(page_context: &RowContext, entry: &SchemaEntry, with_butt
             if box_id == "in_abbOld" || box_id == "in_abbNew" {
                 let filled = |k: &str| !typed_text(inputs, k).trim().is_empty();
                 if filled("in_abbOld") && filled("in_abbNew") {
-                    add_abbreviation(context, inputs);
+                    add_abbreviation(settings_context, actions, inputs);
                 }
             } else {
-                submit_text(context, inputs, &box_id, text.as_str());
+                submit_text(settings_context, actions, inputs, &box_id, text.as_str());
             }
         }
     };
@@ -57,7 +57,7 @@ pub(super) fn text_row(page_context: &RowContext, entry: &SchemaEntry, with_butt
                 td { style: if with_button { "width:100%;" } else { "width:100%;padding-right:1.4rem" }, {input} }
                 if with_button {
                     td { class: "gIcon ft sendBtn", rowspan: "2",
-                        onclick: move |_| submit_text(context, inputs, &send_id, typed_text(inputs, &send_id).as_str()),
+                        onclick: move |_| submit_text(settings_context, actions, inputs, &send_id, typed_text(inputs, &send_id).as_str()),
                         MaterialIcon { name: "send" }
                     }
                 }
@@ -68,11 +68,11 @@ pub(super) fn text_row(page_context: &RowContext, entry: &SchemaEntry, with_butt
 
 /// "Add to list" button of the abbreviation form.
 pub(super) fn add_button_row(page_context: &RowContext, entry: &SchemaEntry) -> Element {
-    let (context, inputs) = (page_context.context, page_context.typed_texts);
+    let (settings_context, actions, inputs) = (page_context.settings_context, page_context.actions, page_context.typed_texts);
     let label = title(entry);
     rsx! {
         li { key: "{entry.id}", class: "gTitle sendBtn", style: "text-align:center;border-top:solid .1rem rgba(255,255,255,.07)",
-            onclick: move |_| add_abbreviation(context, inputs),
+            onclick: move |_| add_abbreviation(settings_context, actions, inputs),
             {markup_view(&label)}
         }
     }
@@ -81,7 +81,7 @@ pub(super) fn add_button_row(page_context: &RowContext, entry: &SchemaEntry) -> 
 /// Background image upload: a hidden file input and a button that opens it, like the original's `li_file`
 /// (the full-width `<button>` look comes from the stylesheet, not from a label).
 pub(super) fn file_row(page_context: &RowContext, entry: &SchemaEntry) -> Element {
-    let context = page_context.context;
+    let (settings_context, actions) = (page_context.settings_context, page_context.actions);
     let label = title(entry);
     rsx! {
         li { key: "{entry.id}", style: "padding:0; text-align:center; border:0",
@@ -93,7 +93,7 @@ pub(super) fn file_row(page_context: &RowContext, entry: &SchemaEntry) -> Elemen
                     if let Some(file) = event.files().into_iter().next() {
                         if let Ok(bytes) = file.read_bytes().await {
                             let mime = file.content_type().unwrap_or_else(|| "image/png".into());
-                            set_background(context, &mime, &bytes);
+                            set_background(settings_context, actions, &mime, &bytes);
                         }
                     }
                 },

@@ -17,7 +17,7 @@ pub(crate) mod standard_table;
 mod table_environment;
 mod visible_players;
 
-use crate::application::app_state::AppContext;
+use crate::application::app_state::{SettingsContext, SettingsScreenContext, TablesContext};
 use crate::presentation::ui::overlay_plugin_context::OverlayPluginContext;
 use dioxus::prelude::*;
 use table_environment::TableEnvironment;
@@ -33,13 +33,15 @@ fn table_label(is_healing: bool) -> &'static str {
 #[component]
 pub fn CombatTables(is_settings_preview: bool) -> Element {
     let overlay_plugin_context = use_context::<OverlayPluginContext>();
-    let context = use_context::<AppContext>();
+    let settings_context = use_context::<SettingsContext>();
+    let tables = use_context::<TablesContext>();
+    let settings_screen = use_context::<SettingsScreenContext>();
     let view = use_context::<crate::presentation::ui::areas::SettingsView>();
     let (table, columns, bars, raid) = (view.table.read().clone(), view.columns.read().clone(), view.bars.read().clone(), view.raid.read().clone());
     let merge_pets = view.page.read().merge_pets;
-    let settings = context.settings.read();
-    let local_player_name = context.local_player_name.read().clone();
-    let blurred_rows = context.blurred_player_rows.read().clone();
+    let settings = settings_context.settings.read();
+    let local_player_name = tables.local_player_name.read().clone();
+    let blurred_rows = tables.blurred_player_rows.read().clone();
 
     // The real tables draw whatever is currently displayed (live, a history entry, or frozen
     // while settings are open); the settings preview always draws the built-in sample fight.
@@ -47,7 +49,7 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
         let sample = crate::application::app_state::sample_combat_message(merge_pets);
         (sample.combatants.clone(), sample.encounter.clone())
     } else {
-        let Some(message) = context.displayed_combat_data.read().clone() else { return rsx! {} };
+        let Some(message) = tables.displayed_combat_data.read().clone() else { return rsx! {} };
         (message.combatants.clone(), message.encounter.clone())
     };
 
@@ -60,7 +62,7 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
     let is_encounter_active = if is_settings_preview { true } else { overlay_plugin_context.get_is_encounter_active() };
     let environment = TableEnvironment::new(is_encounter_active, &settings, &table, &columns, &bars, &raid, &local_player_name, &blurred_rows, is_settings_preview);
 
-    let raid_mode = table.raid_mode(combatants.len()) || (is_settings_preview && *context.settings_preview_raid_mode.read());
+    let raid_mode = table.raid_mode(combatants.len()) || (is_settings_preview && *settings_screen.settings_preview_raid_mode.read());
 
     let sections = table
         .tables_in_order()

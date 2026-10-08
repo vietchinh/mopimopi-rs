@@ -6,7 +6,7 @@
 mod language_links;
 
 use super::combat_tables::CombatTables;
-use crate::application::app_state::AppContext;
+use crate::application::app_state::TablesContext;
 use crate::application::i18n::translate;
 use crate::domain::translations::translations;
 use crate::presentation::ui::shared::safe_markup::markup_view;
@@ -16,11 +16,11 @@ use language_links::LanguageLinks;
 /// The tables once data has arrived, the start screen before that.
 #[component]
 pub fn MainScreen() -> Element {
-    let context = use_context::<AppContext>();
-    if !*context.has_received_data.read() {
+    let tables = use_context::<TablesContext>();
+    if !*tables.has_received_data.read() {
         return rsx! { StartScreen {} };
     }
-    let is_standby_hidden = *context.is_standby_hidden.read();
+    let is_standby_hidden = *tables.is_standby_hidden.read();
     rsx! {
         div { "name": "main", class: "mainBody", display: if is_standby_hidden { "none" },
             CombatTables { is_settings_preview: false }

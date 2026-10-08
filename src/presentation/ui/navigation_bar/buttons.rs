@@ -2,7 +2,7 @@
 //! in the settings or while the mouse is over the ⋮ button.
 
 use super::capture_screenshot;
-use crate::application::app_state::{AppContext, open_history_screen, Dropdown};
+use crate::application::app_state::{open_history_screen, AppActions, Dropdown, DropdownContext, NavigationBarContext, NoticesContext};
 use crate::application::i18n::translate;
 use crate::domain::translations::translations;
 use dioxus::prelude::*;
@@ -12,9 +12,9 @@ use crate::presentation::ui::overlay_plugin_context::OverlayPluginContext;
 #[component]
 pub(super) fn NavigationButtons(is_settings_preview: bool) -> Element {
     let overlay_plugin_context = use_context::<OverlayPluginContext>();
-    let context = use_context::<AppContext>();
+    let navigation_bar = use_context::<NavigationBarContext>();
     let nav = use_context::<crate::presentation::ui::areas::SettingsView>().nav.read().clone();
-    let mouse_is_over_menu_button = *context.nav_buttons_expanded.read();
+    let mouse_is_over_menu_button = *navigation_bar.nav_buttons_expanded.read();
     let is_encounter_active = overlay_plugin_context.get_is_encounter_active();
     let is_shown = |button: &str| {
         let is_pinned = match button {
@@ -44,9 +44,9 @@ pub(super) fn NavigationButtons(is_settings_preview: bool) -> Element {
             right: if is_settings_preview { "0" },
             top: if is_settings_preview { "0" },
             onmouseleave: move |_| {
-                let mut expanded = context.nav_buttons_expanded;
+                let mut expanded = navigation_bar.nav_buttons_expanded;
                 expanded.set(false);
-                let mut flashing = context.capture_flash_active;
+                let mut flashing = navigation_bar.capture_flash_active;
                 flashing.set(false);
             },
             if is_shown("Capture") { NavigationButton { name: "Capture", icon: "camera", is_settings_preview, more_button: false } }
@@ -63,10 +63,13 @@ pub(super) fn NavigationButtons(is_settings_preview: bool) -> Element {
 
 #[component]
 fn NavigationButton(name: &'static str, icon: &'static str, is_settings_preview: bool, more_button: bool) -> Element {
-    let context = use_context::<AppContext>();
+    let navigation_bar = use_context::<NavigationBarContext>();
+    let notices = use_context::<NoticesContext>();
+    let dropdown = use_context::<DropdownContext>();
+    let actions = use_context::<AppActions>();
     // The original flashes a pressed button's icon once (adds `flash animated`, removes it on animationend).
     let mut flash_once = use_signal(|| false);
-    let is_blinking = (*context.capture_flash_active.read() && name == "Capture") || *flash_once.read();
+    let is_blinking = (*navigation_bar.capture_flash_active.read() && name == "Capture") || *flash_once.read();
     rsx! {
         div {
             "name": name,
@@ -74,14 +77,14 @@ fn NavigationButton(name: &'static str, icon: &'static str, is_settings_preview:
             class: if more_button { "nav-more-button" },
             onmouseenter: move |_| {
                 if is_settings_preview { return; }
-                show_button_tooltip(context, name);
+                show_button_tooltip(notices, name);
                 if name == "More" {
-                    let mut expanded = context.nav_buttons_expanded;
+                    let mut expanded = navigation_bar.nav_buttons_expanded;
                     expanded.set(true);
                 }
             },
             onmouseleave: move |_| {
-                let mut tooltip = context.tooltip_html;
+                let mut tooltip = notices.tooltip_html;
                 tooltip.set(None);
             },
             onclick: move |_| {
@@ -89,7 +92,7 @@ fn NavigationButton(name: &'static str, icon: &'static str, is_settings_preview:
                     if name == "RequestEnd" {
                         flash_once.set(true);
                     }
-                    press_button(context, name)
+                    press_button(actions, navigation_bar, dropdown, name)
                 }
             },
             // `MaterialIcon` takes no class, so the classes live on a wrapper that draws no box (`display: contents`, see `.nav-icon` in public/base.css)
@@ -104,14 +107,14 @@ fn NavigationButton(name: &'static str, icon: &'static str, is_settings_preview:
     }
 }
 
-fn press_button(context: AppContext, name: &str) {
+fn press_button(actions: AppActions, navigation_bar: NavigationBarContext, dropdown: DropdownContext, name: &str) {
     match name {
-        "Capture" => capture_screenshot(context),
-        "History" => open_history_screen(context),
+        "Capture" => capture_screenshot(navigation_bar, actions),
+        "History" => open_history_screen(actions),
         "RequestEnd" => request_end_encounter(),
         _ => {
-            let mut dropdown = context.open_dropdown;
-            dropdown.set(Some(Dropdown::Navigation));
+            let mut open_dropdown = dropdown.open_dropdown;
+            open_dropdown.set(Some(Dropdown::Navigation));
         }
     }
 }
@@ -130,11 +133,11 @@ fn request_end_encounter() {
     }
 }
 
-fn show_button_tooltip(context: AppContext, button_name: &str) {
+fn show_button_tooltip(notices: NoticesContext, button_name: &str) {
     let tooltips_enabled = consume_context::<crate::presentation::ui::areas::SettingsView>().page.peek().tooltips;
     if tooltips_enabled {
         let text = translate(&translations().ui_schema["NAV"]["main"]["btn"][button_name]["m"]);
-        let mut tooltip = context.tooltip_html;
+        let mut tooltip = notices.tooltip_html;
         tooltip.set(Some(text));
     }
 }

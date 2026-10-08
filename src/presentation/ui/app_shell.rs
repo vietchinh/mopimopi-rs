@@ -8,38 +8,8 @@ use super::overlay_plugin_context::OverlayPluginContext;
 use super::overlays::{Toast, Tooltip};
 use super::settings_screens::{SettingsNavigationBar, SettingsScreen};
 use super::start_screen::MainScreen;
-use crate::application::app_state::{AppContext, Screen, SettingsLocation, Dropdown, ToastState, on_combat_data_changed, register_save_on_page_hide, schedule_settings_save, restart_standby_timer};
-use crate::domain::settings::Settings;
+use crate::application::app_state::{on_combat_data_changed, Screen, register_save_on_page_hide, restart_standby_timer, schedule_settings_save, AppActions, DropdownContext, NavigationBarContext, NoticesContext, ScreenContext, SettingsContext, SettingsScreenContext, TablesContext};
 use dioxus::prelude::*;
-use std::collections::HashSet;
-
-/// Creates every piece of shared state (see `app_state::AppContext` for what each one means).
-fn create_app_context() -> AppContext {
-    let settings = use_signal(Settings::load_from_browser);
-
-    AppContext {
-        settings,
-        displayed_combat_data: use_signal(|| None),
-        local_player_name: use_signal(String::new),
-        current_screen: use_signal(|| Screen::Main),
-        has_received_data: use_signal(|| false),
-        encounter_was_active: use_signal(|| false),
-        encounter_history: use_signal(Vec::new),
-        encounters_in_current_zone: use_signal(|| 0usize),
-        viewed_history_key: use_signal(|| None::<String>),
-        settings_location: use_signal(SettingsLocation::top_level),
-        open_dropdown: use_signal(|| None::<Dropdown>),
-        settings_preview_enabled: use_signal(|| false),
-        settings_preview_raid_mode: use_signal(|| false),
-        toast_message: use_signal(ToastState::default),
-        toast_generation: use_signal(|| 0u32),
-        tooltip_html: use_signal(|| None::<String>),
-        is_standby_hidden: use_signal(|| false),
-        blurred_player_rows: use_signal(HashSet::<String>::new),
-        nav_buttons_expanded: use_signal(|| false),
-        capture_flash_active: use_signal(|| false),
-    }
-}
 
 // tailwind.css is a Dioxus asset, so `dx` minifies it and gives it a content-hashed file name (long-term
 // cacheable). It is the generated part of the CSS: the Preflight undo, the utilities, and the parts of the
@@ -81,10 +51,18 @@ fn clock_font_face() -> String {
 
 #[component]
 pub fn App() -> Element {
-    let context = create_app_context();
+    // One context per section of the page, each provided here; `actions` is what changes several of them at once.
+    let actions = AppActions::provide();
+    NavigationBarContext::provide();
+    let settings_context = use_context::<SettingsContext>();
+    let screen_context = use_context::<ScreenContext>();
+    let tables_context = use_context::<TablesContext>();
+    let settings_screen_context = use_context::<SettingsScreenContext>();
+    let dropdown_context = use_context::<DropdownContext>();
+    let notices_context = use_context::<NoticesContext>();
     // Each area of the settings as a typed value, for the components that draw it (see `areas`). Created first: what is set up below
     // already needs the page's settings.
-    let view = super::areas::provide_settings_view(context.settings);
+    let view = super::areas::provide_settings_view(settings_context.settings);
 
     let connection_status = use_signal(|| overlay_plugin_context::ConnectionStatus::NotConfigured);
     let combat_data_message = use_signal(|| None);
@@ -96,7 +74,6 @@ pub fn App() -> Element {
         OverlayPluginContext::new(connection_status, combat_data_message, player_name_signal, connection_error, merge_pets_into_owner);
     overlay_plugin_context::spawn_connection_task(connection_status, combat_data_message, player_name_signal, connection_error, merge_pets_into_owner);
 
-    use_context_provider(|| context);
     let color_picker = use_context_provider(super::settings_screens::ColorPickerState::new);
     // Where each graph bar was last drawn, so the next change of a bar can be animated from there.
     use_context_provider(super::combat_tables::BarHistory::default);
@@ -112,7 +89,7 @@ pub fn App() -> Element {
     });
     use_context_provider(|| overlay_plugin_context);
 
-    use_hook(|| restart_standby_timer(context));
+    use_hook(|| restart_standby_timer(actions));
 
     use_effect(move || {
         let merge_pets = view.page.read().merge_pets;
@@ -121,28 +98,28 @@ pub fn App() -> Element {
 
     use_effect(move || {
         if let Some(message) = overlay_plugin_context.combat_data_message() {
-            on_combat_data_changed(context, message);
+            on_combat_data_changed(actions, message);
         }
     });
     use_effect(move || {
         let name = overlay_plugin_context.local_player_name();
         if !name.is_empty() {
-            let mut local_player_name = context.local_player_name;
+            let mut local_player_name = tables_context.local_player_name;
             local_player_name.set(name);
         }
     });
 
     // Save the settings shortly after the last change (see `settings_saving`).
-    use_hook(|| register_save_on_page_hide(context.settings));
+    use_hook(|| register_save_on_page_hide(settings_context.settings));
     use_effect(move || {
-        let _ = context.settings.read(); // re-run after every change
-        schedule_settings_save(context.settings);
+        let _ = settings_context.settings.read(); // re-run after every change
+        schedule_settings_save(settings_context.settings);
     });
 
     use_effect(move || {
-        let _ = context.current_screen.read();
-        let _ = context.settings_location.read();
-        let mut tooltip = context.tooltip_html;
+        let _ = screen_context.current_screen.read();
+        let _ = settings_screen_context.settings_location.read();
+        let mut tooltip = notices_context.tooltip_html;
         if tooltip.peek().is_some() {
             tooltip.set(None);
         }
@@ -155,7 +132,7 @@ pub fn App() -> Element {
     // is computed inline by whichever component owns the element it styles; this is the one
     // exception, because nothing else in the render tree is html's actual owner.
     let root_style = use_memo(move || view.page.read().root_rule());
-    let screen = *context.current_screen.read();
+    let screen = *screen_context.current_screen.read();
     let font_face = clock_font_face();
     let show_resize_handle = screen != Screen::Settings && view.page.read().corner_handle;
 
@@ -173,12 +150,12 @@ pub fn App() -> Element {
             background_image: if show_resize_handle { "url(images/handle.svg)" },
             // Pressing anywhere but on the picker or its boxes closes the picker (they stop the event).
             onmousedown: move |_| color_picker.hide(),
-            if context.open_dropdown.read().is_some() {
+            if dropdown_context.open_dropdown.read().is_some() {
                 DropdownMenu {}
                 div {
                     id: "blackBg",
                     onclick: move |_| {
-                        let mut dropdown = context.open_dropdown;
+                        let mut dropdown = dropdown_context.open_dropdown;
                         dropdown.set(None);
                     },
                 }

@@ -17,7 +17,7 @@ pub(super) fn color_row(page_context: &RowContext, entry: &SchemaEntry) -> Eleme
 
 /// Numeric setting stored in `Range`.
 pub(super) fn slider_setting_row(page_context: &RowContext, entry: &SchemaEntry) -> Element {
-    let (context, id) = (page_context.context, entry.id.clone());
+    let (settings_context, id) = (page_context.settings_context, entry.id.clone());
     let t = title(entry);
     let ic = icon(entry);
     slider_row(
@@ -29,7 +29,7 @@ pub(super) fn slider_setting_row(page_context: &RowContext, entry: &SchemaEntry)
             max: entry.definition["max"].as_f64().unwrap_or(100.0),
             value: page_context.settings.slider_value(&entry.id),
         },
-        move |new_value| context.edit_settings(|settings| settings.set_slider_value(&id, new_value)),
+        move |new_value| settings_context.edit_settings(|settings| settings.set_slider_value(&id, new_value)),
     )
 }
 

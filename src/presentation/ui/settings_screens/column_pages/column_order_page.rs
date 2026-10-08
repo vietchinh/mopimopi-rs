@@ -8,7 +8,7 @@ use dioxus_material_icons::MaterialIcon;
 
 /// Up / down buttons to reorder the columns that are switched on for a table.
 pub(in crate::presentation::ui::settings_screens) fn column_order_page(page_context: &RowContext, table: &str) -> Element {
-    let context = page_context.context;
+    let settings_context = page_context.settings_context;
     let columns: Vec<String> = page_context.settings.file().enabled_columns(table).into_iter().map(String::from).collect();
     let rows = columns.into_iter().map(|col| {
         let name = page_context.settings.column_text(&col, "tt");
@@ -23,11 +23,11 @@ pub(in crate::presentation::ui::settings_screens) fn column_order_page(page_cont
                         tr {
                             td { class: "gIcon", RowIcon { icon: "arrow_right".to_string() } }
                             td { class: "gTitle", {markup_view(&name)} }
-                            td { class: "UBtn", onclick: move |_| context.edit_settings(|settings| settings.move_column(&up_col, &up_table, true)),
+                            td { class: "UBtn", onclick: move |_| settings_context.edit_settings(|settings| settings.move_column(&up_col, &up_table, true)),
                                 MaterialIcon { name: "arrow_upward" }
                             }
                             td { style: "padding:0 1.4rem" }
-                            td { class: "DBtn", onclick: move |_| context.edit_settings(|settings| settings.move_column(&down_col, &down_table, false)),
+                            td { class: "DBtn", onclick: move |_| settings_context.edit_settings(|settings| settings.move_column(&down_col, &down_table, false)),
                                 MaterialIcon { name: "arrow_downward" }
                             }
                         }

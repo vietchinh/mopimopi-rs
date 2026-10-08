@@ -9,7 +9,7 @@
 //! `clippy::pedantic` is enabled in CI. A few categories are turned back off here, crate-wide,
 //! because they conflict with choices made deliberately throughout this codebase rather than
 //! flagging real mistakes; everything else pedantic finds is meant to be fixed, not silenced.
-//! - `large_types_passed_by_value`: `AppContext`/`OverlayPluginContext` are `Copy` structs of
+//! - `large_types_passed_by_value`: the section contexts and `OverlayPluginContext` are `Copy` structs of
 //!   `Signal` handles, made that way specifically so they can be moved into `move |_|` event
 //!   closures and `use_effect`/`use_future` bodies without lifetime issues. Their byte size is
 //!   irrelevant — copying a `Signal` copies a handle, not the data it points to — so "pass by

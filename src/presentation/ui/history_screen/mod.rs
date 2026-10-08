@@ -4,7 +4,7 @@
 
 mod history_row;
 
-use crate::application::app_state::{AppContext, close_history_screen};
+use crate::application::app_state::{close_history_screen, AppActions, HistoryContext, NavigationBarContext, SettingsContext};
 use crate::application::i18n::translate;
 use crate::domain::formatting::NumberFormat;
 use crate::domain::translations::translations;
@@ -17,20 +17,21 @@ use history_row::history_row;
 
 #[component]
 pub fn HistoryNavigationBar() -> Element {
-    let context = use_context::<AppContext>();
+    let navigation_bar = use_context::<NavigationBarContext>();
+    let actions = use_context::<AppActions>();
     let title = translate(&translations().ui_schema["NAV"]["history"]["tt"]);
-    let is_blinking = *context.capture_flash_active.read();
+    let is_blinking = *navigation_bar.capture_flash_active.read();
     let nav = use_context::<SettingsView>().nav.read().bar_vars();
     rsx! {
         nav { "name": "history", class: "nav-bar", style: "{nav}",
             div { class: "left top btn_wrap",
-                div { "name": "Back", class: "btn flex", onclick: move |_| close_history_screen(context),
+                div { "name": "Back", class: "btn flex", onclick: move |_| close_history_screen(actions),
                     span { class: "nav-icon text-(color:--nav-icon-color) text-(length:--nav-icon-size)", MaterialIcon { name: "arrow_back" } }
                 }
             }
             table { class: "nav_title", tbody { tr { td { "{title}" } } } }
             div { class: "right top btn_wrap",
-                div { "name": "Capture", class: "btn flex", onclick: move |_| capture_screenshot(context),
+                div { "name": "Capture", class: "btn flex", onclick: move |_| capture_screenshot(navigation_bar, actions),
                     span { class: "nav-icon text-(color:--nav-icon-color) text-(length:--nav-icon-size)", class: if is_blinking { "flash animated" }, MaterialIcon { name: "camera" } }
                 }
             }
@@ -40,8 +41,10 @@ pub fn HistoryNavigationBar() -> Element {
 
 #[component]
 pub fn HistoryScreen() -> Element {
-    let context = use_context::<AppContext>();
-    let viewed_key = context.viewed_history_key.read().clone();
+    let history = use_context::<HistoryContext>();
+    let settings = use_context::<SettingsContext>();
+    let actions = use_context::<AppActions>();
+    let viewed_key = history.viewed_history_key.read().clone();
 
     // History has no concept of an "own" row (it shows encounter summaries, not per-player rows),
     // so it's always styled as "other" -- matching what the pre-Tailwind CSS selectors always
@@ -69,11 +72,11 @@ pub fn HistoryScreen() -> Element {
         }
     });
 
-    let number_format = NumberFormat::from_settings(&context.settings.read());
-    let entries = context.encounter_history.read().clone();
+    let number_format = NumberFormat::from_settings(&settings.settings.read());
+    let entries = history.encounter_history.read().clone();
     let rows = entries
         .iter()
-        .map(|entry| history_row(context, entry, viewed_key.as_deref() == Some(entry.encounter_key.as_str()), &number_format));
+        .map(|entry| history_row(actions, entry, viewed_key.as_deref() == Some(entry.encounter_key.as_str()), &number_format));
 
     rsx! {
         div { "name": "history", class: "histBody",

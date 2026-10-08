@@ -13,7 +13,7 @@
 mod buttons;
 mod summary_line;
 
-use crate::application::app_state::AppContext;
+use crate::application::app_state::{AppActions, NavigationBarContext, SettingsContext, TablesContext};
 use crate::presentation::ui::areas::SettingsView;
 use crate::application::i18n::translate;
 use crate::domain::translations::translations;
@@ -25,24 +25,25 @@ use summary_line::summary_line;
 /// save a capture; that protocol is gone (see `MAINTAINING.md`), and the real replacement (drawing
 /// the page to a PNG in the browser) is parked in `screenshot.rs` for later, so for now this only
 /// gives the same visible feedback the button always gave, without actually saving anything.
-pub fn capture_screenshot(context: AppContext) {
-    let mut flashing = context.capture_flash_active;
+pub fn capture_screenshot(navigation_bar: NavigationBarContext, actions: AppActions) {
+    let mut flashing = navigation_bar.capture_flash_active;
     flashing.set(true);
     gloo_timers::callback::Timeout::new(750, move || {
-        let mut flashing = context.capture_flash_active;
+        let mut flashing = navigation_bar.capture_flash_active;
         flashing.set(false);
     })
     .forget();
-    crate::application::app_state::show_toast_message(context, "Capture", 1500, 8000);
+    crate::application::app_state::show_toast_message(actions, "Capture", 1500, 8000);
 }
 
 #[component]
 pub fn NavigationBar(is_settings_preview: bool) -> Element {
-    let context = use_context::<AppContext>();
+    let settings_context = use_context::<SettingsContext>();
+    let tables = use_context::<TablesContext>();
     let view = use_context::<SettingsView>();
     let nav = view.nav.read().clone();
     let merge_pets = view.page.read().merge_pets;
-    let settings = context.settings.read();
+    let settings = settings_context.settings.read();
 
     // Same source as `CombatTables`: the settings preview always shows the built-in sample fight;
     // the real bar shows whatever is currently *displayed* (`displayed_combat_data`), not
@@ -53,13 +54,13 @@ pub fn NavigationBar(is_settings_preview: bool) -> Element {
     let combat_data = if is_settings_preview {
         Some(crate::application::app_state::sample_combat_message(merge_pets).clone())
     } else {
-        context.displayed_combat_data.read().as_deref().cloned()
+        tables.displayed_combat_data.read().as_deref().cloned()
     };
     let (time_text, target_text, summary) = match &combat_data {
         Some(message) => (
             message.encounter.duration_text.clone(),
             message.encounter.title.clone(),
-            summary_line(context, &settings, &nav.summary, &message.combatants, &message.encounter, is_settings_preview),
+            summary_line(settings_context, tables, &settings, &nav.summary, &message.combatants, &message.encounter, is_settings_preview),
         ),
         // Nothing has ever arrived yet: the only case the original shows this placeholder for
         // (before its own `firstCombat` flag is ever set).

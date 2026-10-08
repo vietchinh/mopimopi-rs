@@ -13,7 +13,7 @@ use dioxus::prelude::*;
 
 /// Custom header titles: a note, then (current title + text box) per column.
 pub(super) fn header_text_page(page_context: &RowContext) -> Element {
-    let (context, inputs) = (page_context.context, page_context.typed_texts);
+    let (settings_context, actions, inputs) = (page_context.settings_context, page_context.actions, page_context.typed_texts);
     let d = &translations().dictionary;
     let placeholder = translate(&d["headerText"]);
 
@@ -43,7 +43,7 @@ pub(super) fn header_text_page(page_context: &RowContext) -> Element {
         let box_id = format!("headerText_{col}");
         let on_enter = {
             let box_id = box_id.clone();
-            move |text: String| submit_text(context, inputs, &box_id, text.as_str())
+            move |text: String| submit_text(settings_context, actions, inputs, &box_id, text.as_str())
         };
         let input = text_box(inputs, &box_id, &placeholder, on_enter);
         let send_id = box_id.clone();
@@ -55,7 +55,7 @@ pub(super) fn header_text_page(page_context: &RowContext) -> Element {
                         td { class: "gIcon", RowIcon { icon: "text_fields".to_string() } }
                         td { style: "width:100%", {input} }
                         td { class: "gIcon ft sendBtn",
-                            onclick: move |_| submit_text(context, inputs, &send_id, typed_text(inputs, &send_id).as_str()),
+                            onclick: move |_| submit_text(settings_context, actions, inputs, &send_id, typed_text(inputs, &send_id).as_str()),
                             RowIcon { icon: "send".to_string() }
                         }
                     } } }

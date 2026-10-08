@@ -11,7 +11,7 @@ use super::cell_classes::{BODY_CELL_BORDER, HEADER_CELL, HEADER_TABLE};
 use super::graph_bars::graph_bars;
 use super::table_environment::TableEnvironment;
 use super::visible_players::visible_players;
-use crate::application::app_state::AppContext;
+use crate::application::app_state::TablesContext;
 use crate::domain::combat::CombatantKind;
 use crate::domain::formatting::cell_fragments_ranked;
 use crate::application::i18n::translate;
@@ -153,7 +153,7 @@ fn job_icon_cell(environment: &TableEnvironment, combatant: &CombatantRecord, bl
             onclick: move |_| {
                 if can_blur {
                     // `consume_context` is a plain function; `use_context` is a hook and must not be called once per row.
-                    let mut blurred_rows = consume_context::<AppContext>().blurred_player_rows;
+                    let mut blurred_rows = consume_context::<TablesContext>().blurred_player_rows;
                     let mut rows = blurred_rows.write();
                     if !rows.remove(&blur_key) {
                         rows.insert(blur_key.clone());

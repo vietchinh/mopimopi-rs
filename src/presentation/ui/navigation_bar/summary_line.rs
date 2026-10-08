@@ -1,6 +1,6 @@
 //! The summary text in the top bar.
 
-use crate::application::app_state::AppContext;
+use crate::application::app_state::{SettingsContext, TablesContext};
 use crate::common::javascript_compat::p_float;
 use crate::domain::formatting::{cell_plain_text, CellContext, NumberFormat};
 use crate::domain::settings::Settings;
@@ -15,7 +15,8 @@ use std::fmt::Write;
 /// Shows only the parts the user enabled ("Display Type of Combatant Data" settings). Without a
 /// local player row it shows the "Please start the combat." hint.
 pub(super) fn summary_line(
-    context: AppContext,
+    settings_context: SettingsContext,
+    tables: TablesContext,
     settings: &Settings,
     parts: &SummaryParts,
     combatants: &[CombatantRecord],
@@ -30,7 +31,7 @@ pub(super) fn summary_line(
     // The top bar always shows whole numbers (the original's `addComma(x)` with no decimals), whatever
     // the DPS/HPS decimals setting says for the tables.
     let whole = |value: f64| number_format.format_number(value, 1.0, 0);
-    let local_player_name = context.local_player_name.read().clone();
+    let local_player_name = tables.local_player_name.read().clone();
     let cell_context = CellContext::new(settings, dictionary_title(LIMIT_BREAK_JOB_CODE), &local_player_name);
 
     let mut summary = String::new();
@@ -65,7 +66,7 @@ pub(super) fn summary_line(
     };
     let toggle_strongest_action_kind = move |_| {
         if !is_settings_preview {
-            context.edit_settings(|settings| {
+            settings_context.edit_settings(|settings| {
                 let was_showing_heal = settings.option_enabled("swap");
                 settings.set_option_enabled("swap", !was_showing_heal);
             });

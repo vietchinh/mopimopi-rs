@@ -1,6 +1,6 @@
 //! Sample bar and tables above the settings so changes are visible while editing.
 
-use crate::application::app_state::AppContext;
+use crate::application::app_state::SettingsScreenContext;
 use crate::application::i18n::translate;
 use crate::domain::translations::translations;
 use crate::presentation::ui::combat_tables::CombatTables;
@@ -11,8 +11,8 @@ use dioxus::prelude::*;
 /// Sample nav bar + tables so changes are visible while editing.
 #[component]
 pub(super) fn LivePreview() -> Element {
-    let context = use_context::<AppContext>();
-    let raid_mode = *context.settings_preview_raid_mode.read();
+    let settings_screen = use_context::<SettingsScreenContext>();
+    let raid_mode = *settings_screen.settings_preview_raid_mode.read();
     let label = translate(&translations().ui_schema["raid"]["tab_general"]["inner"]["view24_Number"]["tt"]);
     rsx! {
         div {
@@ -22,7 +22,7 @@ pub(super) fn LivePreview() -> Element {
             table {
                 id: "preview24",
                 onclick: move |_| {
-                    let mut raid_preview = context.settings_preview_raid_mode;
+                    let mut raid_preview = settings_screen.settings_preview_raid_mode;
                     let was_on = *raid_preview.peek();
                     raid_preview.set(!was_on);
                 },

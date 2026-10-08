@@ -8,7 +8,7 @@ use crate::presentation::ui::shared::safe_markup::markup_view;
 use dioxus::prelude::*;
 
 pub(super) fn tab_bar(page_context: &RowContext, nav: &SettingsLocation) -> Element {
-    let context = page_context.context;
+    let actions = page_context.actions;
     let selected = current_tab(&nav.page, nav.tab.as_ref());
     let buttons = tabs_of(&nav.page).into_iter().map(|(id, def)| {
         let on = selected.as_deref() == Some(id.as_str());
@@ -16,7 +16,7 @@ pub(super) fn tab_bar(page_context: &RowContext, nav: &SettingsLocation) -> Elem
         let title = translate(&def["tt"]);
         let target = id.clone();
         rsx! {
-            div { key: "{id}", "name": "{id}", class: "tab_box", width: "{width}%", onclick: move |_| select_settings_tab(context, &target),
+            div { key: "{id}", "name": "{id}", class: "tab_box", width: "{width}%", onclick: move |_| select_settings_tab(actions, &target),
                 div { class: if on { "tab_title on" } else { "tab_title" }, {markup_view(&title)} }
                 div { class: if on { "tab_underBar on_bar" } else { "tab_underBar" } }
             }

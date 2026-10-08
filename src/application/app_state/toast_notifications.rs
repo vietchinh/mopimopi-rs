@@ -1,6 +1,6 @@
 //! Short messages that slide in from the right ("Backup completed").
 
-use super::app_context::AppContext;
+use super::app_actions::AppActions;
 use crate::application::i18n::message;
 use dioxus::prelude::*;
 use gloo_timers::callback::Timeout;
@@ -10,17 +10,17 @@ const SLIDE_OUT_MILLISECONDS: u32 = 200;
 
 /// Shows the translated message `message_id` after `delay_milliseconds` for
 /// `visible_until_milliseconds` (measured from now). Does nothing when toasts are disabled.
-pub fn show_toast_message(context: AppContext, message_id: &str, delay_milliseconds: u32, visible_until_milliseconds: u32) {
-    let toasts_enabled = context.settings.peek().option_enabled("toast");
+pub fn show_toast_message(actions: AppActions, message_id: &str, delay_milliseconds: u32, visible_until_milliseconds: u32) {
+    let toasts_enabled = actions.settings.settings.peek().option_enabled("toast");
     if !toasts_enabled {
         return;
     }
     let text = message(message_id);
-    let mut toast = context.toast_message;
+    let mut toast = actions.notices.toast_message;
     if toast.peek().is_slid_in {
         toast.write().is_slid_in = false;
     }
-    let generation_signal = context.toast_generation;
+    let generation_signal = actions.notices.toast_generation;
     let generation = start_new_message_generation(generation_signal);
 
     // Timers of an older message must not touch a newer one, hence the generation checks.
@@ -49,9 +49,9 @@ pub fn show_toast_message(context: AppContext, message_id: &str, delay_milliseco
 
 /// Removes the current message immediately and cancels its timers. Called for every combat
 /// message, so it only writes the toast state when a message is actually showing.
-pub fn dismiss_toast_message(context: AppContext) {
-    start_new_message_generation(context.toast_generation);
-    let mut toast = context.toast_message;
+pub fn dismiss_toast_message(actions: AppActions) {
+    start_new_message_generation(actions.notices.toast_generation);
+    let mut toast = actions.notices.toast_message;
     let is_showing = {
         let state = toast.peek();
         state.is_visible || state.is_slid_in

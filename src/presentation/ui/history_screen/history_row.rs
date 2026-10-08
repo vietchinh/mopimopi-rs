@@ -1,13 +1,13 @@
 //! One line of the history list.
 
-use crate::application::app_state::{show_history_entry, AppContext, HistoryEntry};
+use crate::application::app_state::{show_history_entry, AppActions, HistoryEntry};
 use crate::domain::formatting::NumberFormat;
 use dioxus::prelude::*;
 
 use crate::presentation::ui::combat_tables::cell_classes::BODY_CELL_BORDER as CELL_BORDER;
 
 /// `number_format` is built once per screen by `HistoryScreen`; it does not depend on the row.
-pub(super) fn history_row(context: AppContext, entry: &HistoryEntry, is_shown_now: bool, number_format: &NumberFormat) -> Element {
+pub(super) fn history_row(actions: AppActions, entry: &HistoryEntry, is_shown_now: bool, number_format: &NumberFormat) -> Element {
     let rate = |value: f64| number_format.format_number(value, 1.0, number_format.rate_decimals);
     let rate_or_no_data = |value: Option<f64>| value.map_or_else(|| "No Data".into(), &rate);
     let (encounter_dps, encounter_hps) = (rate(entry.encounter_dps()), rate(entry.encounter_hps()));
@@ -19,7 +19,7 @@ pub(super) fn history_row(context: AppContext, entry: &HistoryEntry, is_shown_no
         // History has no "own row" concept (see HistoryScreen's comment): the text is always the other rows' (no `text-own`).
         // Everything here (row height, corners, the .ex size, own/other text) is read from the
         // variables `HistoryScreen` sets once on #HISTORYBody, via standard_table's `body_style`.
-        div { key: "{entry.encounter_key}", class: "tableWrap themed-text chrome-row", onclick: move |_| show_history_entry(context, &encounter_key),
+        div { key: "{entry.encounter_key}", class: "tableWrap themed-text chrome-row", onclick: move |_| show_history_entry(actions, &encounter_key),
             table { id: "{entry.encounter_key}", class: "tableBody",
                 tbody {
                     tr {

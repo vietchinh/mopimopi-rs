@@ -1,6 +1,6 @@
 //! Top bar of the settings screen.
 
-use crate::application::app_state::{AppContext, go_back_in_settings, Dropdown};
+use crate::application::app_state::{go_back_in_settings, AppActions, Dropdown, DropdownContext, SettingsScreenContext};
 use crate::application::i18n::translate;
 use crate::domain::translations::translations;
 use dioxus::prelude::*;
@@ -23,12 +23,14 @@ pub(super) fn page_title(page: &str) -> String {
 
 #[component]
 pub fn SettingsNavigationBar() -> Element {
-    let context = use_context::<AppContext>();
-    let title = page_title(&context.settings_location.read().page);
+    let actions = use_context::<AppActions>();
+    let dropdown = use_context::<DropdownContext>();
+    let settings_screen = use_context::<SettingsScreenContext>();
+    let title = page_title(&settings_screen.settings_location.read().page);
     rsx! {
         nav { "name": "settings", class: "shadow",
             div { class: "left top btn_wrap",
-                div { "name": "Back", class: "btn flex", onclick: move |_| go_back_in_settings(context),
+                div { "name": "Back", class: "btn flex", onclick: move |_| go_back_in_settings(actions),
                     MaterialIcon { name: "arrow_back" }
                 }
             }
@@ -38,7 +40,7 @@ pub fn SettingsNavigationBar() -> Element {
                     "name": "More",
                     class: "btn flex",
                     onclick: move |_| {
-                        let mut open_dropdown = context.open_dropdown;
+                        let mut open_dropdown = dropdown.open_dropdown;
                         open_dropdown.set(Some(Dropdown::Navigation));
                     },
                     MaterialIcon { name: "more_vert" }

@@ -8,7 +8,7 @@
 //! backgroundColor:'#212121'`), and the pad and slider are drawn on `<canvas>` with the same gradients,
 //! so the pixels come out the same.
 
-use crate::application::app_state::AppContext;
+use crate::application::app_state::SettingsContext;
 use dioxus::prelude::*;
 use std::collections::HashMap;
 use wasm_bindgen::JsCast;
@@ -188,7 +188,7 @@ pub struct JsColorInputProps {
 
 #[component]
 pub fn JsColorInput(props: JsColorInputProps) -> Element {
-    let context = use_context::<AppContext>();
+    let settings_context = use_context::<SettingsContext>();
     let mut picker = use_context::<ColorPickerState>();
     let id = props.id.clone();
     let mut text = use_signal(|| props.hex.clone());
@@ -252,7 +252,7 @@ pub fn JsColorInput(props: JsColorInputProps) -> Element {
                     // stored in full: the original stores them raw and then draws them wrongly (a bug not copied).
                     let digits = if typed.trim().len() == 6 { typed.trim().to_string() } else { hex_of(rgb) };
                     let id = type_id.clone();
-                    context.edit_settings(move |settings| settings.set_color_hex(&id, &digits));
+                    settings_context.edit_settings(move |settings| settings.set_color_hex(&id, &digits));
                 }
             },
             // Leaving the box shows the current colour in full again, in capitals (jscolor's `importColor`
@@ -263,15 +263,15 @@ pub fn JsColorInput(props: JsColorInputProps) -> Element {
 }
 
 /// Applies a colour picked in the panel: remembered per box, saved as a setting.
-fn apply_hsv(context: AppContext, mut picker: ColorPickerState, id: &str, hsv: [f64; 3]) {
+fn apply_hsv(settings_context: SettingsContext, mut picker: ColorPickerState, id: &str, hsv: [f64; 3]) {
     picker.hsv_by_owner.write().insert(id.to_string(), hsv);
     let digits = hex_of(hsv_to_rgb(hsv[0], hsv[1], hsv[2]));
     let id = id.to_string();
-    context.edit_settings(move |settings| settings.set_color_hex(&id, &digits));
+    settings_context.edit_settings(move |settings| settings.set_color_hex(&id, &digits));
 }
 
 /// Where the pad's or slider's pointer is: the mouse position relative to the drawn canvas.
-fn pick_from_pointer(context: AppContext, picker: ColorPickerState, control: Control, client_x: f64, client_y: f64) {
+fn pick_from_pointer(settings_context: SettingsContext, picker: ColorPickerState, control: Control, client_x: f64, client_y: f64) {
     let Some(id) = picker.owner.peek().clone() else { return };
     let placement = *picker.placement.peek();
     let mut hsv = picker.hsv_of(&id);
@@ -287,7 +287,7 @@ fn pick_from_pointer(context: AppContext, picker: ColorPickerState, control: Con
         }
         Control::Slider => hsv[2] = y_value.clamp(0.0, 100.0),
     }
-    apply_hsv(context, picker, &id, hsv);
+    apply_hsv(settings_context, picker, &id, hsv);
 }
 
 fn draw_canvases(hsv: [f64; 3]) {
@@ -328,7 +328,7 @@ fn draw_canvases(hsv: [f64; 3]) {
 /// The one shared panel. Rendered by the root component, outside everything else, so it can sit anywhere.
 #[component]
 pub fn JsColorPicker() -> Element {
-    let context = use_context::<AppContext>();
+    let settings_context = use_context::<SettingsContext>();
     let picker = use_context::<ColorPickerState>();
     let owner = picker.owner.read().clone();
     let hsv = owner.as_deref().map(|id| picker.hsv_of(id)).unwrap_or([0.0, 0.0, 100.0]);
@@ -377,7 +377,7 @@ pub fn JsColorPicker() -> Element {
                         onmousedown: move |event| {
                             event.stop_propagation();
                             let point = event.client_coordinates();
-                            pick_from_pointer(context, picker, Control::Pad, point.x, point.y);
+                            pick_from_pointer(settings_context, picker, Control::Pad, point.x, point.y);
                             let mut dragging = picker.dragging;
                             dragging.set(Some(Control::Pad));
                         },
@@ -398,7 +398,7 @@ pub fn JsColorPicker() -> Element {
                         onmousedown: move |event| {
                             event.stop_propagation();
                             let point = event.client_coordinates();
-                            pick_from_pointer(context, picker, Control::Slider, point.x, point.y);
+                            pick_from_pointer(settings_context, picker, Control::Slider, point.x, point.y);
                             let mut dragging = picker.dragging;
                             dragging.set(Some(Control::Slider));
                         },
@@ -413,7 +413,7 @@ pub fn JsColorPicker() -> Element {
                 style: if control == Control::Pad { "position:fixed;left:0;top:0;width:100%;height:100%;z-index:1001;cursor:crosshair" } else { "position:fixed;left:0;top:0;width:100%;height:100%;z-index:1001;cursor:default" },
                 onmousemove: move |event| {
                     let point = event.client_coordinates();
-                    pick_from_pointer(context, picker, control, point.x, point.y);
+                    pick_from_pointer(settings_context, picker, control, point.x, point.y);
                 },
                 onmouseup: move |_| {
                     let mut dragging = picker.dragging;
