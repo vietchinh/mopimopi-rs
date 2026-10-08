@@ -24,6 +24,8 @@ pub fn on_combat_data_changed(context: AppContext, message: Rc<CombatDataMessage
             show_message(context, message);
         }
         encounter_was_active.set(false);
+    } else if !*context.has_received_data.peek() && !settings_are_open {
+        show_message(context, message);
     }
 }
 
