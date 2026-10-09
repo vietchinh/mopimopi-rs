@@ -14,27 +14,27 @@ pub const PAGES_WITH_LIVE_PREVIEW: [&str; 11] =
 /// Settings pages whose rows are split into tabs.
 pub const PAGES_WITH_TABS: [&str; 10] = ["Data", "color", "opacity", "size", "advanced", "cells", "shape", "raid", "format", "order"];
 
+/// Shows `location` of the settings, with the sample tables above it (in raid mode when `raid_preview`).
+fn show_settings_location(actions: AppActions, location: SettingsLocation, raid_preview: bool) {
+    let mut current = actions.settings_screen.settings_location;
+    current.set(location);
+    let mut preview = actions.settings_screen.settings_preview_enabled;
+    preview.set(true);
+    let mut raid_mode = actions.settings_screen.settings_preview_raid_mode;
+    raid_mode.set(raid_preview);
+}
+
 pub fn open_settings_screen(actions: AppActions) {
     let mut screen = actions.screen.current_screen;
     screen.set(Screen::Settings);
-    let mut location = actions.settings_screen.settings_location;
-    location.set(SettingsLocation::top_level());
+    show_settings_location(actions, SettingsLocation::top_level(), false);
     let mut dropdown = actions.dropdown.open_dropdown;
     dropdown.set(None);
-    let mut preview = actions.settings_screen.settings_preview_enabled;
-    preview.set(true);
-    let mut raid_preview = actions.settings_screen.settings_preview_raid_mode;
-    raid_preview.set(false);
     dismiss_toast_message(actions);
 }
 
 pub fn open_settings_page(actions: AppActions, page: &str) {
-    let mut location = actions.settings_screen.settings_location;
-    location.set(SettingsLocation { page: page.to_string(), tab: None });
-    let mut preview = actions.settings_screen.settings_preview_enabled;
-    preview.set(true);
-    let mut raid_preview = actions.settings_screen.settings_preview_raid_mode;
-    raid_preview.set(page == "raid");
+    show_settings_location(actions, SettingsLocation { page: page.to_string(), tab: None }, page == "raid");
 }
 
 pub fn select_settings_tab(actions: AppActions, tab: &str) {
@@ -51,11 +51,6 @@ pub fn return_to_main_screen(actions: AppActions) {
     dropdown.set(None);
     let mut preview = actions.settings_screen.settings_preview_enabled;
     preview.set(false);
-    // let newest = actions.latest_combat_data.peek().clone();
-    // if let Some(newest) = newest.filter(|_| *actions.tables.has_received_data.peek()) {
-    //     let mut displayed = actions.tables.displayed_combat_data;
-    //     displayed.set(Some(newest));
-    // }
     restart_standby_timer(actions);
 }
 
@@ -67,10 +62,5 @@ pub fn go_back_in_settings(actions: AppActions) {
         return;
     }
     let parent_page = translations().ui_schema["back"][page.as_str()].as_str().unwrap_or("Settings").to_string();
-    let mut location = actions.settings_screen.settings_location;
-    location.set(SettingsLocation { page: parent_page, tab: None });
-    let mut preview = actions.settings_screen.settings_preview_enabled;
-    preview.set(true);
-    let mut raid_preview = actions.settings_screen.settings_preview_raid_mode;
-    raid_preview.set(false);
+    show_settings_location(actions, SettingsLocation { page: parent_page, tab: None }, false);
 }

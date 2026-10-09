@@ -1,7 +1,7 @@
 //! Standby mode: hide the tables after some minutes without a fight.
 
 use super::app_actions::AppActions;
-use super::contexts::{Screen};
+use super::contexts::Screen;
 use super::toast_notifications::{dismiss_toast_message, show_toast_message};
 use dioxus::core::Runtime;
 use dioxus::prelude::*;
@@ -35,10 +35,6 @@ pub fn restart_standby_timer(actions: AppActions) {
     if *is_hidden.peek() {
         is_hidden.set(false); // only write when it changes: every write redraws the readers
     }
-    // let fight_is_running = actions.latest_combat_data.peek().as_ref().map(|data| data.is_encounter_active).unwrap_or(false);
-    // if fight_is_running {
-    //     return; // never hide during a fight
-    // }
     let delay = (standby_minutes * MILLISECONDS_PER_MINUTE).clamp(MINIMUM_STANDBY_MILLISECONDS, MAXIMUM_TIMER_MILLISECONDS);
     // A timer fires outside any component, but the toast's text comes from the translations, which live in the app's
     // scope (as a context): the callback has to run inside it, or Dioxus panics and the whole app stops.

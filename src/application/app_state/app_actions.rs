@@ -20,7 +20,7 @@ pub struct AppActions {
 
 impl AppActions {
     /// Creates the contexts the actions change, and provides each one and the actions to everything below. (The top bar's
-    /// own `NavigationBarContext` is no action's business: the root provides it.) A hook: call it
+    /// own `NavigationBarContext` is no action's business: `PageShell` provides it.) A hook: call it
     /// once, from the root component.
     pub fn provide() -> Self {
         let actions = Self {

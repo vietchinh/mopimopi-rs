@@ -1,5 +1,5 @@
 use super::app_actions::AppActions;
-use super::contexts::{Screen};
+use super::contexts::Screen;
 use super::encounter_history::HistoryEntry;
 use super::standby_mode::restart_standby_timer;
 use crate::infrastructure::act::data::CombatDataMessage;
