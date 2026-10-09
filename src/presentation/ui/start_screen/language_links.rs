@@ -16,6 +16,7 @@ pub(super) fn LanguageLinks() -> Element {
         b { "your language" }
         " : "
         for (index , (language_code , language_name)) in LANGUAGES.into_iter().enumerate() {
+            Fragment { key: "{language_code}",
             if index > 0 { " ❘ " }
             a {
                 id: "{language_code}",
@@ -26,6 +27,7 @@ pub(super) fn LanguageLinks() -> Element {
                     show_toast_message(actions, "submit", 0, 3000);
                 },
                 "{language_name}"
+            }
             }
         }
     }

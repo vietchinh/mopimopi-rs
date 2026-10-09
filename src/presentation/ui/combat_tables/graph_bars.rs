@@ -20,7 +20,7 @@
 //! transform. Size, top margin, opacity and corners are CSS variables set once per table
 //! (`standard_table.rs`'s `body_style`) and read by the `chrome-bar-*` classes in `tailwind.css`.
 
-use super::table_environment::TableEnvironment;
+use super::table_environment::SharedEnvironment;
 use crate::infrastructure::act::data::CombatantRecord;
 use crate::presentation::ui::areas::Side;
 use crate::presentation::ui::shared::palette::percent_of_whole;
@@ -113,10 +113,6 @@ pub(super) fn small_bar_geometry(main: f64, widths: &[i32], on_right: bool) -> O
     Some(geometry)
 }
 
-/// How long a bar's remembered position is trusted. After a longer gap (the row was gone, the fight ended) a bar that
-/// comes back grows in again instead of sliding from where it used to be.
-const REMEMBER_FOR_MS: f64 = 3000.0;
-
 #[derive(Clone, Copy)]
 struct Remembered {
     geometry: BarGeometry,
@@ -124,13 +120,25 @@ struct Remembered {
     /// animation, so every move uses the other one.
     second_keyframes: bool,
     flip: Option<Flip>,
-    seen_at_ms: f64,
 }
 
-/// What every bar drawn so far looked like, so the next draw knows where each one comes from. Provided once, by the root
-/// component. (Plain shared memory rather than a signal: drawing a bar must not cause another draw.)
+/// What every bar drawn so far looked like, so the next draw knows where each one comes from. Provided once, by
+/// `PageShell`.
+///
+/// It is plain shared memory (`Rc<RefCell<..>>`) and deliberately not a signal: it is read and written while a bar is being
+/// drawn, and that must not cause another draw. It never feeds the page by itself; only the answer `animation_of` gives
+/// does, and that is the same for the same input.
+///
+/// It lasts as long as the tables on screen: `forget_all` is called when they are emptied (a new fight starts, or there is
+/// nothing to show), so the bars of the next fight appear in place instead of sliding from where the last fight left them.
 #[derive(Clone, Default)]
 pub struct BarHistory(Rc<RefCell<HashMap<String, Remembered>>>);
+
+impl BarHistory {
+    pub fn forget_all(&self) {
+        self.0.borrow_mut().clear();
+    }
+}
 
 /// The classes and inline custom properties that play a bar's move.
 #[derive(Default)]
@@ -146,13 +154,11 @@ fn animation_of(key: &str, geometry: Option<BarGeometry>, on_right: bool) -> Bar
     let (Some(history), Some(geometry)) = (try_consume_context::<BarHistory>(), geometry) else {
         return BarAnimation::default();
     };
-    let now = js_sys::Date::now();
     let mut remembered = history.0.borrow_mut();
-    let previous = remembered.get(key).copied().filter(|previous| now - previous.seen_at_ms < REMEMBER_FOR_MS);
-    let current = match previous {
-        Some(previous) if previous.geometry == geometry => Remembered { seen_at_ms: now, ..previous },
-        Some(previous) => Remembered { geometry, second_keyframes: !previous.second_keyframes, flip: flip(Some(previous.geometry), geometry), seen_at_ms: now },
-        None => Remembered { geometry, second_keyframes: false, flip: flip(None, geometry), seen_at_ms: now },
+    let current = match remembered.get(key).copied() {
+        Some(previous) if previous.geometry == geometry => previous,
+        Some(previous) => Remembered { geometry, second_keyframes: !previous.second_keyframes, flip: flip(Some(previous.geometry), geometry) },
+        None => Remembered { geometry, second_keyframes: false, flip: flip(None, geometry) },
     };
     remembered.insert(key.to_string(), current);
     let Some(flip) = current.flip else { return BarAnimation::default() };
@@ -163,13 +169,13 @@ fn animation_of(key: &str, geometry: Option<BarGeometry>, on_right: bool) -> Bar
 }
 
 pub(super) fn graph_bars(
-    environment: &TableEnvironment,
+    environment: &SharedEnvironment,
     combatant: &CombatantRecord,
     top_value: f64,
     is_healing: bool,
     row_id: &str,
 ) -> Element {
-    let bars = environment.bars;
+    let bars = &environment.bars;
     let widths = bar_widths(combatant, top_value, is_healing);
     let animated = environment.animate_bars;
     let side = bars.side(is_healing);

@@ -41,7 +41,7 @@ pub fn NavigationBar(is_settings_preview: bool) -> Element {
     let settings_context = use_context::<SettingsContext>();
     let tables = use_context::<TablesContext>();
     let view = use_context::<SettingsView>();
-    let nav = view.nav.read().clone();
+    let nav = view.nav.read();
     let merge_pets = view.page.read().merge_pets;
     let settings = settings_context.settings.read();
 
@@ -51,12 +51,9 @@ pub fn NavigationBar(is_settings_preview: bool) -> Element {
     // the original's quirk (see `summary_line`'s doc comment): once a fight ends, the time, target
     // and DPS summary stay exactly as they were, through every "still inactive" message that
     // follows, until a new fight actually starts.
-    let combat_data = if is_settings_preview {
-        Some(crate::application::app_state::sample_combat_message(merge_pets).clone())
-    } else {
-        tables.displayed_combat_data.read().as_deref().cloned()
-    };
-    let (time_text, target_text, summary) = match &combat_data {
+    let displayed = if is_settings_preview { None } else { tables.displayed_combat_data.read().clone() };
+    let combat_data = if is_settings_preview { Some(crate::application::app_state::sample_combat_message(merge_pets)) } else { displayed.as_deref() };
+    let (time_text, target_text, summary) = match combat_data {
         Some(message) => (
             message.encounter.duration_text.clone(),
             message.encounter.title.clone(),

@@ -9,11 +9,11 @@
 
 use super::cell_classes::{BODY_CELL_BORDER, HEADER_CELL, HEADER_TABLE};
 use super::graph_bars::graph_bars;
-use super::table_environment::TableEnvironment;
+use super::table_environment::SharedEnvironment;
 use super::visible_players::visible_players;
 use crate::application::app_state::TablesContext;
 use crate::domain::combat::CombatantKind;
-use crate::domain::formatting::cell_fragments_ranked;
+use crate::domain::formatting::{cell_fragments_ranked, CellContext};
 use crate::application::i18n::translate;
 use crate::domain::translations::translations;
 use crate::infrastructure::act::data::{CombatantRecord, EncounterRecord};
@@ -21,9 +21,16 @@ use crate::presentation::ui::shared::row_identity::row_element_id;
 use crate::presentation::ui::areas::Column;
 use crate::presentation::ui::shared::text_display::{job_icon_view, text_fragments_view};
 use dioxus::prelude::*;
+use std::collections::HashSet;
 
-pub(super) fn standard_table(environment: &TableEnvironment, combatants: &[CombatantRecord], encounter: &EncounterRecord, is_healing: bool) -> Element {
-    let table = environment.table;
+pub(super) fn standard_table(
+    environment: &SharedEnvironment,
+    combatants: &[CombatantRecord],
+    encounter: &EncounterRecord,
+    is_healing: bool,
+    blurred_rows: &HashSet<String>,
+) -> Element {
+    let table = &environment.table;
     let players = visible_players(&table.kind(is_healing).filter, combatants, is_healing);
     // The best value in this table; bar widths are relative to it. A plain scan, not the position
     // of the first row, since a healing table's own order (sorted in `visible_players`, best first)
@@ -43,15 +50,29 @@ pub(super) fn standard_table(environment: &TableEnvironment, combatants: &[Comba
     let body = table.body_vars();
     // "Spacing of DPS/HPS Table": the space above each table's header.
     let table_gap = table.kind(is_healing).gap;
-    let rows = players
-        .iter()
-        .map(|player| player_row(environment, player.combatant, player.rank, top_value, encounter, is_healing, columns));
+    let rows = players.iter().map(|player| {
+        let row_id = row_element_id(&player.combatant.name);
+        let blur_key = format!("{label}{row_id}");
+        let is_blurred = blurred_rows.contains(&blur_key);
+        rsx! {
+            PlayerRow {
+                key: "{blur_key}",
+                environment: environment.clone(),
+                combatant: player.combatant.clone(),
+                encounter: encounter.clone(),
+                rank: player.rank,
+                top_value,
+                is_healing,
+                is_blurred,
+            }
+        }
+    });
 
     rsx! {
         // No header for a table with no rows (checked against the original: its header only appears with rows).
         if !players.is_empty() {
             div { id: "{label}Header{suffix}", style: "{header}margin-top:{table_gap}",
-                div { id: "{label}oldHeader{suffix}", {header_table(columns)} }
+                div { id: "{label}oldHeader{suffix}", TableHeader { columns: columns.to_vec() } }
             }
         }
         div {
@@ -62,7 +83,9 @@ pub(super) fn standard_table(environment: &TableEnvironment, combatants: &[Comba
     }
 }
 
-fn header_table(columns: &[Column]) -> Element {
+/// The column titles. A component so that it is drawn again only when the columns (or the language of a tooltip) change.
+#[component]
+fn TableHeader(columns: Vec<Column>) -> Element {
     let cells = columns.iter().map(|column| {
         // Explanation shown as a tooltip (from the dictionary), if there is one for this column.
         let hint = {
@@ -87,43 +110,50 @@ fn header_table(columns: &[Column]) -> Element {
     rsx! { table { class: HEADER_TABLE, tbody { tr { {cells} } } } }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn player_row(
-    environment: &TableEnvironment,
-    combatant: &CombatantRecord,
+/// One player's row: the cells, then the bars behind them. A component, so a row whose data and settings did not change is
+/// not drawn again when another row's did.
+#[component]
+fn PlayerRow(
+    environment: SharedEnvironment,
+    combatant: CombatantRecord,
+    encounter: EncounterRecord,
     rank: usize,
     top_value: f64,
-    encounter: &EncounterRecord,
     is_healing: bool,
-    columns: &[Column],
+    is_blurred: bool,
 ) -> Element {
+    let tables = use_context::<TablesContext>();
     let label = super::table_label(is_healing);
     let row_id = row_element_id(&combatant.name);
     let blur_key = format!("{label}{row_id}");
     let is_local_players_pet = matches!(combatant.kind(), CombatantKind::Pet { owner_name, .. } if owner_name == "YOU");
     let is_own = row_id == "YOU" || is_local_players_pet;
-    let cells = columns.iter().map(|column| cell(environment, combatant, rank, encounter, column, &blur_key));
+    let columns = environment.columns.of(is_healing);
+    let cell_context = environment.cell_context();
+    let cells = columns.iter().map(|column| {
+        if column.name == "Class" {
+            job_icon_cell(&environment, &combatant, column, tables.blurred_player_rows, blur_key.clone())
+        } else {
+            cell(&cell_context, &combatant, rank, &encounter, column, is_blurred)
+        }
+    });
 
     rsx! {
         div {
-            key: "{blur_key}",
             id: "{row_id}",
             class: "tableWrap chrome-row themed-text",
             class: if is_own { "text-own" },
             class: if is_local_players_pet { "myPet" },
             table { class: "tableBody", tbody { tr { {cells} } } }
-            {graph_bars(environment, combatant, top_value, is_healing, &row_id)}
+            {graph_bars(&environment, &combatant, top_value, is_healing, &row_id)}
             div { class: "barBg bg-(--chrome-bar-bg) corner-body" }
         }
     }
 }
 
-fn cell(environment: &TableEnvironment, combatant: &CombatantRecord, rank: usize, encounter: &EncounterRecord, column: &Column, blur_key: &str) -> Element {
-    if column.name == "Class" {
-        return job_icon_cell(environment, combatant, blur_key, column);
-    }
-    let is_blurred = column.name == "name" && environment.blurred_rows.contains(blur_key);
-    let content = text_fragments_view(cell_fragments_ranked(&column.name, combatant, encounter, &environment.cell_context, rank), true);
+fn cell(cell_context: &CellContext, combatant: &CombatantRecord, rank: usize, encounter: &EncounterRecord, column: &Column, row_is_blurred: bool) -> Element {
+    let is_blurred = column.name == "name" && row_is_blurred;
+    let content = text_fragments_view(cell_fragments_ranked(&column.name, combatant, encounter, cell_context, rank), true);
     rsx! {
         td {
             key: "{column.name}",
@@ -138,9 +168,14 @@ fn cell(environment: &TableEnvironment, combatant: &CombatantRecord, rank: usize
 }
 
 /// The job icon cell. Clicking it blurs / unblurs the player's name (only outside of fights).
-fn job_icon_cell(environment: &TableEnvironment, combatant: &CombatantRecord, blur_key: &str, column: &Column) -> Element {
+fn job_icon_cell(
+    environment: &SharedEnvironment,
+    combatant: &CombatantRecord,
+    column: &Column,
+    blurred_player_rows: Signal<HashSet<String>>,
+    blur_key: String,
+) -> Element {
     let can_blur = environment.can_blur_names;
-    let blur_key = blur_key.to_string();
     let icon = job_icon_view(&environment.table.icon_set, combatant, true);
     rsx! {
         td {
@@ -152,8 +187,7 @@ fn job_icon_cell(environment: &TableEnvironment, combatant: &CombatantRecord, bl
             cursor: if can_blur { "pointer" },
             onclick: move |_| {
                 if can_blur {
-                    // `consume_context` is a plain function; `use_context` is a hook and must not be called once per row.
-                    let mut blurred_rows = consume_context::<TablesContext>().blurred_player_rows;
+                    let mut blurred_rows = blurred_player_rows;
                     let mut rows = blurred_rows.write();
                     if !rows.remove(&blur_key) {
                         rows.insert(blur_key.clone());
