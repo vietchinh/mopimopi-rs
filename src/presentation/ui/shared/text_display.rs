@@ -36,7 +36,8 @@ fn icon_code(job_code: &str) -> &str {
 /// Job icon image for a player (`images/icon/<icon set>/<JOB TEXT>.png`). `sized_by_table` says
 /// whether the image takes the table's icon width (`chrome-icon`, from `--chrome-icon-size`) --
 /// raid mode's cards size their icon through the parent `.rIcon`'s own nested `& img` rule
-/// instead, so they pass `false`.
+/// instead, so they pass `false`. `aspect-ratio: auto 1` reserves a square until the image loads (icons are square), so a
+/// newly added row does not grow, and push the rows below it, when its icon arrives.
 pub fn job_icon_view(icon_set: &str, combatant: &CombatantRecord, sized_by_table: bool) -> Element {
     let job_code = match combatant.kind() {
         CombatantKind::LimitBreak => "LMB".to_string(),
@@ -46,7 +47,7 @@ pub fn job_icon_view(icon_set: &str, combatant: &CombatantRecord, sized_by_table
     };
 
     let source = format!("images/icon/{icon_set}/{}.png", icon_code(&job_code));
-    rsx! { img { class: if sized_by_table { "w-(--chrome-icon-size)" }, src: "{source}" } }
+    rsx! { img { class: if sized_by_table { "w-(--chrome-icon-size) [aspect-ratio:auto_1]" }, src: "{source}" } }
 }
 
 #[cfg(test)]

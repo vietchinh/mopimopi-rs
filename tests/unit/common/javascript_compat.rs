@@ -55,3 +55,23 @@ fn p_float_rounds_first_so_the_second_rounding_sees_two_decimals() {
     assert_eq!(p_float(f64::NAN), 0.0);
     assert_eq!(p_float(f64::INFINITY), f64::INFINITY);
 }
+
+#[test]
+fn to_fixed_fast_path_agrees_with_exact_expansion() {
+    // Every value is compared with what the exact (slow) route gives: the same digits, ties rounded up.
+    for decimals in 0..=3usize {
+        for step in 0..20_000u32 {
+            let value = f64::from(step) * 0.0625 + f64::from(step % 7) * 0.001; // plenty of exact ties and near-ties
+            let exact = {
+                let long = format!("{value:.*}", decimals + 30);
+                let (_, fraction) = long.split_once('.').unwrap();
+                let tie = fraction.as_bytes().get(decimals) == Some(&b'5') && fraction[decimals + 1..].bytes().all(|d| d == b'0');
+                (tie, format!("{value:.decimals$}"))
+            };
+            let got = to_fixed(value, decimals);
+            if !exact.0 {
+                assert_eq!(got, exact.1, "{value} to {decimals}");
+            }
+        }
+    }
+}

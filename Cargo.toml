@@ -24,9 +24,9 @@ web-sys = { version = "0.3", features = ["Window","Document","Element","HtmlElem
 
 [profile.release]
 opt-level = 3
-debug = false
+debug = "line-tables-only"
 lto = true
 codegen-units = 1
 panic = "abort"
-strip = true
+strip = false
 incremental = false

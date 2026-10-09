@@ -22,6 +22,9 @@
 }
 @utility chrome-bar-animated {
   transform-origin: var(--bar-origin, left) 50%;
+  /* Keeps the bar on its own compositor layer between moves: otherwise the layer is made when each move starts and
+     dropped when it ends, which costs a style/paint/commit pass on the main thread after every message. */
+  will-change: transform;
   animation-duration: 0.4s;
   animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
 }

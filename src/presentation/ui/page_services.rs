@@ -26,8 +26,13 @@ pub fn LanguageSync() -> Element {
 pub fn SettingsSaver() -> Element {
     let settings = use_context::<SettingsContext>().settings;
     use_hook(|| register_save_on_page_hide(settings));
+    let mut is_first_run = use_hook(|| true);
     use_effect(move || {
         let _ = settings.read(); // re-run after every change
+        if is_first_run {
+            is_first_run = false; // the settings just loaded are what is stored already
+            return;
+        }
         schedule_settings_save(settings);
     });
     rsx! {}

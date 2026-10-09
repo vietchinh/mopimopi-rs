@@ -63,6 +63,14 @@ pub fn to_fixed(value: f64, decimals: usize) -> String {
     }
     let sign = if value < 0.0 { "-" } else { "" };
     let magnitude = value.abs();
+    // Far from a tie (the usual case) the value needs no exact expansion; the check is cheap and its error is tiny
+    // next to the 1e-6 margin for the magnitudes and digit counts used here.
+    if decimals <= 6 && magnitude < 1e9 {
+        let scaled = magnitude * 10f64.powi(decimals as i32);
+        if ((scaled - scaled.floor()) - 0.5).abs() > 1e-6 {
+            return format!("{sign}{magnitude:.decimals$}");
+        }
+    }
     // A tie ends exactly one digit past the cut, so a much longer expansion shows all zeros after it.
     let long = format!("{magnitude:.*}", decimals + 30);
     let (integer, fraction) = long.split_once('.').unwrap_or((long.as_str(), ""));

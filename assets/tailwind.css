@@ -203,6 +203,9 @@
       border-right: var(--raid-cell-border);
     }
   }
+  .\[aspect-ratio\:auto_1\] {
+    aspect-ratio: auto 1;
+  }
   .nav-bar {
     background: var(--nav-bg);
     height: var(--nav-height);
@@ -251,6 +254,7 @@
   }
   .chrome-bar-animated {
     transform-origin: var(--bar-origin, left) 50%;
+    will-change: transform;
     animation-duration: 0.4s;
     animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
   }
