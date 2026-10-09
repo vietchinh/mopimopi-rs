@@ -92,13 +92,14 @@ recording. The recordings are 302 s (original) and 303 s (this port).
 Chrome's layout shift score (CLS) measures how much visible content jumps around. Below 0.1 is considered good and above
 0.25 poor. The traces show two different things in this port.
 
-- **A large shift at start-up (score 0.95, before the fix).** The original scored about 0.006. In this port the
-  stylesheets were added by the app itself after the wasm had started: the trace shows the wasm requested at 31 ms, the
-  stylesheets at 78 ms, and a shift of `<body>` at 107 ms, at the same moment as first paint. The first frame was drawn
-  unstyled and the page jumped when the CSS arrived. This is now fixed: `Dioxus.toml` lists `mopimopi.css` and `app.css`
-  under `[web.resource] style`, so `dx` writes them as `<link>` tags into the `<head>` and the browser loads them before
-  the first paint. I confirmed the generated `index.html` contains the links, but I have not yet recorded a new trace to
-  measure the score.
+- **A large shift at start-up (score 0.95 in one trace, about 2.9 cumulative in another, before the fix).** The original
+  scored about 0.006. In this port the stylesheets are added by the app itself after the wasm has started, so the first
+  frame was drawn with the browser's defaults (an 8px `<body>` margin, a serif font) and the page jumped when the CSS
+  arrived: the first shift in the trace was `<body>` moving from `[8,8,609,472]` to `[0,0,640,480]`. It is fixed by a tiny
+  critical reset that is static in the page (a `data:` URI in `Dioxus.toml` for `dx`; the inline `<style>` in
+  `web/index.html` for `build.sh`). A Chrome trace of the fixed page under `dx serve --release` (640x480, headless) has
+  0 `LayoutShift` events. Listing the stylesheets themselves under `[web.resource] style` does not work: `dx` 0.7.10 emits
+  them as literal `<link href>`s without copying the files, so with a `base_path` they 404 and the page is unstyled.
 - **Small recurring shifts (0.0001 to 0.0013 each, about 0.002 in total).** They happen roughly once per combat update,
   which is why the heap timeline holds a `LayoutShiftAttribution` entry for each. The affected table cells move sideways in
   steps of about 7 px (for example 83, 76, 69, 76 px from the left) when values change. My guess is that a column's width

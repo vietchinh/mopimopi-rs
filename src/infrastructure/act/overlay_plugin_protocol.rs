@@ -86,6 +86,7 @@ pub fn interpret(text: &str, options: ParseOptions) -> Result<Option<OverlayPlug
             if options.merge_pets_into_owner {
                 combat_data.merge_pets_into_owners(options.local_player_name);
             }
+            combat_data.sort_by_damage();
             Ok(Some(CombatData(combat_data)))
         }
         OverlayMessage::ChangePrimaryPlayer(player) => {

@@ -14,7 +14,8 @@ Code is grouped into layers. Each layer only imports from layers listed **below*
 src/
   presentation/     everything the user sees
     ui/               Dioxus components (screens, tables, menus, settings pages)
-    theme/            settings -> one CSS stylesheet
+      areas/            the settings as one typed struct per area, and the CSS variables each sets (section 8)
+      shared/style/     typed styling values, readers on the settings file, shapes
   application/      application state and actions (Dioxus signals live here)
     app_state/
   infrastructure/   the outside world
@@ -56,25 +57,25 @@ Known impurity: `domain/settings` still contains `browser_storage.rs`, `language
  combat/             Memo: CombatDataMessage -> EncounterRankings (players, pets merged, sorted)
         │  EncounterRankings
         ▼
- formatting/  theme/ ui/     cells' text  |  one CSS stylesheet  |  Dioxus components
+ formatting/  ui/areas  ui/     cells' text  |  settings as typed areas -> CSS variables  |  Dioxus components
 ```
 
 Settings (`settings/`) and translations (`translations/`) sit beside this flow and are read by
-`formatting`, `theme`, `app_state` and `ui`. Nothing in `act_data`, `combat`, `settings`,
-`translations` or `theme` knows about Dioxus components; only `app_state` (signals) and `ui` do.
+`formatting`, `app_state` and `ui` (the areas in `ui/areas` turn them into typed values for the components). Nothing in `act_data`, `combat`,
+`settings` or `translations` knows about Dioxus components; only `app_state` (signals) and `ui` do.
 
 ### Allowed dependency directions (each line may use the ones below it)
 
 ```
 ui
 app_state                 (Dioxus signals)
-formatting   theme   overlay_plugin_socket
+formatting   overlay_plugin_socket
 combat       settings  translations
 act_data
 javascript_compat
 ```
 `overlay_plugin_socket` uses `act_data` only; `formatting` uses `combat`,
-`settings` and `translations`; `theme` uses only `settings`.
+`settings` and `translations`; the areas read only a `SettingsFile`.
 
 ---------------------------------------------------------------------------------------------------
 
@@ -132,22 +133,28 @@ merge pets into owners -> re-sort -> ranks and top value.
 ## 5. `settings/` – user settings
 
 Settings keep the **same JSON shape as the original overlay** (`q`, `Color`, `Range`, `Alias`, `Order`,
-`ColData` in `localStorage["Mopi2_HAERU"]`), so backups and shared codes import cleanly. They are read
-by string key because the settings pages are generated from `data/l.json`, which names settings by key.
+`ColData` in `localStorage["Mopi2_HAERU"]`), so backups and shared codes import cleanly. The file is a typed
+`SettingsFile`; the settings pages read and write it by string key, because they are generated from
+`data/l.json`, which names settings by key. Everything that *draws* reads typed areas instead (section 8).
 
 | File | What it does |
 |---|---|
-| `mod.rs` | Docs and re-exports (`Settings`, `is_truthy`, storage keys, `read/write_local_storage`). |
-| `user_settings.rs` | `Settings { json_document }` and the section-name constants. |
+| `mod.rs` | Docs and re-exports (`Settings`, `SettingsFile`, `Hex`, `OptionValue`, `Align`, storage keys, `read/write_local_storage`). |
+| `settings_file.rs` | `SettingsFile`: the six sections as ordered maps (`IndexMap`), the value types (`JsonNumber`, `Hex`, `OptionValue`, `Width`, `Align`, `ColumnData`, `ColumnOrder`), and `enabled_columns`, the one definition of which columns a table shows. Whatever this version does not know is kept and written back. |
+| `import.rs` | The single path from JSON text to a `SettingsFile`: bring up to date (fill in what newer versions added, migrate the original's old formats), repair (a value of the wrong kind is replaced by the default, never costs the whole file), then type. Browser storage, backups and shared codes all go through it. |
+| `user_settings.rs` | `Settings { file }` and the section-name constants. |
 | `default_settings.rs` | Loads `data/defaults.json`. |
-| `option_access.rs` | Readers: `option_value/enabled/number/text`, `language_code`, `slider_value`, `color_hex`, `action_abbreviations`. |
+| `option_access.rs` | String-key readers for the settings pages: `option_value/enabled/number/text`, `language_code`, `slider_value`, `color_hex`, `action_abbreviations`. |
 | `option_updates.rs` | Writers: `set_option`, `set_option_enabled`, `set_option_from_text` (keeps number vs text type), `set_slider_value`, `set_color_hex`, abbreviation add/remove, `column_number`. |
 | `column_layout.rs` | Columns: definitions, per-table enable flag, order, `set_column_enabled`, `move_column`. |
-| `persistence.rs` | `defaults`, `load_from_browser` (falls back to defaults + detected language), `from_json_text`, `save_to_browser`, and `normalize_document` which fills options added by newer versions and migrates old data. Storage key constants. |
+| `persistence.rs` | `defaults`, `load_from_browser` (falls back to defaults + detected language), `from_json_text`, `save_to_browser`. |
 | `browser_storage.rs` | `localStorage` get/set, errors ignored. |
 | `language_detection.rs` | Browser language -> KR/JP/CN/DE/FR/EN. |
 | `shareable_code.rs` | "Custom UI Data" export (skips personal/technical options) and import. |
 | `json_coercion.rs` | JavaScript truthiness and number coercion for the mixed-type values the original stored. |
+
+Tests record the old behaviour as fixtures (`tests/fixtures/settings/{loaded,exported,imported}`) and the import
+cases under `tests/fixtures/settings/import/`; regenerate with `UPDATE_FIXTURES=1 cargo test` and read the diff.
 
 ---------------------------------------------------------------------------------------------------
 
@@ -172,23 +179,61 @@ by string key because the settings pages are generated from `data/l.json`, which
 
 ---------------------------------------------------------------------------------------------------
 
-## 8. `theme/` – one stylesheet from the settings
+## 8. Styling – settings, areas, CSS variables, CSS
 
-The original re-applied ~300 jQuery `.css()` calls after every render; here the same rules are generated
-as one `<style>` string whenever settings change.
+The original re-applied ~300 jQuery `.css()` calls after every render. Here the path is always the same:
 
-| File | What it does |
+```
+SettingsFile  --from_raw-->  area struct  --*_vars()-->  inline `--variables`  -->  CSS reads var(--x)
+(by key, once)               (typed, Memo)               (one style attribute)       (css/*.css, utilities)
+```
+
+**The areas** (`ui/areas/`) are the only Rust code that knows a setting's key and the only Rust code that knows the name of a CSS
+variable. `App` creates them once (`provide_settings_view`) as memos, so a component is drawn again only when *its* area changes. A
+component reads `use_context::<SettingsView>()`, never the raw settings.
+
+| Area | What it holds |
 |---|---|
-| `mod.rs` | `build_theme_css` (calls each section in order) and `table_body_height_rem`. Has the stylesheet test. |
-| `style_inputs.rs` | `StyleInputs`: slider -> rem/opacity, colours, italic/bold, font stacks, corner-radius rules, text outline. |
-| `color_conversion.rs` | Hex -> `rgba(...)` (3-digit colours keep the original's unscaled behaviour). |
-| `page_background.rs` | Root font size, background image, accent colour rules. |
-| `navigation_bar.rs` | Top bar: pattern background, border, radius, icons, time/target/summary text, 1-line vs 2-line layout. |
-| `table_corners.rs` | Rounded corners of header/body and graph bars. |
-| `table_text.rs` | Body text of other rows vs your own (`#YOU`, `.myPet`). |
-| `raid_grid.rs` | Raid-mode card styles. |
-| `table_chrome.rs` | Header, dividing lines, icon size, graph bar heights and float position. |
-| `column_layout.rs` | Per-column width, padding, alignment. |
+| `nav.rs` | The navigation bar: background (plain or one of five patterns), edge, corners, the three texts (each its own variables, inline on its cells), pinned buttons, which parts of the summary show. |
+| `table.rs` | Which tables show and in which order, row limits, job filters, raid trigger, icon set; the header's and the body's style (`header_vars`, `body_vars`). |
+| `columns.rs` | The columns of each table as `Column`s: name, title, width (`Fill` or a size), padding, alignments. |
+| `bars.rs` | Graph bars: the palette (job / role / me-and-others) with the rule that picks a colour, the fade, the float sides, the small bars' switches. |
+| `raid.rs` | Raid mode's grid of cards. |
+| `page.rs` | Language, pets merged into owners, tooltips, the page's font size, background and accent (`root_rule`). |
+
+**The typed values** (`ui/shared/style/`): `Size` (tenths of a rem), `Opacity` (percent), `Paint` (joined with an opacity it is
+`rgba(...)` and a 3-digit colour keeps the original's unscaled digits; alone it is `#hex`), `FontStack`, `Shadow`, `Vars` (writes
+`--name:value;`), the readers `StyleReads` on `SettingsFile` (in debug builds a key the file does not have panics, where the old reader
+quietly gave 0), and the shapes `TextStyle`, `Line`, `Corners`. A convention of the file is handled in exactly one of these.
+
+**The CSS** (`css/*.css`, one file per area, `tailwind.css` is the entry): each file starts with a header listing the variables it reads
+and the Rust that sets them. Text is shared: `themed-text` (on a row, a header, a card, or a single cell) shows `--text-*`;
+`text-own` swaps them for `--own-*` (the local player's rows). A value that is one variable and one property is a utility class written
+in the markup (`w-(--chrome-icon-size)`, `text-(length:--chrome-ex-size)`), not a rule of its own; a name Tailwind has to find is always a
+literal string in the source. `--spacing` is a tenth of a rem and `text-accent` is the settings' accent colour. Cascade layers order
+`theme < base < app < legacy < components < utilities`; `public/base.css` is the render-blocking layout glue (and the scrollbar rules: a class
+in the runtime-loaded sheet would flash scrollbars).
+
+**What keeps the two sides from drifting** (all run in `cargo test` / `build.sh`):
+
+* `ui/areas/contract.rs`: builds every area from the fixtures and checks both ways that the variables set are the variables read (CSS and
+  the Rust that reads them in classes or inline). A rename on one side only fails here. Add a file that reads variables to `RUST_THAT_READS`.
+* each area's tests compare its output with what the string-based code produced, recorded in `tests/fixtures/settings/{nav,table,raid,bars}-vars/`;
+  variable *names* changed since, the *values* are still compared one by one.
+* `tools/check-tailwind.mjs` (in `build.sh`): Tailwind reads the source for class names, so a word like `grow` in a comment generates a utility.
+  It fails on a bare word and on a built-in that collides with a class of the stylesheets; add a word to `@source not inline(...)` in
+  `tailwind.css`, or reword it.
+* browser: `playwright-tests/tests/cascade-diff.spec.ts` compares the computed style of every element, before and after, over 30 screens
+  and settings pages (`CASCADE_BEFORE_URL`, `CASCADE_AFTER_URL`). Chrome does not list custom properties there, so a renamed variable shows
+  only if a resulting value changed, which is the point.
+
+**Adding a setting that changes how something looks:** put its key in the area's `from_raw`, a field in the area struct, the variable in its
+`*_vars` (through a shape if there is one), and read it in the area's CSS or as a utility class in the markup. The contract test tells you if the
+two ends do not meet; add the case to the area's recorded test if it reaches a branch the profiles do not.
+
+**Quirks kept on purpose** (each has a test): a 3-digit colour is used unscaled in `rgba(...)` and not in `#hex`; the fallback fonts quote
+`'sans-serif'`; the name column takes the rest of the row whatever its width says; the history list does not follow "Body italic" /
+"Header italic" (`--text-style:normal`); a text whose opacity slider is 0 gets no size and no padding.
 
 ---------------------------------------------------------------------------------------------------
 
@@ -236,7 +281,8 @@ missing `YOU`, an empty parameter).
 | File | What it does |
 |---|---|
 | `mod.rs` | Docs and re-exports. |
-| `app_context.rs` | `AppContext`: a `Copy` bundle of ~20 Dioxus signals/memos (settings, current screen, latest vs displayed combat data, rankings memo, sample rankings memo, local name, connection status, history, dropdown, toast, tooltip, standby, blurred rows...). Also `Screen`, `Dropdown`, `SettingsLocation`, `ToastState`; `language_code()` and `edit_settings()`. |
+| `contexts/` | One context per section of the page, each a `Copy` bundle of signals: `SettingsContext` (settings, `edit_settings()`), `ScreenContext` (`Screen`), `TablesContext` (displayed data, local player, standby flag, blurred rows), `HistoryContext`, `SettingsScreenContext` (`SettingsLocation`, sample tables), `NavigationBarContext`, `DropdownContext` (`Dropdown`), `NoticesContext` (toast, tooltip). A component reads only its own section's context. |
+| `app_actions.rs` | `AppActions`: holds the contexts that the multi-section actions change (opening the settings, a new fight, standby) but keeps them private, so a component can start an action and cannot read state through it. |
 | `sample_fight.rs` | Parses `previewLog.json` once (settings previews, "Show sample data"). |
 | `overlay_plugin_events.rs` | `use_overlay_plugin_events`: one task per channel of the socket; applies status, combat data and player name to the state. |
 | `data_ingestion.rs` | `handle_combat_data_received`: always store as latest; display while a fight runs and once when it ends (then also record history); leave the display alone while the settings screen is open. |
@@ -252,11 +298,11 @@ missing `YOU`, an empty parameter).
 
 | Area | Files | What they do |
 |---|---|---|
-| root | `mod.rs`, `app_shell.rs`, `overlays.rs` | `App` creates the `AppContext`, starts the network once, saves settings after each change, injects the theme `<style>`, and picks the screen. `Tooltip` and `Toast` components. |
+| root | `mod.rs`, `app_shell.rs`, `page_services.rs`, `overlays.rs` | `App` provides every section context (and `AppActions`), the settings view and the translations, then lists what runs for the page's lifetime: `ActConnection` (the one ACT connection and what feeds from it, in `overlay_plugin_context.rs`), `ColorPickerHost` (the picker's state and panel), the headless `LanguageSync`, `SettingsSaver`, `StandbyTimer`, `TooltipReset` (`page_services.rs`) and `PageShell` (theme `<style>`, the open menu, the top bar, the current screen). `PageShell` provides `NavigationBarContext` and `BarHistory` because they must outlive any one bar or table. `Tooltip` and `Toast` components. |
 | `shared/` | `palette`, `row_identity`, `text_display`, `rankings_source`, `switch_and_icon`, `option_choice`, `safe_markup/` | Bar colours by palette mode; element ids of rows; fragments/job icons as DOM; live vs sample rankings; on/off switch and row icon; setting values as list keys; `safe_markup` renders the HTML fragments of the translation files (see below). |
 | `dropdown_menus/` | `mod`, `menu_item`, `navigation_menu`, `choice_menus` | The open `Dropdown` variant becomes a list: the ⋮ menu, single choice, several toggles, column alignment. |
 | `navigation_bar/` | `mod`, `summary_line`, `buttons` | Time, target, summary text, the buttons (Capture, History, End encounter, ⋮) and `screenshot.rs` + `page_screenshot.js` (Capture). |
-| `combat_tables/` | `mod`, `table_environment`, `visible_players`, `standard_table`, `graph_bars`, `raid_grid` | `CombatTables` chooses raid grid or normal tables in the configured order; job filters; header, rows, cells; coloured and small pet/overheal/shield bars; blur names by clicking the icon. |
+| `combat_tables/` | `mod`, `table_environment`, `visible_players`, `standard_table`, `graph_bars`, `raid_grid` | `CombatTables` chooses raid grid or normal tables in the configured order; job filters; header, rows, cells; coloured and small pet/overheal/shield bars; blur names by clicking the icon. `TableEnvironment` (owned, compared by value, shared as `SharedEnvironment`) is built in a memo; `PlayerRow` and `RaidCard` are components with `PartialEq` props, so a row whose data and environment are unchanged is not drawn again. Keep their props small and comparable, and read nothing from a signal inside them that is not a prop or a context. |
 | `start_screen/` | `mod`, `language_links`, `connection_panel`, `connection_help` | Notice before data arrives, language links, connection status with checklists, and "Show sample data". |
 | `history_screen/` | `mod`, `history_row` | Finished-encounter list. |
 | `settings_screens/` | see below | All settings pages. |
@@ -316,7 +362,13 @@ values themselves stay untranslated.
 | `src/data/l.json`, `d.json`, `defaults.json` | Generated from the original `lang.js`/`dic.js`/`init.js` by `tools/extract.js`. `l.json` drives every settings page. |
 | `src/data/previewLog.json` | Sample fight (also used by tests). |
 | `src/data/captures/` | Real ACT captures used as test fixtures. |
-| `public/` | `mopimopi.css` (original styles), `app.css` (fixes: `#main{width:100%;height:100%}` is essential, scrollbar hiding...), `images/`, `font/`. |
+| `assets/` | The generated `tailwind.css`, `font/`. |
+| `public/base.css` | The **base layout**, a static render-blocking `<link>` (`style` in `Dioxus.toml`, `<link>` in `web/index.html`): the layout glue (`@layer app`, what `assets/app.css` was) and the first part of the original overlay's stylesheet through the tables (`@layer legacy`). It has to be in place when the app first paints, or every refresh bounces. |
+| `tailwind.css` (project root) | The Tailwind entry file (about 50 lines): the layer order, `@import "tailwindcss"` as in the Dioxus guide, the imports of `css/`, and `@source` (Tailwind finds classes by reading `src/**/*.rs`). Cascade layers, low to high: `theme`, `base` (Preflight, undone by a generated file), `app` and `legacy` (both start in `public/base.css`; `legacy` continues in `css/legacy.css`), `components`, `utilities`. |
+| `css/*.css` | The rules, one file per area of the UI: `nav`, `table`, `bars`, `raid`, `text` (shapes shared by several areas), `page`, `color-picker`. Each starts with a contract: the variables the file reads and the Rust file that sets them. `theme.css` holds the theme tokens (the colour picker's palette, `--spacing` as a tenth of a rem, the accent colour as `text-accent`), `legacy.css` the rest of the original stylesheet (imported into `@layer legacy`), `cancel-preflight.css` is generated. A variable's name is the contract between the Rust that sets it and the CSS that reads it; `ui/areas/contract.rs` checks it both ways. |
+| `tools/cancel-preflight.mjs` | Writes `css/cancel-preflight.css`, the block that undoes Preflight (`revert-layer` for every property Preflight sets); `--check` says whether it is current (run by `build.sh` and the test suite). Regenerate after upgrading Tailwind. |
+| `tools/check-tailwind.mjs` | `npm run check:css` (also run by `build.sh` and the Playwright suite): fails, naming the class, when a stray word in the Rust sources makes Tailwind generate a utility (a bare word, or a built-in that collides with a class of the stylesheets; a hyphenated built-in such as `w-15` is taken as written on purpose). |
+| `public/` | `images/` (served as they are, relative to the page). |
 | `web/index.html` | Page shell; loads `pkg/mopimopi-dioxus.js` (hyphen, not underscore). |
 | `build.sh` | wasm build -> `dist/` (`BUILD_STD=1` for toolchains without a prebuilt wasm std). |
 | `.github/workflows/pages.yml` | GitHub Pages deploy. |
@@ -329,17 +381,19 @@ values themselves stay untranslated.
 - **Support a new ACT field:** add it to `CombatantRecord` (with `rename` + `lenient_*`), then to `PlayerStats`/`Player` if it needs summing, then a match arm in `formatting/column_cell.rs`, and a column in `defaults.json`/`l.json`.
 - **New pet:** add its names to `combat/pet_names.rs`.
 - **New job icon:** add `<JOB>.png` to each set in `public/images/icon/` (a test fails if a set is missing one). `tools/make_bst_icons.py --source <icon.png>` draws one job's icon in every set's style (framed game icon of any square size, or a bare glyph); it made the Beastmaster icons and can be reused for other new jobs.
-- **New setting:** add it to `defaults.json` and `l.json`; read it with `option_*`; style-related ones go into a `theme/` section.
+- **New Tailwind class:** write it in full in an `rsx!` class string (`class: "nav-icon"`); Tailwind finds it by reading the source, and `dx serve` rebuilds the CSS on save. A class of our own is an `@utility` in `tailwind.css`. Never build a class name with `format!` (there is nothing in the source for Tailwind to find); values that depend on a setting are an inline `style` or an inline CSS variable. If `npm run check:css` names a class you did not mean, add it to the `@source not inline(...)` list in `tailwind.css`.
+- **New setting:** add it to `defaults.json` and `l.json`; for the settings pages nothing else is needed. If it changes how something *looks*, it goes into an area (`ui/areas/`): the key in `from_raw`, a field, the CSS variable in `*_vars`, read in `css/` or as a utility class in the markup (section 8). A component never reads the raw settings.
 - **New protocol message:** add a variant in `act_data/incoming_message.rs` and a test with a captured line.
 
 ## 15. Gotchas
 
-- `mopimopi.css` and `app.css` are linked in the `<head>` through `Dioxus.toml` (`[web.resource] style`), not by the app.
-  Adding them at runtime made the first frame unstyled and caused a layout shift of 0.95. `web/index.html` (used only by
-  `build.sh`) has the same two links.
+- **The legacy stylesheet** (`public/base.css`, then `css/legacy.css`) is the original `mopimopi.css` with its selectors and rule order unchanged; do not tidy or reorder it. The only changes made when it was moved, all no-ops for a browser:
+  `@charset` dropped (the file is ASCII); vendor aliases that duplicated a standard property in the same rule dropped (`-webkit-animation-*`, `-webkit-transition` beside `transition`, `-ms-/-moz-/-khtml-/-webkit-user-select` beside `user-select`; Lightning CSS adds prefixes itself where a target needs them); `-webkit-transition` / `-webkit-filter` / `-webkit-appearance` with no standard twin renamed to the standard property (Blink treats them as aliases); `-webkit-transition:all 03s` (an invalid time, ignored everywhere) dropped, the valid `transition:all 0.3s` beside it kept; `@-webkit-keyframes flash` dropped (`@keyframes flash` is next to it); the selector `input [type="file"]` (a descendant of an `<input>`, matches nothing) and the type selector `scrollbar` (no such element) dropped; stray `;;` removed. Kept, because they mean something: `-webkit-app-region`, `-webkit-linear-gradient(...)` (the legacy start-side direction), `-webkit-tap-highlight-color`, `-webkit-font-smoothing`, `-moz-osx-font-smoothing`, and the `-webkit-scrollbar` / `-webkit-slider-*` pseudo-elements.
+- Tailwind reads Rust as plain text, so words in code and comments are candidate classes. Most produce nothing; the ones that are Tailwind utilities (`table`, `filter`, `static`, `fixed`, ...) would add rules, and `flex`, `hidden` and `shadow` are also *legacy classes the markup uses*, so Tailwind's version would change how the overlay looks (`.shadow` replaces the three-layer Material shadow). They are excluded with `@source not inline(...)` in `tailwind.css`; `npm run check:css` keeps that list honest. **Cascade layers:** across layers the layer decides, not the specificity, and un-layered rules beat all of them. That is why the layout glue (`@layer app`) and the legacy stylesheet (`@layer legacy`) are layers below `utilities`, with the order declared at the top of `public/base.css` and `tailwind.css`; a rule you add to either now loses to a utility even if its selector is more specific. Anything left un-layered (the rules after the utilities, the critical-CSS reset in `<head>`) beats every layer. Cascade layers need Chrome 99+ (`revert-layer` too), and a browser without them drops the whole legacy block. After changing how the CSS is assembled, run `playwright-tests/tests/cascade-diff.spec.ts` against the old build: it compares every property of every element and reported 0 differences for this restructuring (Preflight left on: differences on every element; utilities below legacy: 116 of 467).
+- **Refresh bounce.** `tailwind.css` is added by the app at runtime (`document::Stylesheet`, see `app_shell.rs`), so it arrives after the wasm has run and drawn its first frame. Whatever that frame needs to be laid out correctly must therefore already be on the page: that is `public/base.css`, a plain `<link>` in the head (`style` in `Dioxus.toml`, `web/index.html` for `build.sh`). Measured on a refresh at 2560px wide, without it: first frame with `html` at 16px and the body 377px tall, ~50 ms later a layout shift of ~0.9 when the sheets land, then `html{transition:.3s}` slides the font-size 16px -> 10px for another 300 ms. Rules that set the size or position of something on the start screen or the tables belong in `base.css`; the rest in `tailwind.css`. `legacy` must stay ordered: what is in `base.css` is a *prefix* of the original stylesheet, and rules in one layer keep their order across sheets. **Do not put a path in `[web.resource] style` that is not in `public/`**: `dx` 0.7.10 writes the string into a `<link href>` as it is, without the base path and without copying the file, so the page has no styling at all (checked). Use a relative path (`base.css`).
 - `tracing` is capped at WARN in release builds (`release_max_level_warn` in `Cargo.toml`). Without it Dioxus's signal and memo
   spans become `PerformanceMark`/`PerformanceMeasure` entries that the browser never frees (about 1 MB per hour of combat).
-- Dioxus mounts into `#main`; it must fill `#wrap` (see `app.css`) or percentage layouts collapse.
+- Dioxus mounts into `#main`; it must fill `#wrap` (see `public/base.css`) or percentage layouts collapse.
 - Do not modify signals while rendering (Dioxus, "Intro to Reactivity": it queues re-renders and can loop). Network start-up
   therefore runs in a `use_effect`, which runs after the first render; it reads no signals, so it runs once.
 - The WebSocket `error` event is intentionally not handled: `close` always follows and would recurse.
@@ -350,13 +404,20 @@ values themselves stay untranslated.
 
 All tests live in `tests/unit/`, mirroring `src/` (see `tests/README.md`). Each source file that has
 tests contains only a declaration such as `#[cfg(test)] #[path = "../../tests/unit/..."] mod tests;`,
-so the tests keep access to private items. `cargo test` runs 58 tests: serde leniency and message
-shapes, a real capture, classification, pet merging on the sample fight, number/name formatting,
-endpoint parsing, GUID finding, the safe-markup allowlist, settings round-trips, theme output. `tests/unit/benchmarks.rs` holds
-ignored timing benchmarks (`cargo test --release --offline benchmarks -- --ignored --nocapture`).
-Parity with the original overlay is checked by `tools/original-comparison/compare-tables.mjs` (three fights, every table cell; see its README).
-Browser behaviour is checked with `tools/smoke-test.mjs`, and the connection layer with `tools/websocket-e2e-test.mjs`
-(both need `npm i jsdom ws`).
+so the tests keep access to private items. `cargo test` covers: serde leniency and message shapes, a real capture,
+classification, pet merging on the sample fight, number/name formatting, endpoint parsing, GUID finding, the safe-markup
+allowlist, the settings file (import, repair, round-trips, recorded behaviour), every translation, the typed style values, each
+styling area against what the old code produced, and the variable contract (section 8). **Run plain `cargo test` (debug), not only
+`--release`**: the typed readers' "unknown key" checks and their tests only exist with debug assertions.
+Recorded expectations live in `tests/fixtures/`; regenerate with `UPDATE_FIXTURES=1 cargo test <name>` and read the diff before keeping it.
+`tests/unit/benchmarks.rs` holds ignored timing benchmarks (`cargo test --release --offline benchmarks -- --ignored --nocapture`).
+
+Browser tests are in `playwright-tests/` (README there): pixel goldens of every screen and settings page (compared with the original
+overlay), persistence (what each control saves), the compositor-only bar animation (`bars.spec.ts`), first paint (no layout shift),
+the stylesheet guard, and `cascade-diff.spec.ts`, which compares every element's computed style between two builds: build the
+previous commit to a folder, serve both, and run it after any CSS or markup change. Parity with the original overlay is also checked by
+`tools/original-comparison/compare-tables.mjs` (three fights, every table cell; see its README), and the connection layer with
+`tools/websocket-e2e-test.mjs` (needs `npm i jsdom ws`).
 
 ## 17. CI, deploying to GitHub Pages, requiring green tests
 

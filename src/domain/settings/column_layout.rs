@@ -1,44 +1,33 @@
 //! Table columns: their definitions, which are enabled per table, and their order.
 
-use super::json_coercion::is_truthy;
-use super::user_settings::{COLUMN_DEFINITIONS_SECTION, COLUMN_ORDER_SECTION};
 use super::Settings;
-use serde_json::{json, Map, Value};
+use serde_json::{json, Value};
 
 impl Settings {
-    /// All known columns with their definition (title, width, padding, alignment, table flags).
-    pub fn column_definitions(&self) -> &Map<String, Value> {
-        static EMPTY: std::sync::OnceLock<Map<String, Value>> = std::sync::OnceLock::new();
-        self.json_document[COLUMN_DEFINITIONS_SECTION].as_object().unwrap_or_else(|| EMPTY.get_or_init(Map::new))
+    /// Columns that are switched on in at least one table.
+    pub fn columns_enabled_anywhere(&self) -> Vec<String> {
+        self.file.columns.iter().filter(|(_, definition)| definition.is_on("DPS") || definition.is_on("HPS")).map(|(name, _)| name.clone()).collect()
     }
 
+    /// A field of a column's definition as text (title, width, padding, alignment, ...); empty when there is none.
     pub fn column_text(&self, column: &str, field: &str) -> String {
-        match self.json_document[COLUMN_DEFINITIONS_SECTION][column].get(field) {
-            Some(Value::String(text)) => text.clone(),
-            Some(Value::Number(number)) => number.to_string(),
-            _ => String::new(),
-        }
+        self.file.columns.get(column).map(|definition| definition.text(field)).unwrap_or_default()
     }
 
+    /// Changes a field of a column's definition. A column the file does not have, or a value that does not fit the field, is ignored.
     pub fn set_column_field(&mut self, column: &str, field: &str, value: Value) {
-        self.json_document[COLUMN_DEFINITIONS_SECTION][column][field] = value;
-    }
-
-    /// Whether `column` is switched on for the table (`"DPS"` or `"HPS"`).
-    pub fn column_enabled_in_table(&self, column: &str, table_label: &str) -> bool {
-        is_truthy(&self.json_document[COLUMN_DEFINITIONS_SECTION][column][table_label])
+        if let Some(definition) = self.file.columns.get_mut(column) {
+            definition.set(field, &value);
+        }
     }
 
     /// Columns of a table in display order.
     pub fn column_order(&self, table_label: &str) -> Vec<String> {
-        self.json_document[COLUMN_ORDER_SECTION][table_label]
-            .as_array()
-            .map(|names| names.iter().filter_map(|name| name.as_str().map(String::from)).collect())
-            .unwrap_or_default()
+        self.file.order.0.get(table_label).cloned().unwrap_or_default()
     }
 
     fn set_column_order(&mut self, table_label: &str, order: &[String]) {
-        self.json_document[COLUMN_ORDER_SECTION][table_label] = json!(order);
+        self.file.order.0.insert(table_label.to_string(), order.to_vec());
     }
 
     /// Switches a column on or off for a table, keeping the display order in sync.

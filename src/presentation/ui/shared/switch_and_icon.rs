@@ -2,6 +2,7 @@
 
 use super::safe_markup::markup_view;
 use dioxus::prelude::*;
+use dioxus_material_icons::MaterialIcon;
 
 /// The sliding on/off switch drawn at the right of a row or menu item.
 #[component]
@@ -16,8 +17,10 @@ pub fn SwitchToggle(is_on: bool) -> Element {
 pub fn RowIcon(icon: String) -> Element {
     if icon.starts_with('<') {
         // schema-provided `<img src='./images/...'/>`; only allowlisted markup is rendered
-        rsx! { span { {markup_view(&icon)} } }
+        // The original writes the markup *inside* the same `<i class="material-icons">` a named icon uses,
+        // so the icon font's line box applies to it too (a plain span is 2px shorter per row).
+        rsx! { i { class: "material-icons", {markup_view(&icon)} } }
     } else {
-        rsx! { i { class: "material-icons", "{icon}" } }
+        rsx! { MaterialIcon { name: icon } }
     }
 }

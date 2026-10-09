@@ -9,8 +9,27 @@ base_path = "mopimopi-rs"
 # include `assets` in web platform
 [web.resource]
 
-# Additional CSS style files
-style = ["mopimopi.css", "app.css"]
+# Additional CSS style files: static <link> tags dx puts in the head of the page it generates, so they apply before the wasm has even
+# started loading.
+#
+# - "base.css" is the base layout (public/base.css): the window and page structure and the two screens that paint on a refresh, the start
+#   screen and the tables. Without it the first frame the app draws has no app CSS at all (html at 16px, the body as tall as its
+#   content), the stylesheets that `document::Stylesheet` adds at runtime (tailwind.css) land ~50 ms later, and everything jumps
+#   (a layout shift of ~0.9 measured in a DevTools trace), after which `html{transition:.3s}` slides the font-size from 16px to 10px, resizing
+#   everything for another 300 ms. It is a *relative* path on purpose: `dx` does not process a file listed here, it only writes the
+#   string into a <link href>, so the file has to be one `dx` already serves, and files in `public/` are (next to the page, under
+#   `base_path`). An absolute one ("/assets/base.css") is emitted as it is, without the base path, and 404s: the page then has no styling
+#   at all (checked against this project's dx 0.7.10).
+# - the `data:` URI is the tiny reset that used to be all of this (body margin 0, #main filling the window). base.css covers it; it stays as a
+#   second line of defence, because it cannot fail to load.
+# (The fonts are not listed: they are bundled and declared by the app, see `fonts_css` in src/presentation/ui/app_shell.rs.)
+#
+# The rest of the CSS (tailwind.css: the Preflight undo, the utilities, the menus, settings screens, forms) is a `document::Stylesheet` in
+# `App` (src/presentation/ui/app_shell.rs): it is generated and hashed by `dx`, which a file listed here cannot be.
+style = [
+    "data:text/css;base64,aHRtbCxib2R5e21hcmdpbjowO2JhY2tncm91bmQ6dHJhbnNwYXJlbnR9I21haW57d2lkdGg6MTAwJTtoZWlnaHQ6MTAwJX0=",
+    "base.css",
+]
 
 # Additional JavaScript files
 script = []

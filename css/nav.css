@@ -1,0 +1,46 @@
+/* nav.css: the navigation bar, live and in the history screen.
+
+   Variables read here, and the Rust that sets them (tests/unit/presentation/ui/areas/contract.rs checks both ways):
+     presentation/ui/areas/nav.rs:
+       --nav-bg, --nav-height, --nav-pattern-size, --nav-border, --nav-radius-tl, --nav-radius-tr, --nav-radius-br,
+       --nav-radius-bl, --nav-more-radius-tr, --nav-more-radius-br, --nav-btn-wrap-bg, --nav-edge-width,
+       --nav-icon-color, --nav-icon-size, --nav-time-padding, --nav-target-padding, --nav-gap */
+
+/* Every variable is set once, on the `nav` element itself (nav_bar_style); every descendant inherits it, so these only read variables
+   and never declare one of their own. */
+@utility nav-bar {
+  background: var(--nav-bg);
+  height: var(--nav-height);
+  background-size: var(--nav-pattern-size) var(--nav-pattern-size);
+  background-repeat: repeat;
+  border: var(--nav-border);
+  border-radius: var(--nav-radius-tl) var(--nav-radius-tr) var(--nav-radius-br) var(--nav-radius-bl);
+}
+@utility nav-more-button {
+  border-top-right-radius: var(--nav-more-radius-tr);
+  border-bottom-right-radius: var(--nav-more-radius-br);
+}
+/* The three texts of the bar (time, target, summary) are themed text (text.css), each cell with its own `--text-*` variables inline; what is left
+   here is the space before the time and the target, which is nothing for a text whose opacity slider is 0. */
+@utility nav-time {
+  padding-left: var(--nav-time-padding);
+}
+@utility nav-target {
+  padding-left: var(--nav-target-padding);
+}
+@utility nav-target-2line {
+  padding-bottom: var(--nav-gap);
+  vertical-align: bottom;
+}
+@utility nav-rps-2line {
+  padding-top: var(--nav-gap);
+  vertical-align: top;
+}
+@utility nav-target-1line {
+  padding-bottom: 0;
+  vertical-align: middle;
+}
+@utility nav-rps-1line {
+  padding-top: 0;
+  vertical-align: middle;
+}

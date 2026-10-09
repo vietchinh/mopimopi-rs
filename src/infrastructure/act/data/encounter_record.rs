@@ -21,6 +21,12 @@ pub struct EncounterRecord {
     /// ACT's `enchps` ("2075.26"), not the rounded `ENCHPS`.
     #[serde(default, rename = "enchps", deserialize_with = "lenient_rate")]
     pub heal_per_second: f64,
+    /// ACT's whole-number `ENCDPS` ("6107"), which the top bar's "Total DPS" prints as it is.
+    #[serde(default, rename = "ENCDPS", deserialize_with = "lenient_number")]
+    pub damage_per_second_whole: f64,
+    /// ACT's whole-number `ENCHPS`, for "Total HPS".
+    #[serde(default, rename = "ENCHPS", deserialize_with = "lenient_number")]
+    pub heal_per_second_whole: f64,
     #[serde(default, rename = "CurrentZoneName", deserialize_with = "lenient_text")]
     pub zone_name: String,
 }

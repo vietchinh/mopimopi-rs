@@ -5,6 +5,8 @@ edition = "2021"
 
 [dependencies]
 dioxus = { version = "0.7.10", features = ["web"] }
+dioxus-i18n = "0.5.1"
+dioxus-material-icons = "4.0.1"
 futures = { version = "0.3", default-features = false, features = ["std", "async-await"] }
 gloo-timers = { version = "0.4.0", features = ["futures"] }
 js-sys = "0.3.105"
@@ -14,13 +16,14 @@ js-sys = "0.3.105"
 tracing = { version = "0.1", features = ["release_max_level_warn"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["preserve_order"] }
+indexmap = { version = "2.14", features = ["serde"] }
 wasm-bindgen = "0.2.128"
 wasm-bindgen-futures = "0.4"
 
-web-sys = { version = "0.3", features = ["Window","Document","Element","HtmlElement","HtmlInputElement","WebSocket","MessageEvent","CloseEvent","ErrorEvent","Event","EventTarget","Storage","File","FileList","FileReader","ProgressEvent","CustomEvent","Location","console","BinaryType","Navigator","UrlSearchParams","HtmlTextAreaElement","Blob","Url"] }
+web-sys = { version = "0.3", features = ["Window","Document","Element","HtmlElement","HtmlInputElement","WebSocket","MessageEvent","CloseEvent","ErrorEvent","Event","EventTarget","Storage","File","FileList","FileReader","ProgressEvent","CustomEvent","Location","console","BinaryType","Navigator","UrlSearchParams","HtmlTextAreaElement","Blob","Url","HtmlCanvasElement","CanvasRenderingContext2d","CanvasGradient"] }
 
 [profile.release]
-opt-level = 3
+opt-level = "s"
 debug = false
 lto = true
 codegen-units = 1

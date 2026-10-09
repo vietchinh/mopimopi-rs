@@ -9,7 +9,15 @@ pub fn round_to_two_decimals(value: f64) -> f64 {
     if !value.is_finite() {
         return value;
     }
-    format!("{value:.2}").parse().unwrap_or(0.0)
+    to_fixed(value, 2).parse().unwrap_or(0.0)
+}
+
+/// The original's `pFloat`: `parseFloat(num.nanFix().toFixed(2))`. NaN becomes 0, infinity stays.
+/// Every derived rate and percentage the original computes goes through this *before* it is
+/// shown, so a value is rounded twice (first to two decimals, then to the displayed precision), and
+/// that first step changes what the second one produces (21.1538 -> 21.15 -> "21.1", not "21.2").
+pub fn p_float(value: f64) -> f64 {
+    if value.is_nan() { 0.0 } else { round_to_two_decimals(value) }
 }
 
 /// JavaScript `parseFloat` for text that only contains digits and dots: reads the longest
@@ -40,13 +48,55 @@ pub fn number_to_javascript_string(value: f64) -> String {
     }
 }
 
-/// `Number.prototype.toFixed(decimals)`; with zero decimals ties round away from zero.
+/// `Number.prototype.toFixed(decimals)`.
+///
+/// JavaScript rounds the value's exact decimal expansion and, when it lies exactly halfway, takes
+/// the larger candidate (away from zero). Rust rounds the same exact expansion but resolves an exact
+/// tie to the even digit, so `12.25` -> one decimal is `12.3` in JavaScript and `12.2` with `{:.1}`.
+/// Ties are common here (a percentage already rounded to `x.25` or `x.75`), so they are handled.
 pub fn to_fixed(value: f64, decimals: usize) -> String {
-    if decimals == 0 {
-        format!("{:.0}", value.round())
-    } else {
-        format!("{value:.decimals$}")
+    if value.is_nan() {
+        return "NaN".into();
     }
+    if value.is_infinite() {
+        return if value > 0.0 { "Infinity".into() } else { "-Infinity".into() };
+    }
+    let sign = if value < 0.0 { "-" } else { "" };
+    let magnitude = value.abs();
+    // Far from a tie (the usual case) the value needs no exact expansion; the check is cheap and its error is tiny
+    // next to the 1e-6 margin for the magnitudes and digit counts used here.
+    if decimals <= 6 && magnitude < 1e9 {
+        let scaled = magnitude * 10f64.powi(decimals as i32);
+        if ((scaled - scaled.floor()) - 0.5).abs() > 1e-6 {
+            return format!("{sign}{magnitude:.decimals$}");
+        }
+    }
+    // A tie ends exactly one digit past the cut, so a much longer expansion shows all zeros after it.
+    let long = format!("{magnitude:.*}", decimals + 30);
+    let (integer, fraction) = long.split_once('.').unwrap_or((long.as_str(), ""));
+    let is_tie = fraction.as_bytes().get(decimals) == Some(&b'5') && fraction[decimals + 1..].bytes().all(|digit| digit == b'0');
+    if !is_tie {
+        return format!("{sign}{magnitude:.decimals$}");
+    }
+    // Round the tie up: the kept digits plus one unit in the last place.
+    let mut digits: Vec<u8> = integer.bytes().chain(fraction.bytes().take(decimals)).collect();
+    let mut position = digits.len();
+    loop {
+        if position == 0 {
+            digits.insert(0, b'1');
+            break;
+        }
+        position -= 1;
+        if digits[position] == b'9' {
+            digits[position] = b'0';
+        } else {
+            digits[position] += 1;
+            break;
+        }
+    }
+    let text = String::from_utf8(digits).unwrap_or_default();
+    let split = text.len() - decimals;
+    if decimals == 0 { format!("{sign}{text}") } else { format!("{sign}{}.{}", &text[..split], &text[split..]) }
 }
 
 #[cfg(test)]

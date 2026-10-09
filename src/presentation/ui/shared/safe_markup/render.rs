@@ -3,6 +3,8 @@
 use super::markup_tree::{MarkupElement, MarkupNode, MarkupTag};
 use dioxus::prelude::*;
 
+/// The nodes have no identity of their own (they are the pieces of one piece of text, and the list is rebuilt whole whenever
+/// the text changes), so their position is the only key there is; that is the one case where an index is the right key.
 pub(super) fn render_nodes(nodes: &[MarkupNode]) -> Element {
     rsx! {
         for (index , node) in nodes.iter().enumerate() {

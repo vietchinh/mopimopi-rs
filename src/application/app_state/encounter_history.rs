@@ -1,6 +1,7 @@
 //! The list of finished encounters (History screen).
 
-use super::app_context::{AppContext, Screen};
+use super::app_actions::AppActions;
+use super::contexts::Screen;
 use super::standby_mode::restart_standby_timer;
 use crate::infrastructure::act::data::CombatDataMessage;
 use dioxus::prelude::*;
@@ -48,32 +49,33 @@ impl HistoryEntry {
     }
 }
 
-pub fn open_history_screen(context: AppContext) {
-    let mut screen = context.current_screen;
+pub fn open_history_screen(actions: AppActions) {
+    let mut screen = actions.screen.current_screen;
     screen.set(Screen::History);
-    let mut dropdown = context.open_dropdown;
+    let mut dropdown = actions.dropdown.open_dropdown;
     dropdown.set(None);
 }
 
-pub fn close_history_screen(context: AppContext) {
-    let mut screen = context.current_screen;
+pub fn close_history_screen(actions: AppActions) {
+    let mut screen = actions.screen.current_screen;
     screen.set(Screen::Main);
-    restart_standby_timer(context);
+    restart_standby_timer(actions);
 }
 
-pub fn show_history_entry(context: AppContext, encounter_key: &str) {
-    let picked = context
+pub fn show_history_entry(actions: AppActions, encounter_key: &str) {
+    let picked = actions
+        .history
         .encounter_history
         .peek()
         .iter()
         .find(|entry| entry.encounter_key == encounter_key)
         .map(|entry| entry.combat_data.clone());
     let Some(combat_data) = picked else { return };
-    let mut displayed = context.displayed_combat_data;
+    let mut displayed = actions.tables.displayed_combat_data;
     displayed.set(Some(combat_data));
-    let mut viewed = context.viewed_history_key;
+    let mut viewed = actions.history.viewed_history_key;
     viewed.set(Some(encounter_key.to_string()));
-    let mut has_received_data = context.has_received_data;
+    let mut has_received_data = actions.tables.has_received_data;
     has_received_data.set(true);
-    close_history_screen(context);
+    close_history_screen(actions);
 }

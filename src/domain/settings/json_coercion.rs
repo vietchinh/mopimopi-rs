@@ -4,23 +4,13 @@
 use serde_json::{json, Value};
 
 /// JavaScript truthiness: `0`, `""`, `"0"`, `"false"`, `null` and `false` are falsy.
-pub fn is_truthy(value: &Value) -> bool {
+pub(super) fn is_truthy(value: &Value) -> bool {
     match value {
         Value::Bool(flag) => *flag,
         Value::Number(number) => number.as_f64().is_some_and(|x| x != 0.0),
         Value::String(text) => !(text.is_empty() || text == "0" || text == "false"),
         Value::Null => false,
         _ => true,
-    }
-}
-
-/// Number value of a JSON value (`0` when it is not numeric).
-pub(super) fn as_number(value: &Value) -> f64 {
-    match value {
-        Value::Number(number) => number.as_f64().unwrap_or(0.0),
-        Value::String(text) => text.trim().parse().unwrap_or(0.0),
-        Value::Bool(flag) => f64::from(i32::from(*flag)),
-        _ => 0.0,
     }
 }
 

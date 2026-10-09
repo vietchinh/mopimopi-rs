@@ -11,7 +11,8 @@
 //! * `shared`             – helpers used by several of the above
 
 mod app_shell;
-mod combat_tables;
+mod areas;
+pub(crate) mod combat_tables;
 mod dropdown_menus;
 mod history_screen;
 mod navigation_bar;
@@ -20,5 +21,6 @@ mod settings_screens;
 mod shared;
 mod start_screen;
 mod overlay_plugin_context;
+mod page_services;
 
 pub use app_shell::App;

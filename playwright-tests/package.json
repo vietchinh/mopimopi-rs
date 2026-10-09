@@ -1,0 +1,23 @@
+{
+  "name": "mopimopi-dioxus-playwright-tests",
+  "private": true,
+  "description": "End-to-end tests: the Dioxus port must look and behave like the original MopiMopi overlay.",
+  "scripts": {
+    "test": "playwright test",
+    "test:quick": "playwright test --grep-invert @tall",
+    "test:live": "E2E_MODE=live playwright test",
+    "goldens": "E2E_MODE=record playwright test --workers=2",
+    "report": "playwright show-report",
+    "test:release": "E2E_DX_FLAGS=--release playwright test",
+    "goldens:images": "E2E_GOLDEN_IMAGES=1 E2E_MODE=record playwright test --workers=2"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "@types/node": "^22.0.0",
+    "@types/pngjs": "^6.0.5",
+    "jquery": "3.2.1",
+    "pixelmatch": "5.3.0",
+    "pngjs": "^7.0.0",
+    "ws": "^8.18.0"
+  }
+}

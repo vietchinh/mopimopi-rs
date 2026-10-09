@@ -1,5 +1,7 @@
 //! Small pieces used by several screens.
 //!
+//! * `color_conversion`  – hex colours to `rgba(...)`
+//! * `style`            – the typed values, readers and shapes that replace it
 //! * `palette`          – graph bar colours
 //! * `row_identity`     – element ids of table rows
 //! * `text_display`     – text fragments and job icons as DOM
@@ -8,10 +10,12 @@
 //! * `option_choice`    – settings values as list keys
 //! * `safe_markup`      – renders the HTML fragments of the translation files without `innerHTML`
 
+pub mod color_conversion;
 pub mod option_choice;
 pub mod palette;
 pub mod rankings_source;
 pub mod row_identity;
 pub mod safe_markup;
+pub mod style;
 pub mod switch_and_icon;
 pub mod text_display;

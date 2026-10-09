@@ -2,9 +2,7 @@
 
 use crate::domain::combat::CombatantKind::LimitBreak;
 use crate::domain::combat::LOCAL_PLAYER;
-use crate::domain::formatting::LIMIT_BREAK_JOB_CODE;
 use crate::domain::settings::Settings;
-use crate::domain::translations::Translations;
 use crate::infrastructure::act::data::CombatantRecord;
 
 /// How much of a "First Last" name is shortened (the "Name" settings page).
@@ -81,13 +79,13 @@ fn abbreviate_pet_or_player_name(name: &str, local_player_name: &str, options: &
     format!("{} ({})", pet_part.trim_end(), shown_owner)
 }
 
-/// The text of the name cell.
+/// The text of the name cell. `rank` is the row's 0-based position in its table.
 pub fn display_name(
     player: &CombatantRecord,
     local_player_name: &str,
     options: &NameOptions,
-    translations: &Translations,
-    language_code: &str,
+    limit_break_name: &str,
+    rank: usize,
 ) -> String {
     let is_local_row = player.name == LOCAL_PLAYER;
     let name = if !options.hide_names {
@@ -103,11 +101,11 @@ pub fn display_name(
     } else if is_local_row {
         player.name.clone()
     } else if player.kind() == LimitBreak {
-        translations.dictionary_title(LIMIT_BREAK_JOB_CODE, language_code)
+        limit_break_name.to_string()
     } else {
         String::new()
     };
-    if options.prefix_rank { format!("{}. {}", 1, name) } else { name }
+    if options.prefix_rank { format!("{}. {}", rank + 1, name) } else { name }
 }
 
 #[cfg(test)]
