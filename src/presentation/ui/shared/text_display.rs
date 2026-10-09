@@ -47,7 +47,7 @@ pub fn job_icon_view(icon_set: &str, combatant: &CombatantRecord, sized_by_table
     };
 
     let source = format!("images/icon/{icon_set}/{}.png", icon_code(&job_code));
-    rsx! { img { class: if sized_by_table { "w-(--chrome-icon-size) [aspect-ratio:auto_1]" }, src: "{source}" } }
+    rsx! { img { class: if sized_by_table { "w-(--chrome-icon-size) [aspect-ratio:auto_1]" }, src: "{source}", alt: "{job_code}" } }
 }
 
 #[cfg(test)]

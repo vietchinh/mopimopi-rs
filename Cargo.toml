@@ -23,10 +23,10 @@ wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = ["Window","Document","Element","HtmlElement","HtmlInputElement","WebSocket","MessageEvent","CloseEvent","ErrorEvent","Event","EventTarget","Storage","File","FileList","FileReader","ProgressEvent","CustomEvent","Location","console","BinaryType","Navigator","UrlSearchParams","HtmlTextAreaElement","Blob","Url","HtmlCanvasElement","CanvasRenderingContext2d","CanvasGradient"] }
 
 [profile.release]
-opt-level = 3
-debug = "line-tables-only"
+opt-level = "s"
+debug = false
 lto = true
 codegen-units = 1
 panic = "abort"
-strip = false
+strip = true
 incremental = false

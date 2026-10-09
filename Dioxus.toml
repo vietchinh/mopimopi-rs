@@ -22,14 +22,13 @@ base_path = "mopimopi-rs"
 #   at all (checked against this project's dx 0.7.10).
 # - the `data:` URI is the tiny reset that used to be all of this (body margin 0, #main filling the window). base.css covers it; it stays as a
 #   second line of defence, because it cannot fail to load.
-# - the Google text font.
+# (The fonts are not listed: they are bundled and declared by the app, see `fonts_css` in src/presentation/ui/app_shell.rs.)
 #
 # The rest of the CSS (tailwind.css: the Preflight undo, the utilities, the menus, settings screens, forms) is a `document::Stylesheet` in
 # `App` (src/presentation/ui/app_shell.rs): it is generated and hashed by `dx`, which a file listed here cannot be.
 style = [
     "data:text/css;base64,aHRtbCxib2R5e21hcmdpbjowO2JhY2tncm91bmQ6dHJhbnNwYXJlbnR9I21haW57d2lkdGg6MTAwJTtoZWlnaHQ6MTAwJX0=",
     "base.css",
-    "https://fonts.googleapis.com/css?family=Roboto+Condensed",
 ]
 
 # Additional JavaScript files

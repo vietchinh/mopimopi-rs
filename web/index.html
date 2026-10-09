@@ -10,13 +10,10 @@
   <title>MopiMopi</title>
   <!-- NOTE: `dx` does not use this file (it generates its own page, and takes the links below from
        [web.resource] in Dioxus.toml); only build.sh does. Keep the two in step.
-       The stylesheet tailwind.css and the clock font's @font-face are
-       inserted by the app itself, see `App` in src/presentation/ui/app_shell.rs. -->
+       The stylesheet tailwind.css and the @font-face rules of every font (the clock's,
+       Roboto Condensed, Material Icons) are inserted by the app itself, see `App` in src/presentation/ui/app_shell.rs. -->
   <!-- The base layout: render-blocking, so the app's first frame is laid out (see the comment in Dioxus.toml). Copied to dist/ from public/. -->
   <link rel="stylesheet" href="base.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Condensed" />
   <!-- Same helper the original loaded: exposes OverlayPluginApi when running inside OverlayPlugin -->
   <script src="https://ngld.github.io/OverlayPlugin/assets/shared/common.min.js"></script>
   <!-- Applies with the very first paint, before any stylesheet has loaded: removes the browser's default

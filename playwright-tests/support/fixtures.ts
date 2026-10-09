@@ -24,6 +24,16 @@ const JQUERY = fs.readFileSync(require.resolve("jquery/dist/jquery.min.js"));
 // leaves the font out instead: icons then show as their names, and the browser's own defaults for `<i>` (italic) show through.
 const REAL_ICON_FONT = process.env.E2E_REAL_ICON_FONT !== "0";
 const ICON_FONT = fs.readFileSync(path.resolve(__dirname, "material-icons.woff2"));
+// Roboto Condensed, which the original loads from Google Fonts (`css?family=Roboto+Condensed`): the same two files (and unicode ranges)
+// the port bundles, served in Google's place, so both show the real font and not the fallback an offline run would give.
+const TEXT_FONT_FILES = { latin: fs.readFileSync(path.resolve(__dirname, "RobotoCondensed-latin-400.woff2")), "latin-ext": fs.readFileSync(path.resolve(__dirname, "RobotoCondensed-latin-ext-400.woff2")) };
+const TEXT_FONT_RANGES = {
+  latin: "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD",
+  "latin-ext": "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF",
+};
+const TEXT_FONT_CSS = (["latin-ext", "latin"] as const)
+  .map((name) => `@font-face{font-family:'Roboto Condensed';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/e2e/roboto-condensed-${name}.woff2) format('woff2');unicode-range:${TEXT_FONT_RANGES[name]}}`)
+  .join("\n");
 const ICON_FONT_CSS = `@font-face{font-family:'Material Icons';font-style:normal;font-weight:400;src:url(https://fonts.gstatic.com/e2e/material-icons.woff2) format('woff2')}
 .material-icons{font-family:'Material Icons';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased}`;
 
@@ -66,6 +76,9 @@ export class App {
       const url = route.request().url();
       if (REAL_ICON_FONT && /fonts\.googleapis\.com\/icon\?family=Material\+Icons$/.test(url)) return route.fulfill({ contentType: "text/css", body: ICON_FONT_CSS });
       if (REAL_ICON_FONT && /fonts\.gstatic\.com\/e2e\/material-icons\.woff2/.test(url)) return route.fulfill({ contentType: "font/woff2", body: ICON_FONT });
+      if (/fonts\.googleapis\.com\/css\?family=Roboto\+Condensed$/.test(url)) return route.fulfill({ contentType: "text/css", body: TEXT_FONT_CSS });
+      const textFont = /fonts\.gstatic\.com\/e2e\/roboto-condensed-(latin|latin-ext)\.woff2/.exec(url);
+      if (textFont) return route.fulfill({ contentType: "font/woff2", body: TEXT_FONT_FILES[textFont[1] as "latin" | "latin-ext"] });
       if (/ajax\.googleapis\.com.*jquery/.test(url)) return route.fulfill({ contentType: "text/javascript", body: JQUERY });
       if (/common\.min\.js/.test(url)) return route.fulfill({ contentType: "text/javascript", body: "/* OverlayPlugin helper not available here */" });
       if (/^https?:\/\/(fonts\.|ngld\.|ajax\.)/.test(url)) return route.fulfill({ contentType: "text/css", body: "" });

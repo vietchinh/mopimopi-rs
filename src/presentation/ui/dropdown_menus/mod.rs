@@ -14,16 +14,15 @@ use dioxus::prelude::*;
 #[component]
 pub fn DropdownMenu() -> Element {
     let dropdown = use_context::<DropdownContext>();
-    let Some(open_menu) = dropdown.open_dropdown.read().clone() else { return rsx! {} };
+    // Hooks first: they must run on every render, including the early return below.
     let settings = use_context::<SettingsContext>();
+    let actions = use_context::<AppActions>();
+    let screen = use_context::<ScreenContext>();
+    let settings_screen = use_context::<SettingsScreenContext>();
+    let Some(open_menu) = dropdown.open_dropdown.read().clone() else { return rsx! {} };
 
     let items = match open_menu {
-        Dropdown::Navigation => navigation_menu::navigation_menu_items(
-            use_context::<AppActions>(),
-            use_context::<ScreenContext>(),
-            settings,
-            use_context::<SettingsScreenContext>(),
-        ),
+        Dropdown::Navigation => navigation_menu::navigation_menu_items(actions, screen, settings, settings_screen),
         Dropdown::ChooseOption { setting_key, choices } => choice_menus::option_choice_items(settings, &setting_key, &choices),
         Dropdown::ToggleOptions { options } => choice_menus::option_toggle_items(settings, options),
         Dropdown::ChooseColumnAlignment { column, field } => choice_menus::column_alignment_items(settings, &column, &field),

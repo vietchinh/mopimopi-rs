@@ -4,8 +4,8 @@
 //! configured only from the
 //! page's URL (`?OVERLAY_WS=` / `?HOST_PORT=`). It connects immediately, subscribes, and
 //! reconnects on its own with a growing delay. Whether pets are merged into their owners is a
-//! setting the GUI owns (see `Settings`, key `"pets"`); this context only carries that one bool
-//! through to the point where a message is turned into an event (`set_merge_pets_into_owner`).
+//! setting the GUI owns (see `Settings`, key `"pets"`); the connection task reads it (without subscribing) when a
+//! message arrives and hands the parsed message straight to `on_combat_data_changed`.
 
 use crate::infrastructure::act::data::{peek_combat_data, CombatDataMessage, ParseOptions};
 use crate::infrastructure::act::overlay_plugin_protocol::{interpret, subscribe_message, OverlayPluginEvent, OverlayPluginUrl, OverlayPluginUrlError};
@@ -58,20 +58,16 @@ impl fmt::Display for StartError {
 pub struct OverlayPluginContext {
     connection_status: Signal<ConnectionStatus>,
     combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
-    player_name: Signal<String>,
     error: Signal<Option<String>>,
-    merge_pets_into_owner: Signal<bool>,
 }
 
 impl OverlayPluginContext {
     pub fn new(
         connection_status: Signal<ConnectionStatus>,
         combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
-        player_name: Signal<String>,
         error: Signal<Option<String>>,
-        merge_pets_into_owner: Signal<bool>,
     ) -> OverlayPluginContext {
-        OverlayPluginContext { connection_status, combat_data_message, player_name, error, merge_pets_into_owner }
+        OverlayPluginContext { connection_status, combat_data_message, error }
     }
 
     pub fn connection_status(&self) -> ConnectionStatus {
@@ -86,23 +82,19 @@ impl OverlayPluginContext {
         self.combat_data_message.read().as_ref().is_some_and(|message| message.is_encounter_active)
     }
 
-    pub fn combat_data_message(&self) -> Option<Rc<CombatDataMessage>> {
-        self.combat_data_message.read().clone()
-    }
-
-    pub fn local_player_name(&self) -> String {
-        self.player_name.read().clone()
-    }
-
-    pub fn set_merge_pets_into_owner(&self, value: bool) {
-        let mut merge_pets_into_owner = self.merge_pets_into_owner;
-        merge_pets_into_owner.set(value);
-    }
 
     pub fn show_sample_data(&self, message: CombatDataMessage) {
         let mut combat_data_message = self.combat_data_message;
         combat_data_message.set(Some(Rc::new(message)));
     }
+}
+
+/// Where a parsed message goes: straight into the app state, from the socket task (no effect round trip).
+#[derive(Clone, Copy)]
+struct MessageSink {
+    actions: AppActions,
+    local_player_name: Signal<String>,
+    view: SettingsView,
 }
 
 /// Owns the connection to ACT for the whole page: creates the context, runs the task that keeps it open, and feeds what arrives
@@ -117,27 +109,10 @@ pub fn ActConnection(children: Element) -> Element {
     let combat_data_message = use_signal(|| None);
     let player_name = use_signal(String::new);
     let error = use_signal(|| None);
-    let merge_pets_into_owner = use_signal(|| view.page.peek().merge_pets);
 
-    let context = use_context_provider(|| OverlayPluginContext::new(connection_status, combat_data_message, player_name, error, merge_pets_into_owner));
-    spawn_connection_task(connection_status, combat_data_message, player_name, error, merge_pets_into_owner);
-
-    use_effect(move || {
-        let merge_pets = view.page.read().merge_pets;
-        context.set_merge_pets_into_owner(merge_pets);
-    });
-    use_effect(move || {
-        if let Some(message) = context.combat_data_message() {
-            on_combat_data_changed(actions, message);
-        }
-    });
-    use_effect(move || {
-        let name = context.local_player_name();
-        if !name.is_empty() {
-            let mut local_player_name = tables.local_player_name;
-            local_player_name.set(name);
-        }
-    });
+    use_context_provider(|| OverlayPluginContext::new(connection_status, combat_data_message, error));
+    let sink = MessageSink { actions, local_player_name: tables.local_player_name, view };
+    spawn_connection_task(connection_status, combat_data_message, player_name, error, sink);
 
     children
 }
@@ -147,9 +122,9 @@ fn spawn_connection_task(
     combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
     player_name: Signal<String>,
     error: Signal<Option<String>>,
-    merge_pets_into_owner: Signal<bool>,
+    sink: MessageSink,
 ) {
-    dioxus::hooks::use_future(move || keep_connected(connection_status, combat_data_message, player_name, error, merge_pets_into_owner));
+    dioxus::hooks::use_future(move || keep_connected(connection_status, combat_data_message, player_name, error, sink));
 }
 
 async fn keep_connected(
@@ -157,7 +132,7 @@ async fn keep_connected(
     combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
     player_name_signal: Signal<String>,
     mut error_signal: Signal<Option<String>>,
-    merge_pets_into_owner: Signal<bool>,
+    sink: MessageSink,
 ) {
     let url = match parse_overlay_plugin_url() {
         Ok(url) => url,
@@ -197,7 +172,7 @@ async fn keep_connected(
                         connection_status.set(ConnectionStatus::Connected);
                     },
                     message = message_rx.next() => if let Some(text) = message {
-                        handle_message(&text, combat_data_message, player_name_signal, error_signal, merge_pets_into_owner);
+                        handle_message(&text, combat_data_message, player_name_signal, error_signal, sink);
                     },
                     error = error_rx.next() => if let Some(error) = error {
                         error_signal.set(Some(error.to_string()));
@@ -225,7 +200,7 @@ fn handle_message(
     mut combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
     mut player_name_signal: Signal<String>,
     mut error_signal: Signal<Option<String>>,
-    merge_pets_into_owner: Signal<bool>,
+    sink: MessageSink,
 ) {
     // An idle "still connected" heartbeat (no combatants, no fight, and none was running) shows nothing and is skipped.
     // An empty message is *not* skipped when a fight is running or just was: ACT starts a new encounter with active
@@ -239,12 +214,22 @@ fn handle_message(
     }
     let player_name = player_name_signal.peek().clone();
     let options = ParseOptions {
-        merge_pets_into_owner: *merge_pets_into_owner.peek(),
+        merge_pets_into_owner: sink.view.page.peek().merge_pets,
         local_player_name: Some(player_name.as_str()).filter(|name| !name.is_empty()),
     };
     match interpret(text, options) {
-        Ok(Some(OverlayPluginEvent::CombatData(data))) => combat_data_message.set(Some(Rc::new(data))),
-        Ok(Some(OverlayPluginEvent::PrimaryPlayerChanged(name))) => player_name_signal.set(name),
+        Ok(Some(OverlayPluginEvent::CombatData(data))) => {
+            let message = Rc::new(data);
+            combat_data_message.set(Some(Rc::clone(&message)));
+            on_combat_data_changed(sink.actions, message);
+        }
+        Ok(Some(OverlayPluginEvent::PrimaryPlayerChanged(name))) => {
+            if !name.is_empty() {
+                let mut local_player_name = sink.local_player_name;
+                local_player_name.set(name.clone());
+            }
+            player_name_signal.set(name);
+        }
         Ok(None) => {}
         Err(error) => error_signal.set(Some(error.to_string())),
     }

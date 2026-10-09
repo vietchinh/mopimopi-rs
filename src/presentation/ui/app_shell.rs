@@ -37,17 +37,37 @@ fn asset_url(asset: Asset, plain_file: &'static str) -> String {
     if url.contains(manganis::BundledAsset::PLACEHOLDER_HASH) { plain_file.to_string() } else { url }
 }
 
-// The clock font. Its `@font-face` can't stay in the stylesheet: the stylesheet is served from a hashed
-// `/assets/` URL, so a relative `url(font/...)` inside it would point at `/assets/font/...`. As an
-// asset the font gets a URL that is correct wherever the app is hosted.
+// The fonts. Their `@font-face` rules can't stay in the stylesheet: the stylesheet is served from a hashed
+// `/assets/` URL, so a relative `url(font/...)` inside it would point at `/assets/font/...`. As assets the fonts get
+// URLs that are correct wherever the app is hosted. They are bundled (assets/font/README.md has the licences) so the
+// overlay needs no network for them; the text font and the icon font used to come from fonts.googleapis.com.
 const CLOCK_FONT_WOFF: Asset = asset!("/assets/font/DS-DIGIB.woff");
 const CLOCK_FONT_TTF: Asset = asset!("/assets/font/DS-DIGIB.ttf");
+const TEXT_FONT_LATIN: Asset = asset!("/assets/font/RobotoCondensed-latin-400.woff2");
+const TEXT_FONT_LATIN_EXT: Asset = asset!("/assets/font/RobotoCondensed-latin-ext-400.woff2");
+const ICON_FONT: Asset = asset!("/assets/font/MaterialIcons-Regular.woff2");
 
-fn clock_font_face() -> String {
+/// Roboto Condensed (regular; bold is the browser's), split into the two subsets that cover names and the app's languages,
+/// with the unicode ranges Google serves them under. Any other character falls through to the next family of the font stack.
+const TEXT_FONT_LATIN_RANGE: &str = "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD";
+const TEXT_FONT_LATIN_EXT_RANGE: &str = "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF";
+
+/// The `@font-face` rules of every font, and the `.material-icons` rule that turns an icon's name into its glyph
+/// (the same rule Google's icon stylesheet carries).
+fn fonts_css() -> String {
     format!(
-        "@font-face{{font-family:'DS-Digital';src:url({}) format('woff'),url({}) format('truetype')}}",
-        asset_url(CLOCK_FONT_WOFF, "assets/font/DS-DIGIB.woff"),
-        asset_url(CLOCK_FONT_TTF, "assets/font/DS-DIGIB.ttf"),
+        "@font-face{{font-family:'DS-Digital';src:url({clock_woff}) format('woff'),url({clock_ttf}) format('truetype')}}\
+         @font-face{{font-family:'Roboto Condensed';font-style:normal;font-weight:400;font-display:swap;src:url({latin}) format('woff2');unicode-range:{latin_range}}}\
+         @font-face{{font-family:'Roboto Condensed';font-style:normal;font-weight:400;font-display:swap;src:url({latin_ext}) format('woff2');unicode-range:{latin_ext_range}}}\
+         @font-face{{font-family:'Material Icons';font-style:normal;font-weight:400;src:url({icons}) format('woff2')}}\
+         .material-icons{{font-family:'Material Icons';font-weight:normal;font-style:normal;font-size:24px;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;word-wrap:normal;direction:ltr;-webkit-font-feature-settings:'liga';-webkit-font-smoothing:antialiased}}",
+        clock_woff = asset_url(CLOCK_FONT_WOFF, "assets/font/DS-DIGIB.woff"),
+        clock_ttf = asset_url(CLOCK_FONT_TTF, "assets/font/DS-DIGIB.ttf"),
+        latin = asset_url(TEXT_FONT_LATIN, "assets/font/RobotoCondensed-latin-400.woff2"),
+        latin_range = TEXT_FONT_LATIN_RANGE,
+        latin_ext = asset_url(TEXT_FONT_LATIN_EXT, "assets/font/RobotoCondensed-latin-ext-400.woff2"),
+        latin_ext_range = TEXT_FONT_LATIN_EXT_RANGE,
+        icons = asset_url(ICON_FONT, "assets/font/MaterialIcons-Regular.woff2"),
     )
 }
 
@@ -99,12 +119,10 @@ fn PageShell() -> Element {
     // exception, because nothing else in the render tree is html's actual owner.
     let root_style = use_memo(move || view.page.read().root_rule());
     let screen = *screen_context.current_screen.read();
-    let font_face = clock_font_face();
+    let font_face = fonts_css();
     let show_resize_handle = screen != Screen::Settings && view.page.read().corner_handle;
 
     rsx! {
-        // The Material Icons font (Google's stylesheet), from dioxus-material-icons.
-        dioxus_material_icons::MaterialIconStylesheet {}
         document::Stylesheet { href: asset_url(TAILWIND_CSS, "assets/tailwind.css") }
         style { "{font_face}" }
         style { "{root_style}" }

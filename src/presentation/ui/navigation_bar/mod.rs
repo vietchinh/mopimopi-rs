@@ -70,24 +70,27 @@ pub fn NavigationBar(is_settings_preview: bool) -> Element {
     let nav_vars = nav.bar_vars();
     let (time_vars, target_vars, summary_vars) = (nav.time_vars(), nav.target_vars(), nav.summary_vars());
 
-    // The original has two alternative layouts (2 rows / 1 row); only one is visible.
+    // The original has two alternative layouts (2 rows / 1 row); only the active one is built.
     rsx! {
         nav { "name": "main", class: "nav-bar", style: "{nav_vars}",
-            table { "name": "ACT_2line", display: if !uses_two_lines { "none" },
-                tbody {
-                    tr {
-                        td { rowspan: "2", "name": "time", class: "nav-time themed-text", style: "{time_vars}", "{time_text}" }
-                        td { "name": "target", class: "nav-target nav-target-2line themed-text", style: "{target_vars}", "{target_text}" }
+            if uses_two_lines {
+                table { "name": "ACT_2line",
+                    tbody {
+                        tr {
+                            td { rowspan: "2", "name": "time", class: "nav-time themed-text", style: "{time_vars}", "{time_text}" }
+                            td { "name": "target", class: "nav-target nav-target-2line themed-text", style: "{target_vars}", "{target_text}" }
+                        }
+                        tr { td { "name": "rps", class: "nav-rps-2line themed-text", style: "{summary_vars}", {summary} } }
                     }
-                    tr { td { "name": "rps", class: "nav-rps-2line themed-text", style: "{summary_vars}", {summary.clone()} } }
                 }
-            }
-            table { "name": "ACT_1line", display: if uses_two_lines { "none" },
-                tbody {
-                    tr {
-                        td { "name": "time", class: "nav-time themed-text", style: "{time_vars}", "{time_text}" }
-                        td { "name": "target", class: "nav-target nav-target-1line themed-text", style: "{target_vars}", "{target_text}" }
-                        td { "name": "rps", class: "nav-rps-1line themed-text", style: "{summary_vars}", {summary} }
+            } else {
+                table { "name": "ACT_1line",
+                    tbody {
+                        tr {
+                            td { "name": "time", class: "nav-time themed-text", style: "{time_vars}", "{time_text}" }
+                            td { "name": "target", class: "nav-target nav-target-1line themed-text", style: "{target_vars}", "{target_text}" }
+                            td { "name": "rps", class: "nav-rps-1line themed-text", style: "{summary_vars}", {summary} }
+                        }
                     }
                 }
             }
