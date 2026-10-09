@@ -1,6 +1,6 @@
 //! The one connection to `OverlayPlugin`, and everything it reports, as Dioxus context.
 //!
-//! Its signals are created once, in `App`'s own body (see `new` and `spawn_connection_task`),
+//! Its signals are created once, in `ActConnection` (see `new` and `spawn_connection_task`),
 //! configured only from the
 //! page's URL (`?OVERLAY_WS=` / `?HOST_PORT=`). It connects immediately, subscribes, and
 //! reconnects on its own with a growing delay. Whether pets are merged into their owners is a
@@ -10,7 +10,9 @@
 use crate::infrastructure::act::data::{peek_combat_data, CombatDataMessage, ParseOptions};
 use crate::infrastructure::act::overlay_plugin_protocol::{interpret, subscribe_message, OverlayPluginEvent, OverlayPluginUrl, OverlayPluginUrlError};
 use crate::infrastructure::browser_websocket::BrowserWebsocketClient;
-use dioxus::prelude::Signal;
+use crate::application::app_state::{on_combat_data_changed, AppActions, TablesContext};
+use crate::presentation::ui::areas::SettingsView;
+use dioxus::prelude::*;
 use dioxus::signals::{ReadableExt, WritableExt};
 use futures::channel::mpsc;
 use futures::{select_biased, StreamExt};
@@ -103,7 +105,44 @@ impl OverlayPluginContext {
     }
 }
 
-pub fn spawn_connection_task(
+/// Owns the connection to ACT for the whole page: creates the context, runs the task that keeps it open, and feeds what arrives
+/// into the page (the combat tables' data, the local player's name). Everything below it can read `OverlayPluginContext`.
+#[component]
+pub fn ActConnection(children: Element) -> Element {
+    let actions = use_context::<AppActions>();
+    let tables = use_context::<TablesContext>();
+    let view = use_context::<SettingsView>();
+
+    let connection_status = use_signal(|| ConnectionStatus::NotConfigured);
+    let combat_data_message = use_signal(|| None);
+    let player_name = use_signal(String::new);
+    let error = use_signal(|| None);
+    let merge_pets_into_owner = use_signal(|| view.page.peek().merge_pets);
+
+    let context = use_context_provider(|| OverlayPluginContext::new(connection_status, combat_data_message, player_name, error, merge_pets_into_owner));
+    spawn_connection_task(connection_status, combat_data_message, player_name, error, merge_pets_into_owner);
+
+    use_effect(move || {
+        let merge_pets = view.page.read().merge_pets;
+        context.set_merge_pets_into_owner(merge_pets);
+    });
+    use_effect(move || {
+        if let Some(message) = context.combat_data_message() {
+            on_combat_data_changed(actions, message);
+        }
+    });
+    use_effect(move || {
+        let name = context.local_player_name();
+        if !name.is_empty() {
+            let mut local_player_name = tables.local_player_name;
+            local_player_name.set(name);
+        }
+    });
+
+    children
+}
+
+fn spawn_connection_task(
     connection_status: Signal<ConnectionStatus>,
     combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
     player_name: Signal<String>,
@@ -188,6 +227,11 @@ fn handle_message(
     mut error_signal: Signal<Option<String>>,
     merge_pets_into_owner: Signal<bool>,
 ) {
+    // An idle "still connected" heartbeat (no combatants, no fight, and none was running) shows nothing and is skipped.
+    // An empty message is *not* skipped when a fight is running or just was: ACT starts a new encounter with active
+    // messages that have no combatants yet, and the original overlay redraws (and so empties) its tables on them,
+    // and treats the first inactive message after them as the end of that fight.
+    // The first message of all is never skipped: it is what tells the app that ACT is connected (and idle).
     let previous = combat_data_message.peek().clone();
     let fight_was_running = previous.as_ref().is_some_and(|previous| previous.is_encounter_active);
     if previous.is_some() && peek_combat_data(text).is_some_and(|peek| !peek.has_combatants && !peek.is_active && !fight_was_running) {

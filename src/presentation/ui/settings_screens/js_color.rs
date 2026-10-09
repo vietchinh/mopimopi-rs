@@ -136,6 +136,16 @@ pub struct ColorPickerState {
     dragging: Signal<Option<Control>>,
 }
 
+/// Provides the picker's state to everything inside it and draws the one panel they all share (see `JsColorPicker`).
+#[component]
+pub fn ColorPickerHost(children: Element) -> Element {
+    use_context_provider(ColorPickerState::new);
+    rsx! {
+        JsColorPicker {}
+        {children}
+    }
+}
+
 impl ColorPickerState {
     pub fn new() -> Self {
         Self {

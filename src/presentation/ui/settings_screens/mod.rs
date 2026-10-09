@@ -26,7 +26,7 @@ mod tab_bar;
 mod text_box;
 
 pub use navigation_bar::SettingsNavigationBar;
-pub use js_color::{JsColorPicker, ColorPickerState};
+pub use js_color::{ColorPickerHost, ColorPickerState};
 
 use crate::application::app_state::{AppActions, DropdownContext, SettingsContext, SettingsScreenContext, PAGES_WITH_LIVE_PREVIEW};
 use dioxus::prelude::*;

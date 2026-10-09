@@ -1,14 +1,16 @@
-//! Root component: builds the shared state and the page shell around the current screen.
+//! Root component: builds the state the sections share, and the page shell around the current screen.
 
 use super::dropdown_menus::DropdownMenu;
 use super::history_screen::{HistoryNavigationBar, HistoryScreen};
 use super::navigation_bar::NavigationBar;
-use super::overlay_plugin_context;
-use super::overlay_plugin_context::OverlayPluginContext;
+use super::areas::SettingsView;
+use super::overlay_plugin_context::ActConnection;
+use super::page_services::{LanguageSync, SettingsSaver, StandbyTimer, TooltipReset};
 use super::overlays::{Toast, Tooltip};
-use super::settings_screens::{SettingsNavigationBar, SettingsScreen};
+use super::settings_screens::{ColorPickerHost, ColorPickerState, SettingsNavigationBar, SettingsScreen};
+use super::combat_tables::BarHistory;
 use super::start_screen::MainScreen;
-use crate::application::app_state::{on_combat_data_changed, Screen, register_save_on_page_hide, restart_standby_timer, schedule_settings_save, AppActions, DropdownContext, NavigationBarContext, NoticesContext, ScreenContext, SettingsContext, SettingsScreenContext, TablesContext};
+use crate::application::app_state::{AppActions, DropdownContext, NavigationBarContext, Screen, ScreenContext, SettingsContext};
 use dioxus::prelude::*;
 
 // tailwind.css is a Dioxus asset, so `dx` minifies it and gives it a content-hashed file name (long-term
@@ -49,81 +51,45 @@ fn clock_font_face() -> String {
     )
 }
 
+/// The root. It creates the state every section shares (the contexts, `AppActions`, the settings view, the translations) and
+/// nothing else: each section sets up what only it needs (the colour picker, the bars' memory, the top bar's buttons), and the
+/// jobs that run in the background are components of their own (see `page_services`).
 #[component]
 pub fn App() -> Element {
     // One context per section of the page, each provided here; `actions` is what changes several of them at once.
-    let actions = AppActions::provide();
-    NavigationBarContext::provide();
+    AppActions::provide();
     let settings_context = use_context::<SettingsContext>();
-    let screen_context = use_context::<ScreenContext>();
-    let tables_context = use_context::<TablesContext>();
-    let settings_screen_context = use_context::<SettingsScreenContext>();
-    let dropdown_context = use_context::<DropdownContext>();
-    let notices_context = use_context::<NoticesContext>();
     // Each area of the settings as a typed value, for the components that draw it (see `areas`). Created first: what is set up below
     // already needs the page's settings.
     let view = super::areas::provide_settings_view(settings_context.settings);
+    // Text in the language of the `Lang` setting (see application::i18n); `LanguageSync` keeps it following the setting.
+    crate::application::i18n::use_init_translations(&view.page.peek().language_code);
 
-    let connection_status = use_signal(|| overlay_plugin_context::ConnectionStatus::NotConfigured);
-    let combat_data_message = use_signal(|| None);
-    let player_name_signal = use_signal(String::new);
-    let connection_error = use_signal(|| None);
-    let merge_pets_into_owner = use_signal(|| view.page.peek().merge_pets);
+    rsx! {
+        LanguageSync {}
+        SettingsSaver {}
+        StandbyTimer {}
+        TooltipReset {}
+        ActConnection {
+            ColorPickerHost {
+                PageShell {}
+            }
+        }
+    }
+}
 
-    let overlay_plugin_context =
-        OverlayPluginContext::new(connection_status, combat_data_message, player_name_signal, connection_error, merge_pets_into_owner);
-    overlay_plugin_context::spawn_connection_task(connection_status, combat_data_message, player_name_signal, connection_error, merge_pets_into_owner);
-
-    let color_picker = use_context_provider(super::settings_screens::ColorPickerState::new);
+/// The page itself: its stylesheets and page-wide variables, the open pop-up menu, the top bar and the body of the current screen.
+#[component]
+fn PageShell() -> Element {
+    let screen_context = use_context::<ScreenContext>();
+    let dropdown_context = use_context::<DropdownContext>();
+    let color_picker = use_context::<ColorPickerState>();
+    let view = use_context::<SettingsView>();
+    // Shared by every top bar (main, history, settings preview), so it lives as long as the page does: a button's timer may fire
+    // after the bar that started it has gone.
+    NavigationBarContext::provide();
     // Where each graph bar was last drawn, so the next change of a bar can be animated from there.
-    use_context_provider(super::combat_tables::BarHistory::default);
-    // Text in the language of the `Lang` setting (see application::i18n). It follows the setting; the memo means
-    // only a change of language (not every settings change) gets as far as the bundle.
-    let mut translations = crate::application::i18n::use_init_translations(&view.page.peek().language_code);
-    let language_code = use_memo(move || view.page.read().language_code.clone());
-    use_effect(move || {
-        let tag = crate::application::i18n::language_tag(&language_code.read());
-        if translations.language() != tag {
-            translations.set_language(tag);
-        }
-    });
-    use_context_provider(|| overlay_plugin_context);
-
-    use_hook(|| restart_standby_timer(actions));
-
-    use_effect(move || {
-        let merge_pets = view.page.read().merge_pets;
-        overlay_plugin_context.set_merge_pets_into_owner(merge_pets);
-    });
-
-    use_effect(move || {
-        if let Some(message) = overlay_plugin_context.combat_data_message() {
-            on_combat_data_changed(actions, message);
-        }
-    });
-    use_effect(move || {
-        let name = overlay_plugin_context.local_player_name();
-        if !name.is_empty() {
-            let mut local_player_name = tables_context.local_player_name;
-            local_player_name.set(name);
-        }
-    });
-
-    // Save the settings shortly after the last change (see `settings_saving`).
-    use_hook(|| register_save_on_page_hide(settings_context.settings));
-    use_effect(move || {
-        let _ = settings_context.settings.read(); // re-run after every change
-        schedule_settings_save(settings_context.settings);
-    });
-
-    use_effect(move || {
-        let _ = screen_context.current_screen.read();
-        let _ = settings_screen_context.settings_location.read();
-        let mut tooltip = notices_context.tooltip_html;
-        if tooltip.peek().is_some() {
-            tooltip.set(None);
-        }
-    });
+    use_context_provider(BarHistory::default);
 
     // Page-wide variables (font size, background image, accent colour): owned here since
     // app_shell is the page's actual root, and `:root` in an HTML document *is* the `<html>`
@@ -144,7 +110,6 @@ pub fn App() -> Element {
         style { "{root_style}" }
         // "Resizing Arrow" (`arrow`): the original sets the handle image on #wrap at start-up and when it
         // returns from the settings, and clears it when the settings open (ui.js), so: on unless in settings.
-        super::settings_screens::JsColorPicker {}
         div {
             id: "wrap",
             background_image: if show_resize_handle { "url(images/handle.svg)" },

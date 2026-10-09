@@ -298,7 +298,7 @@ missing `YOU`, an empty parameter).
 
 | Area | Files | What they do |
 |---|---|---|
-| root | `mod.rs`, `app_shell.rs`, `overlays.rs` | `App` provides every section context (and `AppActions`), starts the network once, saves settings after each change, injects the theme `<style>`, and picks the screen. `Tooltip` and `Toast` components. |
+| root | `mod.rs`, `app_shell.rs`, `page_services.rs`, `overlays.rs` | `App` provides every section context (and `AppActions`), the settings view and the translations, then lists what runs for the page's lifetime: `ActConnection` (the one ACT connection and what feeds from it, in `overlay_plugin_context.rs`), `ColorPickerHost` (the picker's state and panel), the headless `LanguageSync`, `SettingsSaver`, `StandbyTimer`, `TooltipReset` (`page_services.rs`) and `PageShell` (theme `<style>`, the open menu, the top bar, the current screen). `PageShell` provides `NavigationBarContext` and `BarHistory` because they must outlive any one bar or table. `Tooltip` and `Toast` components. |
 | `shared/` | `palette`, `row_identity`, `text_display`, `rankings_source`, `switch_and_icon`, `option_choice`, `safe_markup/` | Bar colours by palette mode; element ids of rows; fragments/job icons as DOM; live vs sample rankings; on/off switch and row icon; setting values as list keys; `safe_markup` renders the HTML fragments of the translation files (see below). |
 | `dropdown_menus/` | `mod`, `menu_item`, `navigation_menu`, `choice_menus` | The open `Dropdown` variant becomes a list: the ⋮ menu, single choice, several toggles, column alignment. |
 | `navigation_bar/` | `mod`, `summary_line`, `buttons` | Time, target, summary text, the buttons (Capture, History, End encounter, ⋮) and `screenshot.rs` + `page_screenshot.js` (Capture). |
