@@ -3,7 +3,7 @@
 use crate::domain::formatting::TextFragment;
 use dioxus::prelude::*;
 use crate::domain::combat::CombatantKind;
-use crate::infrastructure::act::data::CombatantRecord;
+use crate::domain::combat::Member;
 
 /// Fragments as DOM: plain text, and dimmed text in a `span.ex`. `sized_by_table` says whether the
 /// dimmed span takes the table's dimmed-text size (`chrome-ex`, from `--chrome-ex-size`) -- that
@@ -21,9 +21,12 @@ pub fn text_fragments_view(fragments: Vec<TextFragment>, sized_by_table: bool) -
 
 /// The job codes that have an icon file (`public/images/icon/<set>/<CODE>.png`, the same files in every set: a unit test
 /// keeps this list and the folders in step). Anything else has no icon, and shows Limit Break's.
-const ICON_CODES: [&str; 46] = [
+/// The port-only icon of an NPC row (see `PortPreferences`): not in the original, so only used while the NPC look is on.
+const NPC_ICON_CODE: &str = "NPC";
+
+const ICON_CODES: [&str; 47] = [
     "ACN", "ALC", "ARC", "ARM", "AST", "AVA", "BLM", "BLU", "BRD", "BSM", "BST", "BTN", "CBO", "CNJ", "CRP", "CUL", "DNC", "DRG", "DRK", "FSH", "GLA",
-    "GNB", "GSM", "LMB", "LNC", "LTW", "MCH", "MIN", "MNK", "MRD", "NIN", "PCT", "PGL", "PLD", "RDM", "ROG", "RPR", "SAM", "SCH", "SGE", "SMN", "THM",
+    "GNB", "GSM", "LMB", "LNC", "LTW", "MCH", "MIN", "MNK", "MRD", "NIN", "NPC", "PCT", "PGL", "PLD", "RDM", "ROG", "RPR", "SAM", "SCH", "SGE", "SMN", "THM",
     "VPR", "WAR", "WHM", "WVR",
 ];
 
@@ -38,8 +41,9 @@ fn icon_code(job_code: &str) -> &str {
 /// raid mode's cards size their icon through the parent `.rIcon`'s own nested `& img` rule
 /// instead, so they pass `false`. `aspect-ratio: auto 1` reserves a square until the image loads (icons are square), so a
 /// newly added row does not grow, and push the rows below it, when its icon arrives.
-pub fn job_icon_view(icon_set: &str, combatant: &CombatantRecord, sized_by_table: bool) -> Element {
+pub fn job_icon_view(icon_set: &str, combatant: &Member, sized_by_table: bool, npc_look: bool) -> Element {
     let job_code = match combatant.kind() {
+        CombatantKind::LimitBreak if npc_look && combatant.is_npc() => NPC_ICON_CODE.to_string(),
         CombatantKind::LimitBreak => "LMB".to_string(),
         CombatantKind::Pet { .. } => "AVA".to_string(),
         CombatantKind::Chocobo { .. } => "CBO".to_string(),

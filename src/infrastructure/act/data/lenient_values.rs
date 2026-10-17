@@ -2,9 +2,27 @@
 //!
 //! Use them with `#[serde(default, deserialize_with = "...")]` on struct fields.
 
-use crate::common::javascript_compat::{number_to_javascript_string, parse_leading_float, round_to_two_decimals};
+use crate::domain::javascript_number::{number_to_javascript_string, round_to_two_decimals};
 use serde::de::{self, Deserializer, IgnoredAny, MapAccess, SeqAccess, Visitor};
 use std::fmt;
+
+/// JavaScript `parseFloat` for text that only contains digits and dots: reads the longest
+/// valid numeric prefix and returns 0 when there is none.
+pub fn parse_leading_float(text: &str) -> f64 {
+    let mut prefix_end = 0;
+    let mut seen_decimal_point = false;
+    for (index, character) in text.char_indices() {
+        if character.is_ascii_digit() {
+            prefix_end = index + 1;
+        } else if character == '.' && !seen_decimal_point {
+            seen_decimal_point = true;
+            prefix_end = index + 1;
+        } else {
+            break;
+        }
+    }
+    text[..prefix_end].parse::<f64>().unwrap_or(0.0)
+}
 
 /// Reads a value of any JSON type without building an intermediate value: each visitor below
 /// receives the scalar straight from the parser (no buffering, no allocation for numbers).

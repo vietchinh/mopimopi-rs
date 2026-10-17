@@ -12,14 +12,13 @@
 //! * `option_access`      – read options, colours and slider values
 //! * `option_updates`     – change options, colours and slider values
 //! * `column_layout`      – which table columns exist, are enabled, and in which order
-//! * `persistence`        – load and save
-//! * `browser_storage`    – thin wrapper over `localStorage`
-//! * `language_detection` – choose the first UI language from the browser
+//! * `port_preferences`   – options only this port has; a separate store, never in the shareable code
+//! * `persistence`        – settings from saved text, and to text
+//! * `language_detection` – map the browser language to the first UI language
 //! * `shareable_code`     – "Custom UI Data" export and import
 //! * `default_settings`   – the built-in defaults (`data/defaults.json`)
 //! * `json_coercion`      – JavaScript-style truthiness and number coercion of JSON values
 
-mod browser_storage;
 mod column_layout;
 mod default_settings;
 mod import;
@@ -28,11 +27,12 @@ mod language_detection;
 mod option_access;
 mod option_updates;
 mod persistence;
+mod port_preferences;
 mod settings_file;
 mod shareable_code;
 mod user_settings;
 
-pub use browser_storage::{read_local_storage, write_local_storage};
-pub use persistence::BACKUP_STORAGE_KEY;
+pub use language_detection::language_code_for_browser_language;
+pub use port_preferences::{is_hex_color, PortPreferences};
 pub use settings_file::{Align, Hex, OptionValue, SettingsFile};
 pub use user_settings::Settings;

@@ -73,10 +73,12 @@ pub fn HistoryScreen() -> Element {
     });
 
     let number_format = NumberFormat::from_settings(&settings.settings.read());
-    let entries = history.encounter_history.read().clone();
+    let local_player_name = use_context::<crate::application::app_state::TablesContext>().local_player_name.read().clone();
+    let pet_view = crate::application::app_state::pet_view(use_context::<SettingsView>().page.read().merge_pets, &local_player_name);
+    let entries = history.encounter_history.read().entries().to_vec();
     let rows = entries
         .iter()
-        .map(|entry| history_row(actions, entry, viewed_key.as_deref() == Some(entry.encounter_key.as_str()), &number_format));
+        .map(|entry| history_row(actions, entry, viewed_key.as_ref() == Some(entry.key()), &number_format, pet_view));
 
     rsx! {
         div { "name": "history", class: "histBody",

@@ -3,7 +3,7 @@
 use crate::domain::combat::CombatantKind::LimitBreak;
 use crate::domain::combat::LOCAL_PLAYER;
 use crate::domain::settings::Settings;
-use crate::infrastructure::act::data::CombatantRecord;
+use crate::domain::combat::Member;
 
 /// How much of a "First Last" name is shortened (the "Name" settings page).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -81,7 +81,7 @@ fn abbreviate_pet_or_player_name(name: &str, local_player_name: &str, options: &
 
 /// The text of the name cell. `rank` is the row's 0-based position in its table.
 pub fn display_name(
-    player: &CombatantRecord,
+    player: &Member,
     local_player_name: &str,
     options: &NameOptions,
     limit_break_name: &str,

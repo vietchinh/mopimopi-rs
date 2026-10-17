@@ -1,7 +1,7 @@
 //! Number formatting driven by the "Number" settings page.
 
 use super::text_fragment::TextFragment;
-use crate::common::javascript_compat::to_fixed;
+use crate::domain::javascript_number::to_fixed;
 use crate::domain::settings::Settings;
 
 const THOUSAND: f64 = 1_000.0;

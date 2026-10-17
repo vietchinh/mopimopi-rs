@@ -149,3 +149,15 @@ fn something_that_is_not_a_settings_object_is_not_loaded() {
         assert!(Settings::from_json_text(text).is_none(), "{text}");
     }
 }
+
+#[test]
+fn a_first_run_gets_the_browser_language_and_a_saved_file_keeps_its_own() {
+    let first_run = Settings::from_stored(None, "JP");
+    assert_eq!(first_run.option_text("Lang"), "JP");
+    let unusable = Settings::from_stored(Some("nope"), "DE");
+    assert_eq!(unusable.option_text("Lang"), "DE");
+    let mut saved = Settings::defaults();
+    saved.set_option_from_text("Lang", "FR");
+    let restored = Settings::from_stored(Some(&saved.to_json_text()), "JP");
+    assert_eq!(restored.option_text("Lang"), "FR");
+}

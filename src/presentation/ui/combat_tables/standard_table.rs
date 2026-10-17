@@ -16,7 +16,7 @@ use crate::domain::combat::CombatantKind;
 use crate::domain::formatting::{cell_fragments_ranked, CellContext};
 use crate::application::i18n::translate;
 use crate::domain::translations::translations;
-use crate::infrastructure::act::data::{CombatantRecord, EncounterRecord};
+use crate::domain::combat::{EncounterFacts, Member};
 use crate::presentation::ui::shared::row_identity::row_element_id;
 use crate::presentation::ui::areas::Column;
 use crate::presentation::ui::shared::text_display::{job_icon_view, text_fragments_view};
@@ -25,8 +25,8 @@ use std::collections::HashSet;
 
 pub(super) fn standard_table(
     environment: &SharedEnvironment,
-    combatants: &[CombatantRecord],
-    encounter: &EncounterRecord,
+    combatants: &[Member],
+    encounter: &EncounterFacts,
     is_healing: bool,
     blurred_rows: &HashSet<String>,
 ) -> Element {
@@ -115,8 +115,8 @@ fn TableHeader(columns: Vec<Column>) -> Element {
 #[component]
 fn PlayerRow(
     environment: SharedEnvironment,
-    combatant: CombatantRecord,
-    encounter: EncounterRecord,
+    combatant: Member,
+    encounter: EncounterFacts,
     rank: usize,
     top_value: f64,
     is_healing: bool,
@@ -151,9 +151,9 @@ fn PlayerRow(
     }
 }
 
-fn cell(cell_context: &CellContext, combatant: &CombatantRecord, rank: usize, encounter: &EncounterRecord, column: &Column, row_is_blurred: bool) -> Element {
+fn cell(cell_context: &CellContext, combatant: &Member, rank: usize, encounter: &EncounterFacts, column: &Column, row_is_blurred: bool) -> Element {
     let is_blurred = column.name == "name" && row_is_blurred;
-    let content = text_fragments_view(cell_fragments_ranked(&column.name, combatant, encounter, cell_context, rank), true);
+    let content = text_fragments_view(cell_fragments_ranked(&column.key, combatant, encounter, cell_context, rank), true);
     rsx! {
         td {
             key: "{column.name}",
@@ -170,13 +170,13 @@ fn cell(cell_context: &CellContext, combatant: &CombatantRecord, rank: usize, en
 /// The job icon cell. Clicking it blurs / unblurs the player's name (only outside of fights).
 fn job_icon_cell(
     environment: &SharedEnvironment,
-    combatant: &CombatantRecord,
+    combatant: &Member,
     column: &Column,
     blurred_player_rows: Signal<HashSet<String>>,
     blur_key: String,
 ) -> Element {
     let can_blur = environment.can_blur_names;
-    let icon = job_icon_view(&environment.table.icon_set, combatant, true);
+    let icon = job_icon_view(&environment.table.icon_set, combatant, true, environment.npc_look());
     rsx! {
         td {
             key: "{column.name}",

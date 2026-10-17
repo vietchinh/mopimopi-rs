@@ -1,5 +1,6 @@
 //! The columns of the damage and healing tables: which are shown, in which order, and how each is laid out.
 
+use crate::domain::formatting::ColumnKey;
 use crate::domain::settings::{Align, SettingsFile};
 use crate::presentation::ui::shared::style::Size;
 use std::fmt::{self, Display};
@@ -25,6 +26,8 @@ impl Display for ColumnWidth {
 pub struct Column {
     /// The column's name: its key in the settings, its class, and what the cells show.
     pub name: String,
+    /// The same key as a value, for drawing the cell (`domain::formatting::ColumnKey`).
+    pub key: ColumnKey,
     pub title: String,
     pub width: ColumnWidth,
     pub padding: Size,
@@ -55,6 +58,7 @@ impl ColumnSettings {
                 .filter_map(|name| raw.columns.get(name).map(|definition| (name, definition)))
                 .map(|(name, definition)| Column {
                     name: name.to_string(),
+                    key: ColumnKey::from_key(name),
                     title: definition.tt.clone(),
                     // The name column takes the rest of the row, whatever width its definition holds.
                     width: if name == "name" { ColumnWidth::Fill } else { ColumnWidth::Fixed(Size(definition.width.as_f64())) },

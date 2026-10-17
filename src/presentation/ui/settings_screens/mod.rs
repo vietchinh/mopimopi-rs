@@ -6,6 +6,7 @@
 //! * `live_preview`    – sample tables above the rows
 //! * `tab_bar`         – tab buttons
 //! * `row_groups`      – rows grouped into boxes
+//! * `port_section`    – the options only this port has (separate store, own export), on the "Custom UI Data" page
 //! * `schema_rows`     – one builder per schema entry type
 //! * `column_pages`    – special pages built from the settings (column order, sizes, ...)
 //! * `row_context`, `row_layout`, `slider_row`, `text_box`, `form_actions`, `base64_encoding` – row building blocks
@@ -17,6 +18,7 @@ pub mod js_color;
 mod live_preview;
 mod navigation_bar;
 mod page_content;
+mod port_section;
 mod row_context;
 mod row_groups;
 mod row_layout;
@@ -51,6 +53,10 @@ pub fn SettingsScreen() -> Element {
 
     let page_context = RowContext { settings_context, dropdown, actions, settings: &settings, typed_texts };
     let body = match content_for(&settings, &location) {
+        PageContent::SchemaRows(entries) if location.page == "custom" => rsx! {
+            {grouped_rows(&page_context, &entries)}
+            {port_section::port_section(&page_context)}
+        },
         PageContent::SchemaRows(entries) => grouped_rows(&page_context, &entries),
         PageContent::Abbreviations(entries) => rsx! {
             {grouped_rows(&page_context, &entries)}

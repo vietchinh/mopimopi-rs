@@ -6,6 +6,7 @@
 //! change is written immediately.
 
 use crate::domain::settings::Settings;
+use crate::infrastructure::browser_storage::save_settings;
 use dioxus::prelude::*;
 use gloo_timers::callback::Timeout;
 use std::cell::RefCell;
@@ -22,7 +23,7 @@ thread_local! {
 /// Saves the settings `SAVE_DELAY_MILLISECONDS` after the most recent call.
 pub fn schedule_settings_save(settings: Signal<Settings>) {
     let timer = Timeout::new(SAVE_DELAY_MILLISECONDS, move || {
-        settings.peek().save_to_browser();
+        save_settings(&settings.peek());
         PENDING_SAVE.with(|pending| *pending.borrow_mut() = None);
     });
     PENDING_SAVE.with(|pending| *pending.borrow_mut() = Some(timer));
@@ -35,7 +36,7 @@ pub fn register_save_on_page_hide(settings: Signal<Settings>) {
     let save_now = Closure::<dyn FnMut()>::new(move || {
         let has_pending_change = PENDING_SAVE.with(|pending| pending.borrow_mut().take().is_some());
         if has_pending_change {
-            settings.peek().save_to_browser();
+            save_settings(&settings.peek());
         }
     });
     let _ = window.add_event_listener_with_callback("pagehide", save_now.as_ref().unchecked_ref());

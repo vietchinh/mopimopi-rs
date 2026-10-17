@@ -1,14 +1,15 @@
 # MopiMopi (Rust / Dioxus) – code guide
 
 A Rust + Dioxus 0.7 port of the MopiMopi FFXIV ACT combat overlay. It compiles to WebAssembly and runs
-as a static site (GitHub Pages). This guide describes every Rust file: what it does and how it connects
-to the others. **111 files, about 6,500 lines**, one small responsibility per file.
+as a static site (GitHub Pages). The port is a **conformist** copy: what it shows and how it is configured
+must match the original (see `docs/ddd/`). Start with `docs/ddd/vision.md`, `glossary.md` and `CHANGES.md`.
 
 ---------------------------------------------------------------------------------------------------
 
 ## 0. Layers (folder structure)
 
-Code is grouped into layers. Each layer only imports from layers listed **below** it.
+Four layers. Each layer only imports from layers listed **below** it; `tests/unit/architecture.rs` enforces this
+and keeps a list of known exceptions that may only shrink.
 
 ```
 src/
@@ -19,25 +20,26 @@ src/
   application/      application state and actions (Dioxus signals live here)
     app_state/
   infrastructure/   the outside world
-    overlay_plugin_socket/   OverlayPlugin's WebSocket: the only source of combat data
-  domain/           business domain: rules + the objects they work on (no Dioxus)
-    combat/           players, roles, pets, rankings, pet merging
+    act/              ACT / OverlayPlugin: wire messages (serde) and the translation into our types
+      data/             records and lenient parsing; `parse_leading_float` lives here
+    browser_websocket/  the WebSocket itself
+    browser_storage.rs  localStorage: settings and backup (the only place that touches storage)
+  domain/           business domain: rules + the objects they work on (no Dioxus, no browser APIs)
+    combat/           players, roles, pets, rankings, pet merging, `EncounterKey`
     formatting/       how values become table text
-    settings/         the user's settings and their rules
+    settings/         the user's settings and their rules (text in, text out; no storage)
     translations/     translated texts, settings-page schema
-  models/           pure data objects, no business rules
-    act_data/         ACT records, the combat message, wire message shapes (serde)
-  common/           helpers shared by all layers
-    javascript_compat.rs
+    javascript_number.rs  shared kernel: JavaScript number rounding/printing the original relied on
 tests/unit/         unit tests, mirroring this structure (see tests/README.md)
+docs/ddd/           vision, glossary, context map, decisions, change log (what changed and which DDD principle)
 ```
 
-Where the older sections below say `combat/`, `ui/` etc., read them as `domain/combat/`,
-`presentation/ui/` and so on. Rust paths are `crate::domain::combat`, `crate::presentation::ui`, ...
-
-Known impurity: `domain/settings` still contains `browser_storage.rs`, `language_detection.rs` and
-`persistence.rs`, which use browser APIs (`localStorage`, `navigator`). They belong in
-`infrastructure/` in a stricter split; they stay because moving them needs small visibility changes.
+The detailed sections below were written before the layers were renamed. Read `models/act_data` as
+`infrastructure/act/data`, `overlay_plugin_socket` as `infrastructure/browser_websocket` + `infrastructure/act`,
+`common/javascript_compat` as `domain/javascript_number` (without `parse_leading_float`, now in
+`infrastructure/act/data/lenient_values.rs`), `combat/` as `domain/combat/`, `ui/` as `presentation/ui/`.
+Known remaining impurity: `domain/formatting/{column_cell,player_name}.rs` import ACT record types from
+`infrastructure` (listed in the architecture test; removed when the ACT translator is built).
 
 ## 1. The big picture
 
@@ -45,37 +47,22 @@ Known impurity: `domain/settings` still contains `browser_storage.rs`, `language
  ACT / OverlayPlugin
         │  WebSocket text (the address comes from the page URL: ?OVERLAY_WS= or ?HOST_PORT=)
         ▼
- overlay_plugin_socket/   created once in main; connects, subscribes, reconnects; sends data down three channels
+ infrastructure/browser_websocket   connects, subscribes, reconnects
         │  &str
         ▼
- act_data/           serde: text -> typed ActEvent (CombatDataMessage | LocalPlayerName)
-        │  ActEvent
+ infrastructure/act                 serde: text -> typed message (CombatDataMessage | LocalPlayerName)
+        │
         ▼
- app_state/          handle_combat_data_received: update signals, history, standby timer
+ application/app_state              update signals, history, standby timer
         │  Signal<Rc<CombatDataMessage>>  ("displayed_combat_data")
         ▼
- combat/             Memo: CombatDataMessage -> EncounterRankings (players, pets merged, sorted)
-        │  EncounterRankings
+ domain/combat                      Memo: message -> EncounterRankings (players, pets merged, sorted)
+        │
         ▼
- formatting/  ui/areas  ui/     cells' text  |  settings as typed areas -> CSS variables  |  Dioxus components
+ domain/formatting  ui/areas  ui    cells' text  |  settings as typed areas -> CSS variables  |  components
 ```
 
-Settings (`settings/`) and translations (`translations/`) sit beside this flow and are read by
-`formatting`, `app_state` and `ui` (the areas in `ui/areas` turn them into typed values for the components). Nothing in `act_data`, `combat`,
-`settings` or `translations` knows about Dioxus components; only `app_state` (signals) and `ui` do.
-
-### Allowed dependency directions (each line may use the ones below it)
-
-```
-ui
-app_state                 (Dioxus signals)
-formatting   overlay_plugin_socket
-combat       settings  translations
-act_data
-javascript_compat
-```
-`overlay_plugin_socket` uses `act_data` only; `formatting` uses `combat`,
-`settings` and `translations`; the areas read only a `SettingsFile`.
+Settings and translations sit beside this flow and are read by `formatting`, `app_state` and `ui`.
 
 ---------------------------------------------------------------------------------------------------
 
@@ -84,7 +71,7 @@ javascript_compat
 | File | What it does |
 |---|---|
 | `src/main.rs` | Declares the modules and calls `dioxus::launch(ui::App)`. Its doc comment states the data flow. |
-| `src/javascript_compat.rs` | Reproduces the JavaScript number behaviour the original relied on: `round_to_two_decimals` (`toFixed(2)` then parse), `parse_leading_float` (`parseFloat`), `number_to_javascript_string` (`Number.toString`, integers without `.0`), `to_fixed`. Used by `act_data`, `combat` and `formatting` so numbers display exactly as in the original. |
+| `src/domain/javascript_number.rs` | Reproduces the JavaScript number behaviour the original relied on: `round_to_two_decimals` (`toFixed(2)` then parse), `parse_leading_float` (`parseFloat`), `number_to_javascript_string` (`Number.toString`, integers without `.0`), `to_fixed`. Used by `act_data`, `combat` and `formatting` so numbers display exactly as in the original. |
 
 ---------------------------------------------------------------------------------------------------
 

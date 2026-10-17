@@ -52,14 +52,15 @@ const capture = (page: Page) => page.evaluate(() => {
   let properties: string[] = [];
   const pathOf = (element: Element) => {
     const parts: string[] = [];
-    for (let e: Element | null = element; e; e = e.parentElement) parts.push(`${e.tagName.toLowerCase()}${e.id ? "#" + e.id : ""}[${e.parentElement ? [...e.parentElement.children].indexOf(e) : 0}]`);
+    for (let e: Element | null = element; e; e = e.parentElement) parts.push(`${e.tagName.toLowerCase()}${e.id ? "#" + e.id : ""}[${e.parentElement ? [...e.parentElement.children].filter((c) => !["SCRIPT", "STYLE", "LINK", "NOSCRIPT"].includes(c.tagName)).indexOf(e) : 0}]`);
     return parts.reverse().join(">");
   };
   for (const element of document.querySelectorAll("html, body, body *")) {
     if (["SCRIPT", "STYLE", "LINK", "NOSCRIPT"].includes(element.tagName)) continue;
+    if (element.closest("#port-only-section")) continue; // declared deviation D1 (docs/ddd/deviations.md)
     const style = getComputedStyle(element);
     // `-webkit-locale` comes from the page's `lang` attribute (`dx`'s generated page has none, build.sh's has `en`), not from any CSS
-    if (!properties.length) properties = Array.from({ length: style.length }, (_, i) => style[i]).filter((property) => property !== "-webkit-locale");
+    if (!properties.length) properties = Array.from({ length: style.length }, (_, i) => style[i]).filter((property) => property !== "-webkit-locale" && !property.startsWith("--"));
     // (absolute URLs carry the address the build is served from, and under `dx serve` its base path; neither is part of the comparison)
     rows[pathOf(element)] = properties.map((property) => style.getPropertyValue(property).split(location.origin).join("").split("/mopimopi-rs").join(""));
   }
@@ -93,7 +94,7 @@ test.describe("computed style of every element, before and after", () => {
       const [before, after] = [await capture(a), await capture(b)];
       expect(after.properties).toEqual(before.properties);
       const differences: { element: string; property: string; before: string; after: string }[] = [];
-      const missing = [...Object.keys(before.rows).filter((k) => !(k in after.rows)), ...Object.keys(after.rows).filter((k) => !(k in before.rows))];
+      const missing = [...Object.keys(before.rows).filter((k) => !(k in after.rows)).map((k) => "BEFORE-ONLY " + k), ...Object.keys(after.rows).filter((k) => !(k in before.rows)).map((k) => "AFTER-ONLY " + k)];
       for (const [element, values] of Object.entries(before.rows)) {
         const other = after.rows[element];
         if (!other) continue;

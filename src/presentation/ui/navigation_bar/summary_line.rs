@@ -1,14 +1,13 @@
 //! The summary text in the top bar.
 
 use crate::application::app_state::{SettingsContext, TablesContext};
-use crate::common::javascript_compat::p_float;
-use crate::domain::formatting::{cell_plain_text, CellContext, NumberFormat};
+use crate::domain::formatting::{cell_plain_text, CellContext, ColumnKey, NumberFormat};
 use crate::domain::settings::Settings;
 use crate::presentation::ui::areas::SummaryParts;
 use crate::application::i18n::{dictionary_title, translate};
 use crate::domain::formatting::LIMIT_BREAK_JOB_CODE;
 use crate::domain::translations::translations;
-use crate::infrastructure::act::data::{CombatantRecord, EncounterRecord};
+use crate::domain::combat::{EncounterFacts, Member};
 use dioxus::prelude::*;
 use std::fmt::Write;
 
@@ -19,8 +18,8 @@ pub(super) fn summary_line(
     tables: TablesContext,
     settings: &Settings,
     parts: &SummaryParts,
-    combatants: &[CombatantRecord],
-    encounter: &EncounterRecord,
+    combatants: &[Member],
+    encounter: &EncounterFacts,
     is_settings_preview: bool,
 ) -> Element {
     let waiting_hint = translate(&translations().ui_schema["NAV"]["main"]["tt"]["rps"]);
@@ -46,13 +45,13 @@ pub(super) fn summary_line(
         // "encdps" table column and for the same reason (see `column_cell::cell_fragments`): the
         // local player's own raw rate field can go stale while they aren't dealing damage, but the
         // encounter's duration keeps advancing every message.
-        let _ = write!(summary, "My DPS {}　", whole(p_float(player.damage / encounter.duration_seconds)));
+        let _ = write!(summary, "My DPS {}　", whole(encounter.damage_per_second_of(player).value()));
     }
     if parts.max_hit_heal {
-        let _ = write!(summary, "My HPS {}　", whole(p_float(player.healed / encounter.duration_seconds)));
+        let _ = write!(summary, "My HPS {}　", whole(encounter.healing_per_second_of(player).value()));
     }
     if parts.rank {
-        let mut by_healing: Vec<&CombatantRecord> = combatants.iter().collect();
+        let mut by_healing: Vec<&Member> = combatants.iter().collect();
         by_healing.sort_by(|a, b| b.healed.partial_cmp(&a.healed).unwrap_or(std::cmp::Ordering::Equal));
         let healing_rank = by_healing.iter().position(|c| c.name == "YOU").unwrap_or(damage_rank);
         let _ = write!(summary, "Rank {}/{}/{}　", damage_rank + 1, healing_rank + 1, combatants.len());
@@ -60,9 +59,9 @@ pub(super) fn summary_line(
 
     // Clicking the "MaxHit" label switches it to "MaxHeal" and back.
     let (label, strongest_action_text) = if parts.shows_strongest_heal {
-        ("MaxHeal ", cell_plain_text("maxheal", player, encounter, &cell_context))
+        ("MaxHeal ", cell_plain_text(&ColumnKey::Maxheal, player, encounter, &cell_context))
     } else {
-        ("MaxHit ", cell_plain_text("maxhit", player, encounter, &cell_context))
+        ("MaxHit ", cell_plain_text(&ColumnKey::Maxhit, player, encounter, &cell_context))
     };
     let toggle_strongest_action_kind = move |_| {
         if !is_settings_preview {

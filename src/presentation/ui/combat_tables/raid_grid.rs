@@ -2,13 +2,13 @@
 
 use super::table_environment::SharedEnvironment;
 use super::visible_players::visible_players;
-use crate::domain::formatting::{cell_fragments, cell_fragments_ranked};
-use crate::infrastructure::act::data::{CombatantRecord, EncounterRecord};
+use crate::domain::formatting::{cell_fragments, cell_fragments_ranked, ColumnKey};
+use crate::domain::combat::{EncounterFacts, Member};
 use crate::presentation::ui::shared::row_identity::row_element_id;
 use crate::presentation::ui::shared::text_display::{job_icon_view, text_fragments_view};
 use dioxus::prelude::*;
 
-pub(super) fn raid_grid(environment: &SharedEnvironment, combatants: &[CombatantRecord], encounter: &EncounterRecord, is_healing: bool) -> Element {
+pub(super) fn raid_grid(environment: &SharedEnvironment, combatants: &[Member], encounter: &EncounterFacts, is_healing: bool) -> Element {
     let players = visible_players(&environment.table.kind(is_healing).filter, combatants, is_healing);
     let cards_per_row = environment.raid.cards_in_a_row();
     let label = super::table_label(is_healing);
@@ -44,14 +44,14 @@ pub(super) fn raid_grid(environment: &SharedEnvironment, combatants: &[Combatant
 
 /// One card of the raid grid. A component, so a card whose data and settings did not change is not drawn again.
 #[component]
-fn RaidCard(environment: SharedEnvironment, combatant: CombatantRecord, encounter: EncounterRecord, rank: usize, is_healing: bool) -> Element {
-    let value_column = if is_healing { "enchps" } else { "encdps" };
+fn RaidCard(environment: SharedEnvironment, combatant: Member, encounter: EncounterFacts, rank: usize, is_healing: bool) -> Element {
+    let value_column = if is_healing { ColumnKey::Enchps } else { ColumnKey::Encdps };
     let cell_context = environment.cell_context();
     let row_id = row_element_id(&combatant.name);
-    let color_strip = environment.bars.palette.player_color(&combatant, &row_id);
-    let icon = job_icon_view(&environment.table.icon_set, &combatant, false);
-    let name = text_fragments_view(cell_fragments_ranked("name", &combatant, &encounter, &cell_context, rank), false);
-    let value = text_fragments_view(cell_fragments(value_column, &combatant, &encounter, &cell_context), false);
+    let color_strip = environment.bar_color(&combatant, &row_id);
+    let icon = job_icon_view(&environment.table.icon_set, &combatant, false, environment.npc_look());
+    let name = text_fragments_view(cell_fragments_ranked(&ColumnKey::Name, &combatant, &encounter, &cell_context, rank), false);
+    let value = text_fragments_view(cell_fragments(&value_column, &combatant, &encounter, &cell_context), false);
     let is_own = row_id == "YOU";
     let card_style = if is_own { "raid-cell-own" } else { "raid-cell-other" };
     rsx! {

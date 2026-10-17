@@ -21,7 +21,7 @@
 //! (`standard_table.rs`'s `body_style`) and read by the `chrome-bar-*` classes in `tailwind.css`.
 
 use super::table_environment::SharedEnvironment;
-use crate::infrastructure::act::data::CombatantRecord;
+use crate::domain::combat::Member;
 use crate::presentation::ui::areas::Side;
 use crate::presentation::ui::shared::palette::percent_of_whole;
 use dioxus::prelude::*;
@@ -37,7 +37,7 @@ struct BarWidths {
     shield: i32,
 }
 
-fn bar_widths(combatant: &CombatantRecord, top_value: f64, is_healing: bool) -> BarWidths {
+fn bar_widths(combatant: &Member, top_value: f64, is_healing: bool) -> BarWidths {
     let (total, contributed_by_pets) =
         if is_healing { (combatant.healed, combatant.pet_effective_healed) } else { (combatant.damage, combatant.pet_damage) };
     BarWidths {
@@ -170,7 +170,7 @@ fn animation_of(key: &str, geometry: Option<BarGeometry>, on_right: bool) -> Bar
 
 pub(super) fn graph_bars(
     environment: &SharedEnvironment,
-    combatant: &CombatantRecord,
+    combatant: &Member,
     top_value: f64,
     is_healing: bool,
     row_id: &str,
@@ -180,7 +180,7 @@ pub(super) fn graph_bars(
     let animated = environment.animate_bars;
     let side = bars.side(is_healing);
 
-    let main_background = bars.fade.apply(&bars.palette.player_color(combatant, row_id));
+    let main_background = bars.fade.apply(&environment.bar_color(combatant, row_id));
 
     // The small bars, in the original's DOM order (each floats to the configured side, so the
     // first one sits at the edge). A row whose small bars add up to more than the container wraps

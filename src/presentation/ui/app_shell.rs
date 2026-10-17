@@ -4,7 +4,7 @@ use super::dropdown_menus::DropdownMenu;
 use super::history_screen::{HistoryNavigationBar, HistoryScreen};
 use super::navigation_bar::NavigationBar;
 use super::areas::SettingsView;
-use super::overlay_plugin_context::ActConnection;
+use crate::application::app_state::ActConnection;
 use super::page_services::{LanguageSync, SettingsSaver, StandbyTimer, TooltipReset};
 use super::overlays::{Toast, Tooltip};
 use super::settings_screens::{ColorPickerHost, ColorPickerState, SettingsNavigationBar, SettingsScreen};

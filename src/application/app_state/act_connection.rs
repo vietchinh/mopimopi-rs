@@ -1,4 +1,5 @@
-//! The one connection to `OverlayPlugin`, and everything it reports, as Dioxus context.
+//! The one connection to `OverlayPlugin`, and everything it reports, as Dioxus context. (Application layer: it owns the
+//! socket task and decides what each arriving message changes; the WebSocket itself is `infrastructure::browser_websocket`.)
 //!
 //! Its signals are created once, in `ActConnection` (see `new` and `spawn_connection_task`),
 //! configured only from the
@@ -7,11 +8,12 @@
 //! setting the GUI owns (see `Settings`, key `"pets"`); the connection task reads it (without subscribing) when a
 //! message arrives and hands the parsed message straight to `on_combat_data_changed`.
 
-use crate::infrastructure::act::data::{peek_combat_data, CombatDataMessage, ParseOptions};
+use crate::domain::combat::Encounter;
+use crate::domain::combat::YouChanged;
+use crate::infrastructure::act::data::peek_combat_data;
 use crate::infrastructure::act::overlay_plugin_protocol::{interpret, subscribe_message, OverlayPluginEvent, OverlayPluginUrl, OverlayPluginUrlError};
 use crate::infrastructure::browser_websocket::BrowserWebsocketClient;
-use crate::application::app_state::{on_combat_data_changed, AppActions, TablesContext};
-use crate::presentation::ui::areas::SettingsView;
+use super::{on_combat_data_changed, AppActions, TablesContext};
 use dioxus::prelude::*;
 use dioxus::signals::{ReadableExt, WritableExt};
 use futures::channel::mpsc;
@@ -57,14 +59,14 @@ impl fmt::Display for StartError {
 #[derive(Clone, Copy)]
 pub struct OverlayPluginContext {
     connection_status: Signal<ConnectionStatus>,
-    combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
+    combat_data_message: Signal<Option<Rc<Encounter>>>,
     error: Signal<Option<String>>,
 }
 
 impl OverlayPluginContext {
     pub fn new(
         connection_status: Signal<ConnectionStatus>,
-        combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
+        combat_data_message: Signal<Option<Rc<Encounter>>>,
         error: Signal<Option<String>>,
     ) -> OverlayPluginContext {
         OverlayPluginContext { connection_status, combat_data_message, error }
@@ -79,11 +81,11 @@ impl OverlayPluginContext {
     }
 
     pub fn get_is_encounter_active(&self) -> bool {
-        self.combat_data_message.read().as_ref().is_some_and(|message| message.is_encounter_active)
+        self.combat_data_message.read().as_ref().is_some_and(|message| message.is_active())
     }
 
 
-    pub fn show_sample_data(&self, message: CombatDataMessage) {
+    pub fn show_sample_data(&self, message: Encounter) {
         let mut combat_data_message = self.combat_data_message;
         combat_data_message.set(Some(Rc::new(message)));
     }
@@ -94,7 +96,6 @@ impl OverlayPluginContext {
 struct MessageSink {
     actions: AppActions,
     local_player_name: Signal<String>,
-    view: SettingsView,
 }
 
 /// Owns the connection to ACT for the whole page: creates the context, runs the task that keeps it open, and feeds what arrives
@@ -103,7 +104,6 @@ struct MessageSink {
 pub fn ActConnection(children: Element) -> Element {
     let actions = use_context::<AppActions>();
     let tables = use_context::<TablesContext>();
-    let view = use_context::<SettingsView>();
 
     let connection_status = use_signal(|| ConnectionStatus::NotConfigured);
     let combat_data_message = use_signal(|| None);
@@ -111,7 +111,7 @@ pub fn ActConnection(children: Element) -> Element {
     let error = use_signal(|| None);
 
     use_context_provider(|| OverlayPluginContext::new(connection_status, combat_data_message, error));
-    let sink = MessageSink { actions, local_player_name: tables.local_player_name, view };
+    let sink = MessageSink { actions, local_player_name: tables.local_player_name };
     spawn_connection_task(connection_status, combat_data_message, player_name, error, sink);
 
     children
@@ -119,7 +119,7 @@ pub fn ActConnection(children: Element) -> Element {
 
 fn spawn_connection_task(
     connection_status: Signal<ConnectionStatus>,
-    combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
+    combat_data_message: Signal<Option<Rc<Encounter>>>,
     player_name: Signal<String>,
     error: Signal<Option<String>>,
     sink: MessageSink,
@@ -129,7 +129,7 @@ fn spawn_connection_task(
 
 async fn keep_connected(
     mut connection_status: Signal<ConnectionStatus>,
-    combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
+    combat_data_message: Signal<Option<Rc<Encounter>>>,
     player_name_signal: Signal<String>,
     mut error_signal: Signal<Option<String>>,
     sink: MessageSink,
@@ -197,7 +197,7 @@ async fn keep_connected(
 
 fn handle_message(
     text: &str,
-    mut combat_data_message: Signal<Option<Rc<CombatDataMessage>>>,
+    mut combat_data_message: Signal<Option<Rc<Encounter>>>,
     mut player_name_signal: Signal<String>,
     mut error_signal: Signal<Option<String>>,
     sink: MessageSink,
@@ -208,22 +208,17 @@ fn handle_message(
     // and treats the first inactive message after them as the end of that fight.
     // The first message of all is never skipped: it is what tells the app that ACT is connected (and idle).
     let previous = combat_data_message.peek().clone();
-    let fight_was_running = previous.as_ref().is_some_and(|previous| previous.is_encounter_active);
+    let fight_was_running = previous.as_ref().is_some_and(|previous| previous.is_active());
     if previous.is_some() && peek_combat_data(text).is_some_and(|peek| !peek.has_combatants && !peek.is_active && !fight_was_running) {
         return;
     }
-    let player_name = player_name_signal.peek().clone();
-    let options = ParseOptions {
-        merge_pets_into_owner: sink.view.page.peek().merge_pets,
-        local_player_name: Some(player_name.as_str()).filter(|name| !name.is_empty()),
-    };
-    match interpret(text, options) {
+    match interpret(text) {
         Ok(Some(OverlayPluginEvent::CombatData(data))) => {
             let message = Rc::new(data);
             combat_data_message.set(Some(Rc::clone(&message)));
             on_combat_data_changed(sink.actions, message);
         }
-        Ok(Some(OverlayPluginEvent::PrimaryPlayerChanged(name))) => {
+        Ok(Some(OverlayPluginEvent::PrimaryPlayerChanged(YouChanged { name }))) => {
             if !name.is_empty() {
                 let mut local_player_name = sink.local_player_name;
                 local_player_name.set(name.clone());

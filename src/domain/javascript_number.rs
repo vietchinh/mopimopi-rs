@@ -1,4 +1,7 @@
-//! Helpers that reproduce a few JavaScript number behaviours the original overlay relied on.
+//! Shared kernel: the JavaScript number behaviours the original overlay relied on.
+//!
+//! Both the ACT edge and the display rules use these, so they sit in the domain where either may import them
+//! (DDD: shared kernel, kept small and tested).
 //!
 //! ACT sends numbers as formatted text ("6,703.94", "12%"), and the original JavaScript code
 //! converted them with `parseFloat`, `toFixed` and `Number.toString`. Keeping the same results
@@ -18,24 +21,6 @@ pub fn round_to_two_decimals(value: f64) -> f64 {
 /// that first step changes what the second one produces (21.1538 -> 21.15 -> "21.1", not "21.2").
 pub fn p_float(value: f64) -> f64 {
     if value.is_nan() { 0.0 } else { round_to_two_decimals(value) }
-}
-
-/// JavaScript `parseFloat` for text that only contains digits and dots: reads the longest
-/// valid numeric prefix and returns 0 when there is none.
-pub fn parse_leading_float(text: &str) -> f64 {
-    let mut prefix_end = 0;
-    let mut seen_decimal_point = false;
-    for (index, character) in text.char_indices() {
-        if character.is_ascii_digit() {
-            prefix_end = index + 1;
-        } else if character == '.' && !seen_decimal_point {
-            seen_decimal_point = true;
-            prefix_end = index + 1;
-        } else {
-            break;
-        }
-    }
-    text[..prefix_end].parse::<f64>().unwrap_or(0.0)
 }
 
 /// `Number.prototype.toString()` for the values used in keys: integers print without decimals.
@@ -100,5 +85,5 @@ pub fn to_fixed(value: f64, decimals: usize) -> String {
 }
 
 #[cfg(test)]
-#[path = "../../tests/unit/common/javascript_compat.rs"]
+#[path = "../../tests/unit/domain/javascript_number.rs"]
 mod tests;

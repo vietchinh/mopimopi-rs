@@ -1,6 +1,7 @@
 //! The user's settings, shared by every section of the page.
 
 use crate::domain::settings::Settings;
+use crate::infrastructure::browser_storage::load_settings;
 use dioxus::prelude::*;
 
 #[derive(Clone, Copy)]
@@ -11,7 +12,7 @@ pub struct SettingsContext {
 impl SettingsContext {
     /// Loads the saved settings and provides them to everything below. A hook: call it once, from the root component.
     pub fn provide() -> Self {
-        let settings = use_signal(Settings::load_from_browser);
+        let settings = use_signal(load_settings);
         use_context_provider(|| Self { settings })
     }
 

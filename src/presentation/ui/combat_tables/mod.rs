@@ -18,9 +18,9 @@ mod table_environment;
 mod visible_players;
 
 use crate::application::app_state::{SettingsContext, SettingsScreenContext, TablesContext};
-use crate::presentation::ui::overlay_plugin_context::OverlayPluginContext;
+use crate::application::app_state::OverlayPluginContext;
 use dioxus::prelude::*;
-use crate::infrastructure::act::data::CombatDataMessage;
+use crate::domain::combat::Encounter;
 use table_environment::{SharedEnvironment, TableEnvironment};
 
 /// "DPS" or "HPS": the prefix used in element ids, column flags and setting keys. There are only
@@ -53,6 +53,7 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
 
     // Its own memo, so a message that does not change whether a fight is running does not rebuild the environment.
     let fight_is_running = use_memo(use_reactive!(|is_settings_preview| is_settings_preview || overlay_plugin_context.get_is_encounter_active()));
+    let port_preferences = use_context::<crate::application::app_state::PortPreferencesContext>();
     let environment = use_memo(use_reactive!(|is_settings_preview| {
         SharedEnvironment::new(TableEnvironment::new(
             *fight_is_running.read(),
@@ -63,6 +64,7 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
             &view.raid.read(),
             &tables.local_player_name.read(),
             is_settings_preview,
+            Some(port_preferences.preferences.read().clone()).filter(|preferences| preferences.npc_own_look).map(|preferences| preferences.npc_color),
         ))
     }));
     let merge_pets = view.page.read().merge_pets;
@@ -70,13 +72,15 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
     // The real tables draw whatever is currently displayed (live, a history entry, or frozen
     // while settings are open); the settings preview always draws the built-in sample fight.
     let displayed = if is_settings_preview { None } else { tables.displayed_combat_data.read().clone() };
-    let message: &CombatDataMessage = if is_settings_preview {
-        crate::application::app_state::sample_combat_message(merge_pets)
+    let message: &Encounter = if is_settings_preview {
+        crate::application::app_state::sample_encounter()
     } else {
         let Some(message) = displayed.as_deref() else { return empty_tables() };
         message
     };
-    let (combatants, encounter) = (&message.combatants, &message.encounter);
+    let local_player_name = tables.local_player_name.read().clone();
+    let combatants = &message.rows(crate::application::app_state::pet_view(merge_pets, &local_player_name));
+    let encounter = message.facts();
 
     // The original only builds its tables when the data has a combatant named "YOU" (`onCombatDataUpdate`
     // starts with that check); without one both tables stay empty.

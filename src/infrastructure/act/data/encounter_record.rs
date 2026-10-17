@@ -1,6 +1,7 @@
 //! The `Encounter` object of a combat data message.
 
 use super::lenient_values::{lenient_number, lenient_rate, lenient_text};
+use crate::domain::combat::EncounterFacts;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
@@ -29,4 +30,21 @@ pub struct EncounterRecord {
     pub heal_per_second_whole: f64,
     #[serde(default, rename = "CurrentZoneName", deserialize_with = "lenient_text")]
     pub zone_name: String,
+}
+
+impl From<EncounterRecord> for EncounterFacts {
+    fn from(record: EncounterRecord) -> EncounterFacts {
+        EncounterFacts {
+            title: record.title,
+            duration_text: record.duration_text,
+            duration_seconds: record.duration_seconds,
+            total_damage: record.total_damage,
+            total_healed: record.total_healed,
+            damage_per_second: record.damage_per_second,
+            heal_per_second: record.heal_per_second,
+            damage_per_second_whole: record.damage_per_second_whole,
+            heal_per_second_whole: record.heal_per_second_whole,
+            zone_name: record.zone_name,
+        }
+    }
 }

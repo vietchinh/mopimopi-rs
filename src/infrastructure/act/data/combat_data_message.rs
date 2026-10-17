@@ -1,9 +1,10 @@
-//! The `CombatData` payload: one encounter plus its combatants, in the order ACT sent them.
+//! The `CombatData` payload as ACT sends it: one encounter plus its combatants, in the order ACT sent them.
+//! Private to the ACT edge: `Encounter::from` turns it into the domain's own model.
 
 use super::combatant_record::CombatantRecord;
 use super::encounter_record::EncounterRecord;
 use super::lenient_values::lenient_bool;
-use crate::domain::combat::{plan_pet_merges, PetMerge, LOCAL_PLAYER};
+use crate::domain::combat::{Encounter, Member};
 use serde::de::{Deserializer, IgnoredAny, MapAccess, Visitor};
 use serde::Deserialize;
 use std::fmt;
@@ -22,62 +23,17 @@ pub struct CombatDataMessage {
     pub is_encounter_active: bool,
 }
 
-impl CombatDataMessage {
-    /// The combatant with this name ("YOU", "Kay Lionheart", "Eos (Future Fade)").
-    pub fn combatant(&self, name: &str) -> Option<&CombatantRecord> {
-        self.combatants.iter().find(|combatant| combatant.name == name)
+/// The translation from ACT's wire shape into the domain's Encounter (an anticorruption layer): the wire type ends here.
+impl From<CombatDataMessage> for Encounter {
+    fn from(message: CombatDataMessage) -> Encounter {
+        let members = message.combatants.into_iter().map(Member::from).collect();
+        Encounter::new(message.encounter.into(), members, message.is_encounter_active)
     }
+}
 
-    /// The local player's row, if they are in this fight. ACT always lists the local
-    /// player as "YOU".
-    pub fn local_player(&self) -> Option<&CombatantRecord> {
-        self.combatant(LOCAL_PLAYER)
-    }
-
-    /// Folds pets into their owners as planned by the domain (`plan_pet_merges`).
-    /// `local_player_name` lets the player's own pets find the "YOU" row.
-    pub fn merge_pets_into_owners(&mut self, local_player_name: Option<&str>) {
-        let identities = self.combatants.iter().map(CombatantRecord::identity);
-        let merges = plan_pet_merges(identities, local_player_name);
-        if merges.is_empty() {
-            return;
-        }
-        for merge in &merges {
-            self.fold_pet_into_owner(merge);
-        }
-        // An owner that absorbed a pet may now out-damage a row that ranked above it.
-        self.sort_by_damage();
-    }
-
-    /// Puts the combatants in the order the damage table shows them: most damage first, rows with
-    /// equal damage in the order ACT sent them. The original always sorts (whether or not pets are
-    /// merged), and so must this: ACT's own order is arbitrary.
-    pub fn sort_by_damage(&mut self) {
-        self.combatants.sort_by(|a, b| {
-            b.damage.partial_cmp(&a.damage).unwrap_or(std::cmp::Ordering::Equal).then(a.arrival_index.cmp(&b.arrival_index))
-        });
-    }
-
-    /// Moves one pet's numbers into its owner and removes the pet's row. The plan only names
-    /// owners that are present; should one be missing anyway, the pet's row is left as it is.
-    fn fold_pet_into_owner(&mut self, merge: &PetMerge) {
-        if self.combatant(&merge.owner).is_none() {
-            return;
-        }
-        let Some(pet_index) = self.position_of(&merge.pet) else { return };
-        let pet = self.combatants.remove(pet_index);
-        if let Some(owner) = self.combatant_mut(&merge.owner) {
-            owner.absorb_pet(&pet);
-        }
-    }
-
-    fn position_of(&self, name: &str) -> Option<usize> {
-        self.combatants.iter().position(|combatant| combatant.name == name)
-    }
-
-    fn combatant_mut(&mut self, name: &str) -> Option<&mut CombatantRecord> {
-        self.combatants.iter_mut().find(|combatant| combatant.name == name)
-    }
+/// Parses the text of a `CombatData` message into an Encounter (the bundled sample fight uses this).
+pub fn encounter_from_json(text: &str) -> Result<Encounter, serde_json::Error> {
+    serde_json::from_str::<CombatDataMessage>(text).map(Encounter::from)
 }
 
 /// Reads a JSON object as a list of its values, ignoring the keys.

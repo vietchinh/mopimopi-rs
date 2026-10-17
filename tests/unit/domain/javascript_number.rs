@@ -10,12 +10,6 @@ fn rounds_like_to_fixed_two() {
 }
 
 #[test]
-fn parses_leading_float_prefix() {
-    assert_eq!(parse_leading_float("12.5.3"), 12.5);
-    assert_eq!(parse_leading_float(""), 0.0);
-}
-
-#[test]
 fn prints_integers_without_decimals() {
     assert_eq!(number_to_javascript_string(35.0), "35");
     assert_eq!(number_to_javascript_string(35.5), "35.5");

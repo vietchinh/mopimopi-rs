@@ -32,6 +32,7 @@ impl AppActions {
             dropdown: DropdownContext::provide(),
             notices: NoticesContext::provide(),
         };
+        PortPreferencesContext::provide();
         use_context_provider(|| actions)
     }
 }

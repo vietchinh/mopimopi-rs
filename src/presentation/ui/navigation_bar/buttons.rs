@@ -7,7 +7,7 @@ use crate::application::i18n::translate;
 use crate::domain::translations::translations;
 use dioxus::prelude::*;
 use dioxus_material_icons::MaterialIcon;
-use crate::presentation::ui::overlay_plugin_context::OverlayPluginContext;
+use crate::application::app_state::OverlayPluginContext;
 
 #[component]
 pub(super) fn NavigationButtons(is_settings_preview: bool) -> Element {

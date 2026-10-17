@@ -33,12 +33,6 @@ pub enum MessageType {
     NotSupported,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct ParseOptions<'a> {
-    pub merge_pets_into_owner: bool,
-    pub local_player_name: Option<&'a str>,
-}
-
 impl OverlayMessage {
     pub fn parse(json_text: &str) -> Result<Self, serde_json::Error> {
         serde_json::from_str(json_text)

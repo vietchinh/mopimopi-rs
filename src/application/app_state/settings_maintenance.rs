@@ -3,7 +3,8 @@
 use dioxus::prelude::*;
 use super::app_actions::AppActions;
 use super::toast_notifications::show_toast_message;
-use crate::domain::settings::{read_local_storage, write_local_storage, Settings, BACKUP_STORAGE_KEY};
+use crate::domain::settings::Settings;
+use crate::infrastructure::browser_storage::{load_backup, save_backup};
 use crate::application::i18n::message;
 use serde_json::Value;
 
@@ -25,12 +26,12 @@ pub fn reset_settings_to_defaults(actions: AppActions) {
 pub fn back_up_settings(actions: AppActions) {
     let date = js_sys::Date::new_0().to_string().as_string().unwrap_or_default();
     actions.settings.edit_settings(|settings| settings.set_option("backupDate", Value::String(date)));
-    write_local_storage(BACKUP_STORAGE_KEY, &actions.settings.settings.peek().to_json_text());
+    save_backup(&actions.settings.settings.peek());
     show_toast_message(actions, "backup", 500, 3000);
 }
 
 pub fn restore_settings_from_backup(actions: AppActions) {
-    match read_local_storage(BACKUP_STORAGE_KEY).and_then(|text| Settings::from_json_text(&text)) {
+    match load_backup() {
         Some(restored) => {
             let mut settings = actions.settings.settings;
             settings.set(restored);

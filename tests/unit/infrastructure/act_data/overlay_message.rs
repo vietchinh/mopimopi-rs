@@ -45,12 +45,5 @@ fn a_real_capture_parses() {
     let message = OverlayMessage::parse(text).unwrap();
     let combat_data = message.combat_data().expect("the capture is a CombatData message");
     assert!(!combat_data.combatants.is_empty());
-    assert!(combat_data.local_player().is_some());
-}
-
-#[test]
-fn parse_options_default_to_no_merging() {
-    let options = ParseOptions::default();
-    assert!(!options.merge_pets_into_owner);
-    assert_eq!(options.local_player_name, None);
+    assert!(crate::domain::combat::Encounter::from(combat_data.clone()).local_player().is_some());
 }

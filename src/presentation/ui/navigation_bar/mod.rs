@@ -52,12 +52,12 @@ pub fn NavigationBar(is_settings_preview: bool) -> Element {
     // and DPS summary stay exactly as they were, through every "still inactive" message that
     // follows, until a new fight actually starts.
     let displayed = if is_settings_preview { None } else { tables.displayed_combat_data.read().clone() };
-    let combat_data = if is_settings_preview { Some(crate::application::app_state::sample_combat_message(merge_pets)) } else { displayed.as_deref() };
+    let combat_data = if is_settings_preview { Some(crate::application::app_state::sample_encounter()) } else { displayed.as_deref() };
     let (time_text, target_text, summary) = match combat_data {
         Some(message) => (
-            message.encounter.duration_text.clone(),
-            message.encounter.title.clone(),
-            summary_line(settings_context, tables, &settings, &nav.summary, &message.combatants, &message.encounter, is_settings_preview),
+            message.facts().duration_text.clone(),
+            message.facts().title.clone(),
+            summary_line(settings_context, tables, &settings, &nav.summary, &message.rows(crate::application::app_state::pet_view(merge_pets, &tables.local_player_name.read())), message.facts(), is_settings_preview),
         ),
         // Nothing has ever arrived yet: the only case the original shows this placeholder for
         // (before its own `firstCombat` flag is ever set).

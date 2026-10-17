@@ -4,7 +4,9 @@
 //! actions and incoming data change it through the functions of these files, which take `AppActions`:
 //!
 //! * `contexts`             – the shared signals, one context per section of the page
+//! * `act_connection`      – the connection to ACT: socket task and what each message changes
 //! * `app_actions`          – `AppActions`: what the actions need to change several sections
+//! * `pet_view`            – the `pets` option as a question to the Encounter
 //! * `sample_fight`         – built-in sample data for the settings previews and demo
 //! * `data_ingestion`       – what happens when new combat data arrives
 //! * `encounter_history`    – the list of finished encounters
@@ -14,10 +16,12 @@
 //! * `settings_maintenance` – reset, backup, restore, fullscreen
 //! * `settings_saving`      – delayed saving of the settings
 
+mod act_connection;
 mod app_actions;
 mod contexts;
 mod data_ingestion;
 mod encounter_history;
+mod pet_view;
 mod sample_fight;
 mod screen_navigation;
 mod settings_maintenance;
@@ -25,11 +29,14 @@ mod settings_saving;
 mod standby_mode;
 mod toast_notifications;
 
+pub use act_connection::{ActConnection, OverlayPluginContext};
 pub use app_actions::AppActions;
+pub use contexts::PortPreferencesContext;
 pub use contexts::*;
 pub use data_ingestion::on_combat_data_changed;
-pub use encounter_history::{close_history_screen, open_history_screen, show_history_entry, HistoryEntry};
-pub use sample_fight::sample_combat_message;
+pub use encounter_history::{close_history_screen, open_history_screen, show_history_entry};
+pub use pet_view::pet_view;
+pub use sample_fight::sample_encounter;
 pub use standby_mode::restart_standby_timer;
 pub use screen_navigation::{
     go_back_in_settings, open_settings_page, open_settings_screen, return_to_main_screen, select_settings_tab,

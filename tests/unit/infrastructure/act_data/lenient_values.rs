@@ -82,3 +82,9 @@ fn bool_accepts_json_booleans_and_the_text_true() {
     assert!(!boolean(r#""false""#));
     assert!(!boolean("null"));
 }
+
+#[test]
+fn parses_leading_float_prefix() {
+    assert_eq!(parse_leading_float("12.5.3"), 12.5);
+    assert_eq!(parse_leading_float(""), 0.0);
+}

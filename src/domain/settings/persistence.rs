@@ -1,25 +1,18 @@
-//! Loading and saving settings.
+//! Turning settings into text and back (the browser storage itself lives in `infrastructure::browser_storage`).
 
-use super::browser_storage::{read_local_storage, write_local_storage};
 use super::import::{defaults, import};
-use super::language_detection::detect_language_code;
 use super::settings_file::OptionValue;
 use super::Settings;
-
-/// `localStorage` key of the live settings (same key as the original overlay).
-pub const SETTINGS_STORAGE_KEY: &str = "Mopi2_HAERU";
-/// `localStorage` key of the backup made from the Tools page.
-pub const BACKUP_STORAGE_KEY: &str = "backup";
 
 impl Settings {
     pub fn defaults() -> Settings {
         Settings { file: defaults().clone() }
     }
 
-    /// Reads settings from `localStorage`, falling back to defaults with a language matching the
-    /// browser. Options added by newer versions are filled in from the defaults.
-    pub fn load_from_browser() -> Settings {
-        let stored = read_local_storage(SETTINGS_STORAGE_KEY).and_then(|text| match import(&text) {
+    /// Settings from the saved text, falling back to defaults with `first_run_language` when there is none or it
+    /// is unusable. Options added by newer versions are filled in from the defaults. Pure: the caller reads storage.
+    pub fn from_stored(stored_text: Option<&str>, first_run_language: &str) -> Settings {
+        let stored = stored_text.and_then(|text| match import(text) {
             Ok(file) => Some(file),
             Err(error) => {
                 tracing::warn!("the saved settings were not used ({error:?}); starting from the defaults");
@@ -30,7 +23,7 @@ impl Settings {
             Some(file) => Settings { file },
             None => {
                 let mut first_run = Settings::defaults();
-                first_run.file.set_option("Lang", OptionValue::Text(detect_language_code().to_string()));
+                first_run.file.set_option("Lang", OptionValue::Text(first_run_language.to_string()));
                 first_run
             }
         }
@@ -43,10 +36,6 @@ impl Settings {
 
     pub fn to_json_text(&self) -> String {
         serde_json::to_string(&self.file).unwrap_or_default()
-    }
-
-    pub fn save_to_browser(&self) {
-        write_local_storage(SETTINGS_STORAGE_KEY, &self.to_json_text());
     }
 }
 

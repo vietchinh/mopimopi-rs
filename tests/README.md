@@ -1,14 +1,14 @@
 # Tests
 
 All unit tests live here, outside `src/`. Each file mirrors the source file it tests
-(`src/models/act_data/incoming_message.rs` -> `tests/unit/models/act_data/incoming_message.rs`).
+(`src/infrastructure/act/data/lenient_values.rs` -> `tests/unit/infrastructure/act_data/lenient_values.rs`).
 
 They are still compiled as a child module of the file they test, through a one-line declaration in
 that source file:
 
 ```rust
 #[cfg(test)]
-#[path = "../../../tests/unit/models/act_data/incoming_message.rs"]
+#[path = "../../../tests/unit/infrastructure/act_data/lenient_values.rs"]
 mod tests;
 ```
 

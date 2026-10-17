@@ -1,5 +1,5 @@
 //! Decides, for one update, which pets fold into which owners. It only names combatants;
-//! adding up the numbers is done by the combatant record (`CombatantRecord::absorb_pet`).
+//! adding up the numbers is done by the combatant record (`Member::absorb_pet`).
 
 use super::pet_ownership::{ClassifiedCombatant, PetOwnership};
 use super::CombatantIdentity;

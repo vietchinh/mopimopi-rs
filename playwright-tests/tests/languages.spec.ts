@@ -7,7 +7,7 @@ import { radioEntries } from "../support/settings";
 
 const LANGUAGES = ["KR", "JP", "EN", "FR", "DE", "CN"];
 const path = (...steps: string[]) => steps.map((s) => (/^(tab|input|type|mouse|drag|dropdown|range|js):/.test(s) ? s : `li#${s}`));
-const rows = (page: Page) => page.locator(".scrollArea li").allInnerTexts();
+const rows = (page: Page) => page.locator(".scrollArea li:not(#port-only-section li)").allInnerTexts();
 
 const PAGES: string[][] = [[], ["Data"], ["Data", "tab:tab_mhh", "abbset"], ["Design", "font"], ["Design", "cells"], ["Design", "color", "tab:tab_graph"], ["Overlay"], ["Tool"], ["Tool", "custom"]];
 

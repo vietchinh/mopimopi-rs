@@ -24,7 +24,13 @@ test.describe("settings pages", () => {
   for (const steps of SCREENS) {
     test(steps.join(" > ") || "settings (top)", async ({ app }) => {
       await app.matchScreenshot(`screens/${steps.join("-") || "top"}`, {
-        after: async (page) => { await openSettings(page); await runSteps(page, path(...steps)); },
+        after: async (page) => {
+          await openSettings(page);
+          await runSteps(page, path(...steps));
+          // Declared deviation D1 (docs/ddd/deviations.md): the port adds a "Port-only options" section to the
+          // Custom UI Data page. It is hidden here so the rest of the page is still compared pixel for pixel.
+          await page.addStyleTag({ content: "#port-only-section{display:none!important}" });
+        },
       });
     });
   }

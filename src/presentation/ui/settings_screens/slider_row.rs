@@ -1,7 +1,7 @@
 //! Row with a range slider.
 
 use super::row_layout::settings_row;
-use crate::common::javascript_compat::number_to_javascript_string;
+use crate::domain::javascript_number::number_to_javascript_string;
 use dioxus::prelude::*;
 
 /// Unit shown next to a slider value.

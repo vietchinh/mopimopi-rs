@@ -19,8 +19,6 @@ mod encounter_record;
 mod lenient_values;
 mod overlay_message;
 
-pub use combat_data_message::CombatDataMessage;
+pub use combat_data_message::encounter_from_json;
 pub use combat_data_peek::peek_combat_data;
-pub use combatant_record::CombatantRecord;
-pub use encounter_record::EncounterRecord;
-pub use overlay_message::{OverlayMessage, ParseOptions};
+pub use overlay_message::OverlayMessage;

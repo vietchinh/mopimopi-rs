@@ -8,6 +8,7 @@
 //! * `settings_screen_context`  – the settings screens: page, tab, sample tables
 //! * `navigation_bar_context`   – the top bar's buttons
 //! * `dropdown_context`         – the open pop-up menu
+//! * `port_preferences_context` – options only this port has, in a store of their own
 //! * `notices_context`          – the toast and the tooltip
 //!
 //! Something that changes several sections at once (opening the settings, a new fight) is an action of
@@ -17,6 +18,7 @@ mod dropdown_context;
 mod history_context;
 mod navigation_bar_context;
 mod notices_context;
+mod port_preferences_context;
 mod screen_context;
 mod settings_context;
 mod settings_screen_context;
@@ -26,6 +28,7 @@ pub use dropdown_context::{Dropdown, DropdownContext};
 pub use history_context::HistoryContext;
 pub use navigation_bar_context::NavigationBarContext;
 pub use notices_context::NoticesContext;
+pub use port_preferences_context::PortPreferencesContext;
 pub use screen_context::{Screen, ScreenContext};
 pub use settings_context::SettingsContext;
 pub use settings_screen_context::{SettingsLocation, SettingsScreenContext};

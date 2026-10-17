@@ -12,6 +12,8 @@ mod player_name;
 mod strongest_action_text;
 mod text_fragment;
 
+mod column_key;
+pub use column_key::ColumnKey;
 pub use column_cell::{cell_fragments, cell_fragments_ranked, cell_plain_text, CellContext};
 pub use number_format::NumberFormat;
 pub use text_fragment::TextFragment;

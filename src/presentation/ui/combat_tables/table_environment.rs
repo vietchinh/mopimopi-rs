@@ -5,6 +5,7 @@
 //! two of them is a pointer check.
 
 use crate::application::i18n::dictionary_title;
+use crate::domain::combat::Member;
 use crate::domain::formatting::CellContext;
 use crate::domain::formatting::LIMIT_BREAK_JOB_CODE;
 use crate::domain::settings::Settings;
@@ -27,6 +28,8 @@ pub(super) struct TableEnvironment {
     /// Blurring names is only allowed while no fight is running.
     pub can_blur_names: bool,
     pub animate_bars: bool,
+    /// Port-only: the colour (hex, no `#`) NPC rows get when "NPCs look like themselves" is on; `None` draws them like the original.
+    pub npc_color: Option<String>,
 }
 
 impl TableEnvironment {
@@ -40,6 +43,7 @@ impl TableEnvironment {
         raid: &RaidSettings,
         local_player_name: &str,
         is_settings_preview: bool,
+        npc_color: Option<String>,
     ) -> TableEnvironment {
         TableEnvironment {
             table: table.clone(),
@@ -52,7 +56,21 @@ impl TableEnvironment {
             local_player_name: local_player_name.to_string(),
             can_blur_names: !is_settings_preview && !fight_is_running,
             animate_bars: bars.animate && !is_settings_preview,
+            npc_color,
         }
+    }
+
+    /// The main bar colour of a row: the original's palette, except an NPC while the port-only NPC look is on.
+    pub fn bar_color(&self, combatant: &Member, row_id: &str) -> String {
+        match &self.npc_color {
+            Some(color) if combatant.is_npc() => format!("#{color}"),
+            _ => self.bars.palette.player_color(combatant, row_id),
+        }
+    }
+
+    /// Whether NPC rows get their own icon (the port-only NPC look).
+    pub fn npc_look(&self) -> bool {
+        self.npc_color.is_some()
     }
 
     /// The text rules for the cells. Cheap, but not free, so a row builds it when it draws, not when it is compared.
