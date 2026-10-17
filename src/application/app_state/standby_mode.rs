@@ -1,5 +1,6 @@
 //! Standby mode: hide the tables after some minutes without a fight.
 
+use crate::domain::settings::SettingKey;
 use super::app_actions::AppActions;
 use super::contexts::Screen;
 use super::toast_notifications::{dismiss_toast_message, show_toast_message};
@@ -31,7 +32,7 @@ pub fn restart_standby_timer(actions: AppActions) {
 
     let (standby_enabled, standby_minutes) = {
         let settings = actions.settings.settings.peek();
-        (settings.option_enabled("autoHide"), settings.slider_value("autoHideTime"))
+        (settings.is_on(SettingKey::AutoHide), settings.slider(SettingKey::AutoHideSeconds))
     };
     if !standby_enabled || *actions.screen.current_screen.peek() == Screen::Settings {
         STANDBY_TIMER.with(|timer| *timer.borrow_mut() = None);

@@ -1,11 +1,19 @@
 //! Changing settings.
 
 use super::settings_file::OptionValue;
-use super::Settings;
+use super::{Settings, SettingKey};
 use serde_json::Value;
 
 impl Settings {
-    /// Sets an option. A value an option cannot be (null, a list, an object) is ignored.
+    pub fn set(&mut self, key: SettingKey, value: Value) {
+        self.set_option(key.id(), value);
+    }
+
+    pub fn set_on(&mut self, key: SettingKey, enabled: bool) {
+        self.set_option_enabled(key.id(), enabled);
+    }
+
+    /// Sets an option by its text key (settings pages). A value an option cannot be (null, a list, an object) is ignored.
     pub fn set_option(&mut self, key: &str, value: Value) {
         if let Some(value) = OptionValue::from_value(&value) {
             self.file.set_option(key, value);

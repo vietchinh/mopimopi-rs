@@ -1,5 +1,6 @@
 //! Rows that open pages or run actions.
 
+use crate::domain::settings::SettingKey;
 use super::{icon, note, title};
 use crate::presentation::ui::settings_screens::row_context::RowContext;
 use crate::presentation::ui::settings_screens::row_layout::{settings_row, settings_row_with_icon_cell};
@@ -30,7 +31,7 @@ pub(super) fn action_row(page_context: &RowContext, entry: &SchemaEntry) -> Elem
         let names: Vec<String> = f.iter().filter(|(k, _)| page_context.settings.option_enabled(k)).map(|(_, v)| translate(&v["tt"])).collect();
         names.join(&message("comma"))
     } else if entry.id == "backup" {
-        page_context.settings.option_text("backupDate")
+        page_context.settings.text(SettingKey::BackupDate)
     } else {
         note(entry)
     };

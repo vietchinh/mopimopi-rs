@@ -20,7 +20,21 @@ impl Amount {
     }
 }
 
-/// An amount per second, rounded to two decimals like the original's `pFloat`.
+impl std::ops::Add for Amount {
+    type Output = Amount;
+    fn add(self, other: Amount) -> Amount {
+        Amount(self.0 + other.0)
+    }
+}
+
+impl std::ops::AddAssign for Amount {
+    fn add_assign(&mut self, other: Amount) {
+        *self = *self + other;
+    }
+}
+
+/// A rate the program derives (amount over seconds), rounded to two decimals like the original's `pFloat`. A per-second
+/// figure that ACT itself reports is a `Reported`, which the original never rounds.
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct Rate(f64);
 
@@ -40,7 +54,49 @@ impl Rate {
     }
 }
 
-/// A share of a whole, in percent, rounded to two decimals like `pFloat`. 0 of 0 is 0; more than 0 of 0 is infinity, as in JavaScript.
+impl std::ops::Add for Rate {
+    type Output = Rate;
+    fn add(self, other: Rate) -> Rate {
+        Rate(self.0 + other.0)
+    }
+}
+
+impl std::ops::AddAssign for Rate {
+    fn add_assign(&mut self, other: Rate) {
+        *self = *self + other;
+    }
+}
+
+/// A ratio or per-second figure exactly as ACT reported it. The original shows these as they came, without its `pFloat`
+/// rounding, so neither do we; only NaN cannot exist.
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
+pub struct Reported(f64);
+
+impl Reported {
+    pub fn new(value: f64) -> Self {
+        Self(if value.is_nan() { 0.0 } else { value })
+    }
+
+    pub fn value(self) -> f64 {
+        self.0
+    }
+}
+
+impl std::ops::Add for Reported {
+    type Output = Reported;
+    fn add(self, other: Reported) -> Reported {
+        Reported(self.0 + other.0)
+    }
+}
+
+impl std::ops::AddAssign for Reported {
+    fn add_assign(&mut self, other: Reported) {
+        *self = *self + other;
+    }
+}
+
+/// A share of a whole that the program derives, in percent, rounded to two decimals like `pFloat`. 0 of 0 is 0; more than 0
+/// of 0 is infinity, as in JavaScript.
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 pub struct Percent(f64);
 
@@ -67,16 +123,11 @@ impl Percent {
     }
 }
 
-/// The job text ACT reports ("Drk", "Limit Break", "" for NPCs, "0" for chocobos). Kept as text; what it means is
-/// decided once, when the Encounter is assembled.
+/// The job text as the row carries it. Kept as text; what it means for the kind of participant is decided at the ACT edge.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Job(String);
 
 impl Job {
-    pub fn new(text: &str) -> Self {
-        Self(text.to_string())
-    }
-
     pub fn as_str(&self) -> &str {
         &self.0
     }

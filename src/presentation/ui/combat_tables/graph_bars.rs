@@ -21,7 +21,7 @@
 //! (`standard_table.rs`'s `body_style`) and read by the `chrome-bar-*` classes in `tailwind.css`.
 
 use super::table_environment::SharedEnvironment;
-use crate::domain::combat::Participant;
+use crate::domain::combat::{Amount, Participant};
 use crate::presentation::ui::areas::Side;
 use crate::presentation::ui::shared::palette::percent_of_whole;
 use dioxus::prelude::*;
@@ -46,8 +46,8 @@ fn bar_widths(participant: &Participant, top_value: f64, is_healing: bool) -> Ba
         // row's own total) and is then a percentage of the main bar's length -- so it equals "the
         // pet's share of this row" only for the top row. Overheal and shield are shares of the
         // row's own healing.
-        main: percent_of_whole(total, top_value).clamp(0, 100),
-        pet: percent_of_whole(contributed_by_pets, top_value).clamp(0, 100),
+        main: percent_of_whole(total, Amount::new(top_value)).clamp(0, 100),
+        pet: percent_of_whole(contributed_by_pets, Amount::new(top_value)).clamp(0, 100),
         overheal: percent_of_whole(participant.over_heal, participant.healed).clamp(0, 100),
         shield: percent_of_whole(participant.damage_shield, participant.healed).clamp(0, 100),
     }
@@ -180,7 +180,7 @@ pub(super) fn graph_bars(
     let animated = environment.animate_bars;
     let side = bars.side(is_healing);
 
-    let main_background = bars.fade.apply(&environment.bar_color(participant, row_id));
+    let main_background = bars.fade.apply(&environment.bar_color(participant));
 
     // The small bars, in the original's DOM order (each floats to the configured side, so the
     // first one sits at the edge). A row whose small bars add up to more than the container wraps
@@ -197,7 +197,7 @@ pub(super) fn graph_bars(
     let small_geometry = small_bar_geometry(f64::from(widths.main), &shown_widths, on_right);
     let mut small_elements = Vec::new();
     for (index, &(kind, width, _)) in shown.iter().enumerate() {
-        let background = bars.fade.apply(&bars.palette.color_of(kind, "", row_id));
+        let background = bars.fade.apply(&bars.palette.color_of(kind, "", participant.ownership()));
         let chrome = bar_classes(kind);
         let motion = if animated { animation_of(&format!("{is_healing}|{row_id}|{kind}"), small_geometry.as_ref().map(|g| g[index]), on_right) } else { BarAnimation::default() };
         small_elements.push(rsx! {

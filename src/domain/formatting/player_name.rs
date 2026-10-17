@@ -1,8 +1,7 @@
 //! How a participant's name is displayed in the name column.
 
-use crate::domain::combat::ParticipantKind::LimitBreak;
 use crate::domain::combat::LOCAL_PLAYER;
-use crate::domain::settings::Settings;
+use crate::domain::settings::{Settings, SettingKey};
 use crate::domain::combat::Participant;
 
 /// How much of a "First Last" name is shortened (the "Name" settings page).
@@ -38,10 +37,10 @@ pub struct NameOptions {
 impl NameOptions {
     pub fn from_settings(settings: &Settings) -> NameOptions {
         NameOptions {
-            abbreviation: NameAbbreviation::from_option_number(settings.option_number("cnt") as i32),
-            keep_you_label: settings.option_enabled("myName"),
-            hide_names: settings.option_enabled("hideName"),
-            prefix_rank: settings.option_enabled("rank"),
+            abbreviation: NameAbbreviation::from_option_number(settings.number(SettingKey::NameAbbreviation) as i32),
+            keep_you_label: settings.is_on(SettingKey::KeepYouLabel),
+            hide_names: settings.is_on(SettingKey::HideNames),
+            prefix_rank: settings.is_on(SettingKey::PrefixRank),
         }
     }
 }
@@ -100,7 +99,7 @@ pub fn display_name(
         }
     } else if is_you {
         participant.name.clone()
-    } else if participant.kind() == LimitBreak {
+    } else if participant.looks_like_limit_break() {
         limit_break_name.to_string()
     } else {
         String::new()

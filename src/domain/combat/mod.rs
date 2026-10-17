@@ -8,7 +8,7 @@
 //!
 //! * `participant`        – the kinds of participant an Encounter holds (Player, Npc, PlayerCompanion, LimitBreak, Unclassified)
 //! * `stats`       – a participant's numbers and names
-//! * `participant_kind`   – how the original tells player, pet, chocobo and Limit Break apart, from a row's name and job
+//! * (removed) `participant_kind` – the ACT conventions that told player, pet, chocobo and Limit Break apart now live in the ACT edge (`sorting`). Was: from a row's name and job
 //! * `encounter`     – the Encounter aggregate, its participants, value objects and events (not wired in yet)
 //! * `encounter_key` – identifies one finished encounter (title + totals)
 //! * `history`       – the finished encounters and the rules that span fights
@@ -18,7 +18,6 @@
 //! * `pet_merge_plan` – the list of "fold this pet into that owner" steps for one update
 
 
-mod participant_kind;
 mod encounter;
 mod stats;
 mod participant;
@@ -29,16 +28,15 @@ mod known_pets;
 mod pet_merge_plan;
 mod pet_ownership;
 
-pub use participant_kind::{ParticipantIdentity, ParticipantKind};
-pub use encounter::{Amount, Encounter, EncounterEnded, EncounterFacts, Job, Percent, PetView, Rate, Standing, YouChanged};
+pub use encounter::{Amount, Encounter, EncounterEnded, EncounterFacts, Percent, Phase, Rate, Reported, PetView, YouChanged};
 pub use encounter_key::EncounterKey;
 pub use stats::Stats;
-pub use participant::Participant;
+pub use participant::{CompanionKind, Ownership, Participant};
 pub use healing::Healing;
 pub use history::{History, HistoryEntry};
-pub use known_pets::PetJob;
+pub use known_pets::{job_of_pet, PetJob};
 pub use pet_merge_plan::plan_pet_merges;
-pub use pet_ownership::LOCAL_PLAYER;
+pub use pet_ownership::{PetCandidate, LOCAL_PLAYER};
 
 #[cfg(test)]
 #[path = "../../../tests/unit/domain/combat/open_host_service.rs"]

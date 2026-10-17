@@ -12,7 +12,6 @@ use super::graph_bars::graph_bars;
 use super::table_environment::SharedEnvironment;
 use super::visible_participants::visible_participants;
 use crate::application::app_state::TablesContext;
-use crate::domain::combat::ParticipantKind;
 use crate::domain::formatting::{cell_fragments_ranked, CellContext};
 use crate::application::i18n::translate;
 use crate::domain::translations::translations;
@@ -21,12 +20,13 @@ use crate::presentation::ui::shared::row_identity::row_element_id;
 use crate::presentation::ui::areas::Column;
 use crate::presentation::ui::shared::text_display::{job_icon_view, text_fragments_view};
 use dioxus::prelude::*;
+use std::rc::Rc;
 use std::collections::HashSet;
 
 pub(super) fn standard_table(
     environment: &SharedEnvironment,
-    participants: &[Participant],
-    encounter: &EncounterFacts,
+    participants: &[Rc<Participant>],
+    encounter: &Rc<EncounterFacts>,
     is_healing: bool,
     blurred_rows: &HashSet<String>,
 ) -> Element {
@@ -37,7 +37,7 @@ pub(super) fn standard_table(
     // would make that valid too, but a damage table's order is only usually already sorted this way.
     let top_value = participants
         .iter()
-        .map(|participant| if is_healing { participant.healed } else { participant.damage })
+        .map(|participant| if is_healing { participant.healed } else { participant.damage }.value())
         .fold(0.0, f64::max);
     let label = super::table_label(is_healing);
     let columns = environment.columns.of(is_healing);
@@ -58,8 +58,8 @@ pub(super) fn standard_table(
             ParticipantRow {
                 key: "{blur_key}",
                 environment: environment.clone(),
-                participant: ranked.participant.clone(),
-                encounter: encounter.clone(),
+                participant: Rc::clone(ranked.participant),
+                encounter: Rc::clone(encounter),
                 rank: ranked.rank,
                 top_value,
                 is_healing,
@@ -115,8 +115,8 @@ fn TableHeader(columns: Vec<Column>) -> Element {
 #[component]
 fn ParticipantRow(
     environment: SharedEnvironment,
-    participant: Participant,
-    encounter: EncounterFacts,
+    participant: Rc<Participant>,
+    encounter: Rc<EncounterFacts>,
     rank: usize,
     top_value: f64,
     is_healing: bool,
@@ -126,8 +126,7 @@ fn ParticipantRow(
     let label = super::table_label(is_healing);
     let row_id = row_element_id(&participant.name);
     let blur_key = format!("{label}{row_id}");
-    let is_your_pet = matches!(participant.kind(), ParticipantKind::Pet { owner_name, .. } if owner_name == "YOU");
-    let is_own = row_id == "YOU" || is_your_pet;
+    let is_own = participant.is_yours_to_highlight();
     let columns = environment.columns.of(is_healing);
     let cell_context = environment.cell_context();
     let cells = columns.iter().map(|column| {
@@ -143,7 +142,7 @@ fn ParticipantRow(
             id: "{row_id}",
             class: "tableWrap chrome-row themed-text",
             class: if is_own { "text-own" },
-            class: if is_your_pet { "myPet" },
+            class: if participant.is_your_pet() { "myPet" },
             table { class: "tableBody", tbody { tr { {cells} } } }
             {graph_bars(&environment, &participant, top_value, is_healing, &row_id)}
             div { class: "barBg bg-(--chrome-bar-bg) corner-body" }

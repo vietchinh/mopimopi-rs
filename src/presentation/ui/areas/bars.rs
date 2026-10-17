@@ -1,14 +1,15 @@
 //! The graph bars behind the rows: their colours, the fade, the side the small bars float to, and which small bars show.
 
 use crate::domain::settings::SettingsFile;
-use crate::domain::combat::Participant;
+use crate::domain::combat::{Ownership, Participant};
 use crate::presentation::ui::shared::style::StyleReads;
 use indexmap::IndexMap;
 
 const PET_BAR: &str = "pet";
 const OVERHEAL_BAR: &str = "oh";
 const SHIELD_BAR: &str = "ds";
-const LOCAL_PLAYER_ID: &str = "YOU";
+/// The palette file's key for the local player's colour in the "me and others" palette.
+const YOU_COLOR_KEY: &str = "YOU";
 
 /// The side the small bars (pet, shield, overheal) float to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -52,10 +53,10 @@ impl BarPalette {
     }
 
     /// CSS colour of a bar. `color_key` is a job or bar kind (`pet`, `ds`, `oh`); `role_key` the role's palette key, empty for the small
-    /// bars; `row_id` the row's element id.
-    pub fn color_of(&self, color_key: &str, role_key: &str, row_id: &str) -> String {
+    /// bars; `ownership` whose row it is.
+    pub fn color_of(&self, color_key: &str, role_key: &str, ownership: Ownership) -> String {
         let is_small_bar = matches!(color_key, PET_BAR | OVERHEAL_BAR | SHIELD_BAR);
-        let uses_my_color = self.uses_my_color && row_id.contains(LOCAL_PLAYER_ID) && !is_small_bar;
+        let uses_my_color = self.uses_my_color && ownership != Ownership::Others && !is_small_bar;
         match self.mode {
             PaletteMode::Role => {
                 if uses_my_color {
@@ -69,8 +70,8 @@ impl BarPalette {
             PaletteMode::MeAndOthers => {
                 if matches!(color_key, PET_BAR | OVERHEAL_BAR | SHIELD_BAR | "LMB" | "CBO") {
                     self.color(color_key)
-                } else if row_id == LOCAL_PLAYER_ID {
-                    self.color(LOCAL_PLAYER_ID)
+                } else if ownership == Ownership::You {
+                    self.color(YOU_COLOR_KEY)
                 } else {
                     self.color("Other")
                 }
@@ -83,8 +84,8 @@ impl BarPalette {
 
     /// Colour of a participant's main bar. The colour key is the row's `class_code()` (not the raw job text the icon uses); the role key is
     /// only used by the role palette.
-    pub fn participant_color(&self, participant: &Participant, row_id: &str) -> String {
-        self.color_of(&participant.class_code(), participant.role_palette_key(), row_id)
+    pub fn participant_color(&self, participant: &Participant) -> String {
+        self.color_of(&participant.class_code(), participant.role_palette_key(), participant.ownership())
     }
 }
 

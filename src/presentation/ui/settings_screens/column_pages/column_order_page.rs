@@ -11,7 +11,7 @@ pub(in crate::presentation::ui::settings_screens) fn column_order_page(page_cont
     let settings_context = page_context.settings_context;
     let columns: Vec<String> = page_context.settings.file().enabled_columns(table).into_iter().map(String::from).collect();
     let rows = columns.into_iter().map(|col| {
-        let name = page_context.settings.column_text(&col, "tt");
+        let name = page_context.settings.column_title(&col);
         let (up_col, down_col) = (col.clone(), col.clone());
         let (up_table, down_table) = (table.to_string(), table.to_string());
         // The original's `li_2btn` row: icon, title, an up cell, an empty padded spacer cell, a down cell

@@ -1,13 +1,14 @@
 //! Combat's open host service, tested from the outside: one test per consumer, each using only what
 //! `domain::combat` publishes (see the module's doc comment and docs/ddd/decisions/0003-combat-open-host-service.md).
 
-use crate::domain::combat::{Amount, Encounter, EncounterFacts, Stats, History, Percent, PetView, Rate};
+use crate::domain::combat::{Amount, Encounter, EncounterFacts, Stats, History, Participant, Percent, PetJob, PetView, Phase};
+use super::encounter::Rate;
 use crate::domain::formatting::{cell_plain_text, CellContext, ColumnKey};
 use crate::domain::settings::Settings;
 use std::rc::Rc;
 
 fn stats(name: &str, job: &str, damage: f64) -> Stats {
-    Stats { name: name.into(), job: job.to_string().into(), damage, healed: damage / 2.0, duration_seconds: 10.0, ..Stats::default() }
+    Stats { name: name.into(), job: job.to_string().into(), damage: Amount::new(damage), healed: Amount::new(damage / 2.0), duration_seconds: 10.0, ..Stats::default() }
 }
 
 fn fight(title: &str) -> Encounter {
@@ -19,7 +20,15 @@ fn fight(title: &str) -> Encounter {
         total_healed: 300.0,
         ..EncounterFacts::default()
     };
-    Encounter::from_stats(facts, vec![stats("YOU", "Sch", 400.0), stats("Eos (Future Fade)", "", 100.0), stats("Tank", "Pld", 100.0)], false)
+    Encounter::from_participants(
+        facts,
+        vec![
+            Participant::you(stats("YOU", "Sch", 400.0)),
+            Participant::pet(stats("Eos (Future Fade)", "", 100.0), "Future Fade", PetJob::Scholar),
+            Participant::player(stats("Tank", "Pld", 100.0)),
+        ],
+        Phase::Over,
+    )
 }
 
 /// Consumer: Formatting. It reads participants and the Encounter's facts, and asks the Encounter for rates.
@@ -40,7 +49,7 @@ fn the_tables_ask_for_rows_in_either_pet_view() {
     assert_eq!(encounter.rows(PetView::Separate).len(), 3);
     let folded = encounter.rows(PetView::FoldedIntoOwners { local_player_name: Some("Future Fade") });
     assert_eq!(folded.len(), 2);
-    assert_eq!(folded[0].damage, 500.0);
+    assert_eq!(folded[0].damage, Amount::new(500.0));
     assert_eq!(encounter.participants().len(), 3);
 }
 
@@ -68,8 +77,8 @@ fn the_history_screen_reads_entries_numbered_within_their_zone() {
 #[test]
 fn the_application_layer_learns_that_a_fight_ended() {
     let encounter = fight("Boss");
-    assert_eq!(encounter.ended_since(true).map(|event| event.key), Some(encounter.key()));
-    assert_eq!(encounter.ended_since(false), None);
+    assert_eq!(encounter.ended_since(Phase::Running).map(|event| event.key), Some(encounter.key()));
+    assert_eq!(encounter.ended_since(Phase::Over), None);
 }
 
 #[test]

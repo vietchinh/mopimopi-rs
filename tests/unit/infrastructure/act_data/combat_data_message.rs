@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::domain::combat::Participant;
-use crate::domain::combat::PetView;
+use crate::domain::combat::{Amount, PetView};
 
 fn parse(json: &str) -> Encounter {
     encounter_from_json(json).expect("valid combat data")
@@ -11,7 +11,7 @@ fn parse(json: &str) -> Encounter {
 
 const FOLDED: PetView<'static> = PetView::FoldedIntoOwners { local_player_name: None };
 
-fn names(rows: &[Participant]) -> Vec<&str> {
+fn names(rows: &[std::rc::Rc<Participant>]) -> Vec<&str> {
     rows.iter().map(|row| row.name.as_str()).collect()
 }
 
@@ -24,8 +24,8 @@ fn keys_are_dropped_and_arrival_order_is_kept() {
 #[test]
 fn the_local_player_is_the_row_called_you() {
     let message = parse(r#"{"Encounter":{},"Combatant":{"YOU":{"name":"YOU","damage":"5"}}}"#);
-    assert_eq!(message.you().unwrap().damage, 5.0);
-    assert!(parse(r#"{"Encounter":{},"Combatant":{"Nobody":{"name":"Nobody"}}}"#).you().is_none());
+    assert_eq!(message.rows(PetView::Separate).iter().find(|row| row.is_you()).unwrap().damage, Amount::new(5.0));
+    assert!(parse(r#"{"Encounter":{},"Combatant":{"Nobody":{"name":"Nobody"}}}"#).rows(PetView::Separate).iter().all(|row| !row.is_you()));
 }
 
 #[test]
@@ -50,7 +50,7 @@ fn folding_a_pet_removes_its_row_and_adds_its_numbers_to_the_owner() {
     let rows = message.rows(FOLDED);
     assert_eq!(rows.len(), 1, "the pet's row is gone from the view");
     let owner = &rows[0];
-    assert_eq!((owner.damage, owner.healed, owner.pet_damage), (120.0, 55.0, 20.0));
+    assert_eq!((owner.damage, owner.healed, owner.pet_damage), (Amount::new(120.0), Amount::new(55.0), Amount::new(20.0)));
 }
 
 #[test]
@@ -107,5 +107,5 @@ fn folding_uses_the_local_player_name_to_find_the_players_own_pets() {
     }}"#);
     let rows = message.rows(PetView::FoldedIntoOwners { local_player_name: Some("Future Fade") });
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].damage, 15.0);
+    assert_eq!(rows[0].damage, Amount::new(15.0));
 }

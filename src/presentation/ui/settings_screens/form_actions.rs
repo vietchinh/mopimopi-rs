@@ -1,5 +1,6 @@
 //! What happens when the user submits text or picks a file on a settings page.
 
+use crate::domain::settings::SettingKey;
 use super::base64_encoding::base64_encode;
 use super::row_context::TypedTexts;
 use super::text_box::clear_typed_text;
@@ -22,7 +23,7 @@ pub(super) fn submit_text(settings_context: SettingsContext, actions: AppActions
         settings_context.edit_settings(|settings| ok = settings.import_shareable_code(&text).is_ok());
         show_toast_message(actions, if ok { "submit" } else { "notData" }, 500, 3000);
     } else if let Some(col) = box_id.strip_prefix("headerText_") {
-        settings_context.edit_settings(|settings| settings.set_column_field(col, "tt", json!(text)));
+        settings_context.edit_settings(|settings| settings.set_column_title(col, &text));
         show_toast_message(actions, "submit", 500, 3000);
     } else if let Some(setting) = box_id.strip_prefix("in_") {
         settings_context.edit_settings(|settings| settings.set_option(setting, json!(text)));
@@ -49,8 +50,8 @@ pub(super) fn add_abbreviation(settings_context: SettingsContext, actions: AppAc
 pub(super) fn set_background(settings_context: SettingsContext, actions: AppActions, mime: &str, bytes: &[u8]) {
     let url = format!("data:{mime};base64,{}", base64_encode(bytes));
     settings_context.edit_settings(|settings| {
-        settings.set_option("overlayBgImg", json!(url));
-        settings.set_option_enabled("overlayBg", true);
+        settings.set(SettingKey::OverlayBackgroundImage, json!(url));
+        settings.set_on(SettingKey::OverlayBackground, true);
     });
     show_toast_message(actions, "submit", 0, 3000);
 }

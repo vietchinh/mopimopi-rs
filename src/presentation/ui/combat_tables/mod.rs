@@ -80,11 +80,11 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
     };
     let local_player_name = tables.local_player_name.read().clone();
     let participants = &message.rows(crate::application::app_state::pet_view(merge_pets, &local_player_name));
-    let encounter = message.facts();
+    let encounter = &message.shared_facts();
 
     // The original only builds its tables when the data has a participant named "YOU" (`onCombatDataUpdate`
     // starts with that check); without one both tables stay empty.
-    if !participants.iter().any(|participant| participant.name == "YOU") {
+    if !participants.iter().any(|participant| participant.is_you()) {
         return empty_tables();
     }
 

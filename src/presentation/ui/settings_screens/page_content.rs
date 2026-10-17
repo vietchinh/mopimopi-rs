@@ -1,7 +1,7 @@
 //! Which content a settings page shows, taken from the schema in `data/l.json`.
 
 use crate::application::app_state::{SettingsLocation, PAGES_WITH_TABS};
-use crate::domain::settings::Settings;
+use crate::domain::settings::{Settings, SettingKey};
 use crate::domain::translations::translations;
 use serde_json::Value;
 
@@ -68,7 +68,7 @@ pub(super) fn content_for(settings: &Settings, location: &SettingsLocation) -> P
     };
     let column_flag = tab.trim_start_matches("tab_").to_string();
     match (page, tab.as_str()) {
-        ("color", "tab_graph") => PageContent::SchemaRows(entries_of(&schema["Graph"][settings.option_text("palette").as_str()], None)),
+        ("color", "tab_graph") => PageContent::SchemaRows(entries_of(&schema["Graph"][settings.text(SettingKey::Palette).as_str()], None)),
         ("order", _) => PageContent::ColumnOrder(column_flag),
         ("cells", "tab_title" | "tab_width" | "tab_padding" | "tab_align") => PageContent::ColumnSettings(tab),
         ("format", _) => PageContent::SchemaRows(entries_of(&schema[page][tab.as_str()]["inner"], Some(&column_flag))),

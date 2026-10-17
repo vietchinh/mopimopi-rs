@@ -20,3 +20,8 @@ Words used identically in code, docs and conversation. Raider-owned terms are ma
 | Participant | Any row of an encounter, whichever kind. The word "combatant" is ACT's and stays inside the translator. | `domain::combat::Participant` |
 | Stats | A participant's numbers and names, without its kind. | `domain::combat::Stats` |
 | Standing | Where the local player stands: My DPS, My HPS, rank. | `Encounter::local_standing` |
+| Placed participant | A row whose kind the ACT edge has already decided; the domain only receives these (`Participant::you/player/npc/limit_break/pet/chocobo/unclassified`). | `infrastructure/act/data/sorting.rs` |
+| Ownership | Whose a participant is, from your point of view: You, one of Your companions, or Others. | `domain::combat::Ownership` |
+| Phase | Where a fight is in its life: Running, then Over. | `domain::combat::Phase` |
+| Setting key | A setting the program itself uses, by meaning; the text key is the original's and is only for the schema-driven pages. | `domain::settings::SettingKey` |
+| Reported | A ratio or per-second figure exactly as ACT reported it, never rounded by us (the original shows these as they came). | `domain::combat::Reported` |

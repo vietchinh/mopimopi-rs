@@ -44,6 +44,9 @@ mod architecture;
 #[cfg(test)]
 #[path = "../tests/unit/benchmarks.rs"]
 mod benchmarks;
+#[cfg(test)]
+#[path = "../tests/unit/rust_profile.rs"]
+mod rust_profile;
 mod domain;
 mod infrastructure;
 mod presentation;

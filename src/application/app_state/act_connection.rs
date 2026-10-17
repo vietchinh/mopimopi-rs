@@ -58,36 +58,16 @@ impl fmt::Display for StartError {
 
 #[derive(Clone, Copy)]
 pub struct OverlayPluginContext {
-    connection_status: Signal<ConnectionStatus>,
     combat_data_message: Signal<Option<Rc<Encounter>>>,
-    error: Signal<Option<String>>,
 }
 
 impl OverlayPluginContext {
-    pub fn new(
-        connection_status: Signal<ConnectionStatus>,
-        combat_data_message: Signal<Option<Rc<Encounter>>>,
-        error: Signal<Option<String>>,
-    ) -> OverlayPluginContext {
-        OverlayPluginContext { connection_status, combat_data_message, error }
-    }
-
-    pub fn connection_status(&self) -> ConnectionStatus {
-        *self.connection_status.read()
-    }
-
-    pub fn error_message(&self) -> Option<String> {
-        self.error.read().clone()
+    pub fn new(combat_data_message: Signal<Option<Rc<Encounter>>>) -> OverlayPluginContext {
+        OverlayPluginContext { combat_data_message }
     }
 
     pub fn get_is_encounter_active(&self) -> bool {
-        self.combat_data_message.read().as_ref().is_some_and(|message| message.is_active())
-    }
-
-
-    pub fn show_sample_data(&self, message: Encounter) {
-        let mut combat_data_message = self.combat_data_message;
-        combat_data_message.set(Some(Rc::new(message)));
+        self.combat_data_message.read().as_ref().is_some_and(|message| message.is_running())
     }
 }
 
@@ -110,7 +90,7 @@ pub fn ActConnection(children: Element) -> Element {
     let player_name = use_signal(String::new);
     let error = use_signal(|| None);
 
-    use_context_provider(|| OverlayPluginContext::new(connection_status, combat_data_message, error));
+    use_context_provider(|| OverlayPluginContext::new(combat_data_message));
     let sink = MessageSink { actions, local_player_name: tables.local_player_name };
     spawn_connection_task(connection_status, combat_data_message, player_name, error, sink);
 
@@ -208,7 +188,7 @@ fn handle_message(
     // and treats the first inactive message after them as the end of that fight.
     // The first message of all is never skipped: it is what tells the app that ACT is connected (and idle).
     let previous = combat_data_message.peek().clone();
-    let fight_was_running = previous.as_ref().is_some_and(|previous| previous.is_active());
+    let fight_was_running = previous.as_ref().is_some_and(|previous| previous.is_running());
     if previous.is_some() && peek_combat_data(text).is_some_and(|peek| !peek.has_members && !peek.is_active && !fight_was_running) {
         return;
     }

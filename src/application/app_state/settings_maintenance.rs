@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 use super::app_actions::AppActions;
 use super::toast_notifications::show_toast_message;
-use crate::domain::settings::Settings;
+use crate::domain::settings::{Settings, SettingKey};
 use crate::infrastructure::browser_storage::{load_backup, save_backup};
 use crate::application::i18n::message;
 use serde_json::Value;
@@ -17,7 +17,7 @@ pub fn reset_settings_to_defaults(actions: AppActions) {
     }
     let language = actions.settings.settings.peek().language_code();
     let mut fresh = Settings::defaults();
-    fresh.set_option("Lang", Value::String(language));
+    fresh.set(SettingKey::Language, Value::String(language));
     let mut settings = actions.settings.settings;
     settings.set(fresh);
     show_toast_message(actions, "init", 0, 3000);
@@ -25,7 +25,7 @@ pub fn reset_settings_to_defaults(actions: AppActions) {
 
 pub fn back_up_settings(actions: AppActions) {
     let date = js_sys::Date::new_0().to_string().as_string().unwrap_or_default();
-    actions.settings.edit_settings(|settings| settings.set_option("backupDate", Value::String(date)));
+    actions.settings.edit_settings(|settings| settings.set(SettingKey::BackupDate, Value::String(date)));
     save_backup(&actions.settings.settings.peek());
     show_toast_message(actions, "backup", 500, 3000);
 }

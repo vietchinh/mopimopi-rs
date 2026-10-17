@@ -1,12 +1,12 @@
 //! Which participants a table shows, in the order it should show them.
 
-use crate::domain::combat::ParticipantKind;
 use crate::presentation::ui::areas::JobFilter;
 use crate::domain::combat::Participant;
+use std::rc::Rc;
 
 /// The job filter of the table ("tanks in the damage table", "healers in the healing table", ...).
 fn passes_job_filter(filter: &JobFilter, participant: &Participant) -> bool {
-    let is_chocobo = matches!(participant.kind(), ParticipantKind::Chocobo { .. });
+    let is_chocobo = participant.is_chocobo();
     (filter.tanks && participant.is_tank())
         || (filter.healers && participant.is_healer())
         // "DPS" in the original is the default role: everyone who is not a tank, healer, crafter, gatherer or chocobo
@@ -21,14 +21,14 @@ fn passes_job_filter(filter: &JobFilter, participant: &Participant) -> bool {
 /// while sorting, before it filters).
 pub(super) struct RankedParticipant<'a> {
     pub rank: usize,
-    pub participant: &'a Participant,
+    pub participant: &'a Rc<Participant>,
 }
 
 /// Participants this table shows, in the order it should draw them, after the job filter. The damage
 /// table takes ACT's list as `Encounter::sort_by_damage` left it; the healing table sorts
 /// it by healed, best first, rows that tie in arrival order (as the original's stable sort does).
-pub(super) fn visible_participants<'a>(filter: &JobFilter, participants: &'a [Participant], is_healing: bool) -> Vec<RankedParticipant<'a>> {
-    let mut ordered: Vec<&Participant> = participants.iter().collect();
+pub(super) fn visible_participants<'a>(filter: &JobFilter, participants: &'a [Rc<Participant>], is_healing: bool) -> Vec<RankedParticipant<'a>> {
+    let mut ordered: Vec<&Rc<Participant>> = participants.iter().collect();
     if is_healing {
         ordered.sort_by(|a, b| b.healed.partial_cmp(&a.healed).unwrap_or(std::cmp::Ordering::Equal).then(a.arrival_index.cmp(&b.arrival_index)));
     }

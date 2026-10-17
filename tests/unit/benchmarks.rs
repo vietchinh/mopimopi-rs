@@ -52,11 +52,16 @@ fn time<T>(label: &str, mut work: impl FnMut() -> T) -> f64 {
     for _ in 0..20 {
         std::hint::black_box(work());
     }
-    let start = Instant::now();
-    for _ in 0..ITERATIONS {
-        std::hint::black_box(work());
-    }
-    let micros = (start.elapsed() / ITERATIONS).as_secs_f64() * 1e6;
+    // The median of the iterations: a shared machine adds long spikes that a mean would carry along.
+    let mut samples: Vec<f64> = (0..ITERATIONS)
+        .map(|_| {
+            let start = Instant::now();
+            std::hint::black_box(work());
+            start.elapsed().as_secs_f64() * 1e6
+        })
+        .collect();
+    samples.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let micros = samples[samples.len() / 2];
     println!("{label:<46} {micros:>9.1} µs");
     micros
 }
@@ -97,4 +102,26 @@ fn measure_the_unbounded_history() {
         let bytes_per_fight = std::mem::size_of::<crate::domain::combat::Participant>() * (PLAYERS + 4);
         println!("  ~{} KiB of participant data kept alive for {fights} fights (participants only, excluding strings)", bytes_per_fight * fights / 1024);
     }
+}
+
+/// What one redraw asks of each row: the cells of the usual columns, the colour key and the role.
+#[test]
+#[ignore]
+fn measure_one_redraw_of_the_rows() {
+    use crate::domain::formatting::{cell_fragments, CellContext, ColumnKey};
+    use crate::domain::settings::Settings;
+    let text = synthetic_message(true, 1);
+    let encounter = encounter_of(&text);
+    let settings = Settings::defaults();
+    let context = CellContext::new(&settings, "LB".into(), "Future Fade");
+    let columns: Vec<ColumnKey> = ["Name", "Encdps", "Dps", "Enchps", "DamagePct", "Crithit", "MergedDamage", "MergedHealed", "OverHealPct", "Maxhit", "Deaths"]
+        .iter()
+        .map(|key| ColumnKey::from_key(key))
+        .collect();
+    let rows = encounter.rows(PetView::FoldedIntoOwners { local_player_name: Some("Future Fade") });
+    let facts = encounter.facts().clone();
+    time("cells of one redraw (11 columns x all rows)", || {
+        rows.iter().map(|row| columns.iter().map(|column| cell_fragments(column, row, &facts, &context).len()).sum::<usize>()).sum::<usize>()
+    });
+    time("colour key + role of every row", || rows.iter().map(|row| row.class_code().len() + row.role_palette_key().len()).sum::<usize>());
 }

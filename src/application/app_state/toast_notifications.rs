@@ -1,5 +1,6 @@
 //! Short messages that slide in from the right ("Backup completed").
 
+use crate::domain::settings::SettingKey;
 use super::app_actions::AppActions;
 use crate::application::i18n::message;
 use dioxus::prelude::*;
@@ -11,7 +12,7 @@ const SLIDE_OUT_MILLISECONDS: u32 = 200;
 /// Shows the translated message `message_id` after `delay_milliseconds` for
 /// `visible_until_milliseconds` (measured from now). Does nothing when toasts are disabled.
 pub fn show_toast_message(actions: AppActions, message_id: &str, delay_milliseconds: u32, visible_until_milliseconds: u32) {
-    let toasts_enabled = actions.settings.settings.peek().option_enabled("toast");
+    let toasts_enabled = actions.settings.settings.peek().is_on(SettingKey::Toasts);
     if !toasts_enabled {
         return;
     }

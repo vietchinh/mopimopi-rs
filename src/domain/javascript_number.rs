@@ -12,6 +12,28 @@ pub fn round_to_two_decimals(value: f64) -> f64 {
     if !value.is_finite() {
         return value;
     }
+    // Far from a tie and of ordinary size (the usual case: counts, and rates with a few decimals) the answer is the whole number
+    // of hundredths nearest the value, divided by 100. That division is correctly rounded, so it gives the very same double that
+    // parsing the text "12.35" gives, without building the text. The margin is wide next to the error of `value * 100`
+    // (under 2e-7 below 1e7), and anything closer to a tie, or larger, takes the exact route.
+    let magnitude = value.abs();
+    if magnitude < 1e7 {
+        let scaled = magnitude * 100.0;
+        let hundredths = scaled.round();
+        if (scaled - hundredths).abs() < 0.5 - 1e-6 {
+            let rounded = hundredths / 100.0;
+            return if value < 0.0 { -rounded } else { rounded };
+        }
+    }
+    to_fixed(value, 2).parse().unwrap_or(0.0)
+}
+
+/// The exact route `round_to_two_decimals` used before it had a fast path; the tests hold the fast path to it.
+#[cfg(test)]
+pub(crate) fn round_to_two_decimals_by_text(value: f64) -> f64 {
+    if !value.is_finite() {
+        return value;
+    }
     to_fixed(value, 2).parse().unwrap_or(0.0)
 }
 

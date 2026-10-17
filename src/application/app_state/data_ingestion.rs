@@ -2,7 +2,7 @@ use super::app_actions::AppActions;
 use super::contexts::Screen;
 use super::standby_mode::restart_standby_timer;
 
-use crate::domain::combat::{Encounter, EncounterEnded};
+use crate::domain::combat::{Encounter, EncounterEnded, Phase};
 use dioxus::prelude::*;
 use std::rc::Rc;
 
@@ -11,20 +11,20 @@ use std::rc::Rc;
 /// settings screen is open the display is left alone so the user can edit undisturbed.
 pub fn on_combat_data_changed(actions: AppActions, message: Rc<Encounter>) {
     let settings_are_open = *actions.screen.current_screen.peek() == Screen::Settings;
-    let previous_message_was_active = *actions.tables.encounter_was_active.peek();
-    let mut encounter_was_active = actions.tables.encounter_was_active;
+    let previous_phase = *actions.tables.encounter_phase.peek();
+    let mut encounter_phase = actions.tables.encounter_phase;
 
-    if message.is_active() {
+    if message.is_running() {
         if !settings_are_open {
             show_message(actions, message);
         }
-        encounter_was_active.set(true);
-    } else if let Some(EncounterEnded { .. }) = message.ended_since(previous_message_was_active) {
+        encounter_phase.set(Phase::Running);
+    } else if let Some(EncounterEnded { .. }) = message.ended_since(previous_phase) {
         if !settings_are_open {
             record_finished_encounter(actions, &message);
             show_message(actions, message);
         }
-        encounter_was_active.set(false);
+        encounter_phase.set(Phase::Over);
     } else if !*actions.tables.has_received_data.peek() && !settings_are_open {
         // The very first message, and nothing is happening: ACT is connected and idle. The start screen gives way to
         // the (empty) tables, as in the original, and the standby timer starts.

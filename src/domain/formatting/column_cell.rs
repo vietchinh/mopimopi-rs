@@ -5,7 +5,7 @@ use super::number_format::NumberFormat;
 use super::player_name::{display_name, NameOptions};
 use super::strongest_action_text::strongest_action_fragments;
 use super::text_fragment::{join_plain_text, TextFragment};
-use crate::domain::combat::{Amount, Percent};
+use crate::domain::combat::{Amount, Percent, Reported};
 use crate::domain::settings::Settings;
 use crate::domain::combat::{EncounterFacts, Participant};
 
@@ -32,8 +32,8 @@ impl<'a> CellContext<'a> {
 }
 
 /// A percentage, or 0 when the whole is 0 (ACT would show NaN there).
-fn share(part: f64, whole: f64, format: &NumberFormat) -> Vec<TextFragment> {
-    format.percent_fragments(Percent::share(Amount::new(part), Amount::new(whole)).value())
+fn share(part: Amount, whole: Amount, format: &NumberFormat) -> Vec<TextFragment> {
+    format.percent_fragments(Percent::share(part, whole))
 }
 
 /// Fragments of one cell, for a row with no rank (see `cell_fragments_ranked`).
@@ -63,13 +63,13 @@ pub fn cell_fragments_ranked(column: &ColumnKey, participant: &Participant, enco
         // own raw stat block can go a while without a fresh update from ACT, but the encounter's
         // duration keeps ticking every message, so recomputing here is what makes DPS visibly fall
         // as time passes with no new damage, instead of freezing at whatever ACT last reported.
-        ColumnKey::Dps => format.rate_fragments(participant.personal_damage_per_second().value()),
-        ColumnKey::Encdps => format.rate_fragments(encounter.damage_per_second_of(participant).value()),
-        ColumnKey::Enchps => format.rate_fragments(encounter.healing_per_second_of(participant).value()),
-        ColumnKey::MergedLast10DPS => format.rate_fragments(participant.damage_per_second_last_10_seconds),
-        ColumnKey::MergedLast30DPS => format.rate_fragments(participant.damage_per_second_last_30_seconds),
-        ColumnKey::MergedLast60DPS => format.rate_fragments(participant.damage_per_second_last_60_seconds),
-        ColumnKey::MergedLast180DPS => format.rate_fragments(participant.damage_per_second_last_180_seconds),
+        ColumnKey::Dps => format.rate_fragments(participant.personal_damage_per_second()),
+        ColumnKey::Encdps => format.rate_fragments(encounter.damage_per_second_of(participant)),
+        ColumnKey::Enchps => format.rate_fragments(encounter.healing_per_second_of(participant)),
+        ColumnKey::MergedLast10DPS => format.reported_rate_fragments(participant.damage_per_second_last_10_seconds),
+        ColumnKey::MergedLast30DPS => format.reported_rate_fragments(participant.damage_per_second_last_30_seconds),
+        ColumnKey::MergedLast60DPS => format.reported_rate_fragments(participant.damage_per_second_last_60_seconds),
+        ColumnKey::MergedLast180DPS => format.reported_rate_fragments(participant.damage_per_second_last_180_seconds),
 
         ColumnKey::MergedDamage => format.amount_fragments(participant.damage),
         ColumnKey::MergedSwings => format.amount_fragments(participant.swings),
@@ -97,22 +97,22 @@ pub fn cell_fragments_ranked(column: &ColumnKey, participant: &Participant, enco
         ColumnKey::Maxhit => strongest_action_fragments(&participant.strongest_hit_name, participant.strongest_hit_amount, context.settings, format),
         ColumnKey::Maxheal => strongest_action_fragments(&participant.strongest_heal_name, participant.strongest_heal_amount, context.settings, format),
 
-        ColumnKey::DamagePct => share(participant.damage, encounter.total_damage, format),
-        ColumnKey::HealedPct => share(participant.healed, encounter.total_healed, format),
-        ColumnKey::OverHealPct => format.percent_fragments(participant.healing().overheal_share().value()),
+        ColumnKey::DamagePct => share(participant.damage, Amount::new(encounter.total_damage), format),
+        ColumnKey::HealedPct => share(participant.healed, Amount::new(encounter.total_healed), format),
+        ColumnKey::OverHealPct => format.percent_fragments(participant.healing().overheal_share()),
         ColumnKey::DirectHitPct => share(participant.direct_hits, participant.hits, format),
         ColumnKey::CrithitPct => share(participant.critical_hits, participant.hits, format),
         ColumnKey::CritDirectHitPct => share(participant.critical_direct_hits, participant.hits, format),
-        ColumnKey::CrithealPct => format.percent_fragments(participant.critical_heal_share().value()),
+        ColumnKey::CrithealPct => format.percent_fragments(participant.critical_heal_share()),
         ColumnKey::Tohit => share(participant.hits, participant.swings, format),
 
-        ColumnKey::Class | ColumnKey::Unknown(_) => format.percent_fragments(0.0),
+        ColumnKey::Class | ColumnKey::Unknown(_) => format.percent_fragments(Percent::default()),
     }
 }
 
 /// Parry and block are shown without decimals whatever the percentage setting says.
-fn whole_percent(value: f64, format: &NumberFormat) -> Vec<TextFragment> {
-    vec![TextFragment::Plain(format.format_number(value, 1.0, 0)), TextFragment::Dimmed("%".into())]
+fn whole_percent(percent: Reported, format: &NumberFormat) -> Vec<TextFragment> {
+    vec![TextFragment::Plain(format.format_number(percent.value(), 1.0, 0)), TextFragment::Dimmed("%".into())]
 }
 
 /// Plain text of a cell (used where dimming does not matter, e.g. the summary line).
@@ -123,11 +123,12 @@ pub fn cell_plain_text(column: &ColumnKey, participant: &Participant, encounter:
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::combat::Reported;
     use crate::domain::combat::Stats;
     use crate::domain::settings::Settings;
 
     fn participant(damage: f64, hits: f64, swings: f64) -> Participant {
-        Participant::player(Stats { damage, hits, swings, damage_per_second: damage, ..Default::default() })
+        Participant::player(Stats { damage: Amount::new(damage), hits: Amount::new(hits), swings: Amount::new(swings), damage_per_second: Reported::new(damage), ..Default::default() })
     }
 
     #[test]
@@ -146,7 +147,7 @@ mod tests {
     fn dps_uses_personal_duration_encdps_uses_the_encounters() {
         let settings = Settings::defaults();
         let context = CellContext::new(&settings, "Limit Break".to_string(), "");
-        let participant = Participant::player(Stats { damage: 1000.0, duration_seconds: 10.0, ..Default::default() });
+        let participant = Participant::player(Stats { damage: Amount::new(1000.0), duration_seconds: 10.0, ..Default::default() });
         let encounter = EncounterFacts { duration_seconds: 20.0, ..Default::default() };
         assert_eq!(cell_plain_text(&ColumnKey::Dps, &participant, &encounter, &context), "100"); // 1000 / 10 (personal)
         assert_eq!(cell_plain_text(&ColumnKey::Encdps, &participant, &encounter, &context), "50"); // 1000 / 20 (encounter)
@@ -156,7 +157,7 @@ mod tests {
     fn a_personal_duration_of_zero_divides_by_one_instead_of_by_zero() {
         let settings = Settings::defaults();
         let context = CellContext::new(&settings, "Limit Break".to_string(), "");
-        let participant = Participant::player(Stats { damage: 1234.0, duration_seconds: 0.0, ..Default::default() });
+        let participant = Participant::player(Stats { damage: Amount::new(1234.0), duration_seconds: 0.0, ..Default::default() });
         let encounter = EncounterFacts::default();
         assert_eq!(cell_plain_text(&ColumnKey::Dps, &participant, &encounter, &context), "1,234");
     }
@@ -171,7 +172,7 @@ mod tests {
         let context = CellContext::new(&settings, "Limit Break".to_string(), "");
         // Same participant, same damage, only the encounter's duration has moved on: this is exactly
         // what "still in combat but not attacking" looks like across two messages.
-        let participant = Participant::player(Stats { damage: 1000.0, ..Default::default() });
+        let participant = Participant::player(Stats { damage: Amount::new(1000.0), ..Default::default() });
         let earlier = EncounterFacts { duration_seconds: 10.0, ..Default::default() };
         let later = EncounterFacts { duration_seconds: 20.0, ..Default::default() };
         assert_eq!(cell_plain_text(&ColumnKey::Encdps, &participant, &earlier, &context), "100");

@@ -7,8 +7,9 @@ use crate::domain::combat::{EncounterFacts, Participant};
 use crate::presentation::ui::shared::row_identity::row_element_id;
 use crate::presentation::ui::shared::text_display::{job_icon_view, text_fragments_view};
 use dioxus::prelude::*;
+use std::rc::Rc;
 
-pub(super) fn raid_grid(environment: &SharedEnvironment, participants: &[Participant], encounter: &EncounterFacts, is_healing: bool) -> Element {
+pub(super) fn raid_grid(environment: &SharedEnvironment, participants: &[Rc<Participant>], encounter: &Rc<EncounterFacts>, is_healing: bool) -> Element {
     let shown = visible_participants(&environment.table.kind(is_healing).filter, participants, is_healing);
     let cards_per_row = environment.raid.cards_in_a_row();
     let label = super::table_label(is_healing);
@@ -21,8 +22,8 @@ pub(super) fn raid_grid(environment: &SharedEnvironment, participants: &[Partici
                 RaidCard {
                     key: "{row_element_id(&ranked.participant.name)}",
                     environment: environment.clone(),
-                    participant: ranked.participant.clone(),
-                    encounter: encounter.clone(),
+                    participant: Rc::clone(ranked.participant),
+                    encounter: Rc::clone(encounter),
                     rank: ranked.rank,
                     is_healing,
                 }
@@ -44,15 +45,15 @@ pub(super) fn raid_grid(environment: &SharedEnvironment, participants: &[Partici
 
 /// One card of the raid grid. A component, so a card whose data and settings did not change is not drawn again.
 #[component]
-fn RaidCard(environment: SharedEnvironment, participant: Participant, encounter: EncounterFacts, rank: usize, is_healing: bool) -> Element {
+fn RaidCard(environment: SharedEnvironment, participant: Rc<Participant>, encounter: Rc<EncounterFacts>, rank: usize, is_healing: bool) -> Element {
     let value_column = if is_healing { ColumnKey::Enchps } else { ColumnKey::Encdps };
     let cell_context = environment.cell_context();
     let row_id = row_element_id(&participant.name);
-    let color_strip = environment.bar_color(&participant, &row_id);
+    let color_strip = environment.bar_color(&participant);
     let icon = job_icon_view(&environment.table.icon_set, &participant, false, environment.npc_look());
     let name = text_fragments_view(cell_fragments_ranked(&ColumnKey::Name, &participant, &encounter, &cell_context, rank), false);
     let value = text_fragments_view(cell_fragments(&value_column, &participant, &encounter, &cell_context), false);
-    let is_own = row_id == "YOU";
+    let is_own = participant.is_you();
     let card_style = if is_own { "raid-cell-own" } else { "raid-cell-other" };
     rsx! {
         table {

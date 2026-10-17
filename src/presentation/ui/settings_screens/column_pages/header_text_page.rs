@@ -39,7 +39,7 @@ pub(super) fn header_text_page(page_context: &RowContext) -> Element {
     });
     let boxes = columns.into_iter().map(|col| {
         let label = translate(&d[col.as_str()]["tt"]);
-        let current = page_context.settings.column_text(&col, "tt");
+        let current = page_context.settings.column_title(&col);
         let box_id = format!("headerText_{col}");
         let on_enter = {
             let box_id = box_id.clone();

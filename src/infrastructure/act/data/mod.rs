@@ -10,6 +10,7 @@
 //! * `combatant_record`      – one entry of the `Combatant` object: player, pet, chocobo or LB
 //! * `combat_data_message`   – the whole `CombatData` payload, and folding pets into owners
 //! * `combat_data_peek`      – is it active / empty? read from the raw text, without parsing
+//! * `sorting`              – places each row among the domain's kinds of Participant (ACT's conventions end here)
 //! * `overlay_message`       – `OverlayMessage`: every `OverlayPlugin` message, one enum
 
 mod combat_data_message;
@@ -18,6 +19,7 @@ mod combatant_record;
 mod encounter_record;
 mod lenient_values;
 mod overlay_message;
+mod sorting;
 
 pub use combat_data_message::encounter_from_json;
 pub use combat_data_peek::peek_combat_data;

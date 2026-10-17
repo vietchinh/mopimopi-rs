@@ -2,7 +2,7 @@
 
 use crate::domain::formatting::TextFragment;
 use dioxus::prelude::*;
-use crate::domain::combat::ParticipantKind;
+use crate::domain::combat::CompanionKind;
 use crate::domain::combat::Participant;
 
 /// Fragments as DOM: plain text, and dimmed text in a `span.ex`. `sized_by_table` says whether the
@@ -42,12 +42,12 @@ fn icon_code(job_code: &str) -> &str {
 /// instead, so they pass `false`. `aspect-ratio: auto 1` reserves a square until the image loads (icons are square), so a
 /// newly added row does not grow, and push the rows below it, when its icon arrives.
 pub fn job_icon_view(icon_set: &str, participant: &Participant, sized_by_table: bool, npc_look: bool) -> Element {
-    let job_code = match participant.kind() {
-        ParticipantKind::LimitBreak if npc_look && participant.is_npc() => NPC_ICON_CODE.to_string(),
-        ParticipantKind::LimitBreak => "LMB".to_string(),
-        ParticipantKind::Pet { .. } => "AVA".to_string(),
-        ParticipantKind::Chocobo { .. } => "CBO".to_string(),
-        _ => participant.job.to_uppercase(),
+    let job_code = match participant.companion_of() {
+        _ if npc_look && participant.is_npc() => NPC_ICON_CODE.to_string(),
+        _ if participant.looks_like_limit_break() => "LMB".to_string(),
+        Some((_, CompanionKind::Pet(_))) => "AVA".to_string(),
+        Some((_, CompanionKind::Chocobo)) => "CBO".to_string(),
+        None => participant.job.to_uppercase(),
     };
 
     let source = format!("images/icon/{icon_set}/{}.png", icon_code(&job_code));

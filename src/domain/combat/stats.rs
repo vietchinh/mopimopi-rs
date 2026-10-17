@@ -4,8 +4,8 @@
 //!
 //! (DDD: the wire type stays at the edge, an anticorruption layer; the domain owns its own model.)
 
-use super::encounter::{Amount, Job, Percent, Rate};
-use super::{Healing, ParticipantIdentity};
+use super::encounter::{Amount, Job, Percent, Rate, Reported};
+use super::Healing;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Stats {
@@ -18,54 +18,54 @@ pub struct Stats {
     pub duration_text: String,
     pub duration_seconds: f64,
 
-    pub damage: f64,
-    pub damage_per_second: f64,
-    pub hits: f64,
-    pub misses: f64,
-    pub swings: f64,
-    pub critical_hits: f64,
-    pub direct_hits: f64,
-    pub critical_direct_hits: f64,
-    pub damage_taken: f64,
+    pub damage: Amount,
+    pub damage_per_second: Reported,
+    pub hits: Amount,
+    pub misses: Amount,
+    pub swings: Amount,
+    pub critical_hits: Amount,
+    pub direct_hits: Amount,
+    pub critical_direct_hits: Amount,
+    pub damage_taken: Amount,
 
-    pub heals: f64,
+    pub heals: Amount,
     /// Everything: HP restored + overheal + shields. See `healing()`.
-    pub healed: f64,
-    pub heal_per_second: f64,
-    pub cures: f64,
-    pub critical_heals: f64,
-    pub heals_taken: f64,
-    pub damage_shield: f64,
-    pub over_heal: f64,
-    pub absorb_heal: f64,
+    pub healed: Amount,
+    pub heal_per_second: Reported,
+    pub cures: Amount,
+    pub critical_heals: Amount,
+    pub heals_taken: Amount,
+    pub damage_shield: Amount,
+    pub over_heal: Amount,
+    pub absorb_heal: Amount,
 
-    pub damage_per_second_last_10_seconds: f64,
-    pub damage_per_second_last_30_seconds: f64,
-    pub damage_per_second_last_60_seconds: f64,
-    pub damage_per_second_last_180_seconds: f64,
+    pub damage_per_second_last_10_seconds: Reported,
+    pub damage_per_second_last_30_seconds: Reported,
+    pub damage_per_second_last_60_seconds: Reported,
+    pub damage_per_second_last_180_seconds: Reported,
 
     /// The action of the strongest hit ("Shieldsplitter"); the amount is
     /// `strongest_hit_amount`. Empty when there was none. (ACT sends "Shieldsplitter-1819".)
     pub strongest_hit_name: String,
-    pub strongest_hit_amount: f64,
+    pub strongest_hit_amount: Amount,
     /// The action of the strongest heal ("Divine Veil (*)"); the amount is
     /// `strongest_heal_amount`. Empty when there was none.
     pub strongest_heal_name: String,
-    pub strongest_heal_amount: f64,
+    pub strongest_heal_amount: Amount,
 
 
-    pub avoided_hits: f64,
-    pub mana_restored: f64,
-    pub parry_percent: f64,
-    pub block_percent: f64,
-    pub deaths: f64,
+    pub avoided_hits: Amount,
+    pub mana_restored: Amount,
+    pub parry_percent: Reported,
+    pub block_percent: Reported,
+    pub deaths: Amount,
 
     /// After pets are merged: the part of `damage` that came from pets. 0 otherwise.
     /// For drawing the pet's segment of the DPS bar.
-    pub pet_damage: f64,
+    pub pet_damage: Amount,
     /// After pets are merged: the part of the effective healing that came from pets.
     /// For drawing the pet's segment of the HPS bar.
-    pub pet_effective_healed: f64,
+    pub pet_effective_healed: Amount,
 }
 
 impl Stats {
@@ -73,12 +73,7 @@ impl Stats {
     /// 1 second, as in the original.
     pub fn personal_damage_per_second(&self) -> Rate {
         let seconds = if self.duration_seconds == 0.0 { 1.0 } else { self.duration_seconds };
-        Rate::per_second(Amount::new(self.damage), seconds)
-    }
-
-    /// The name and job the domain rules work with.
-    pub fn identity(&self) -> ParticipantIdentity<'_> {
-        ParticipantIdentity { name: &self.name, job: self.job.as_str() }
+        Rate::per_second(self.damage, seconds)
     }
 
     /// Healing split into what was restored, overhealed and shielded.
@@ -88,7 +83,7 @@ impl Stats {
 
     /// ACT's `critheal%`, rounded like the original; 0 when there were no heals.
     pub fn critical_heal_share(&self) -> Percent {
-        Percent::share(Amount::new(self.critical_heals), Amount::new(self.heals))
+        Percent::share(self.critical_heals, self.heals)
     }
 
     pub fn absorb_pet(&mut self, pet: &Stats) {

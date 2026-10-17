@@ -1,6 +1,6 @@
 //! The tables section: the data they draw and what decides whether they are shown.
 
-use crate::domain::combat::Encounter;
+use crate::domain::combat::{Encounter, Phase};
 use dioxus::prelude::*;
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -15,7 +15,7 @@ pub struct TablesContext {
     /// False until the first data arrives (the start screen is shown until then).
     pub has_received_data: Signal<bool>,
     /// True while the previous message was from a running fight (used to detect fight ends).
-    pub encounter_was_active: Signal<bool>,
+    pub encounter_phase: Signal<Phase>,
     /// Rows whose name the user blurred by clicking the job icon.
     pub blurred_player_rows: Signal<HashSet<String>>,
     /// Standby mode: tables hidden after inactivity.
@@ -29,7 +29,7 @@ impl TablesContext {
             displayed_combat_data: use_signal(|| None),
             local_player_name: use_signal(String::new),
             has_received_data: use_signal(|| false),
-            encounter_was_active: use_signal(|| false),
+            encounter_phase: use_signal(Phase::default),
             blurred_player_rows: use_signal(HashSet::<String>::new),
             is_standby_hidden: use_signal(|| false),
         };

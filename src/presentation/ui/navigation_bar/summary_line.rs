@@ -2,7 +2,7 @@
 
 use crate::application::app_state::{SettingsContext, TablesContext};
 use crate::domain::formatting::{cell_plain_text, CellContext, ColumnKey, NumberFormat};
-use crate::domain::settings::Settings;
+use crate::domain::settings::{Settings, SettingKey};
 use crate::presentation::ui::areas::SummaryParts;
 use crate::application::i18n::{dictionary_title, translate};
 use crate::domain::formatting::LIMIT_BREAK_JOB_CODE;
@@ -65,8 +65,8 @@ pub(super) fn summary_line(
     let toggle_strongest_action_kind = move |_| {
         if !is_settings_preview {
             settings_context.edit_settings(|settings| {
-                let was_showing_heal = settings.option_enabled("swap");
-                settings.set_option_enabled("swap", !was_showing_heal);
+                let was_showing_heal = settings.is_on(SettingKey::SwapTables);
+                settings.set_on(SettingKey::SwapTables, !was_showing_heal);
             });
         }
     };

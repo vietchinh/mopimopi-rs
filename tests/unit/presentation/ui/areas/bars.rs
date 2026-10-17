@@ -4,6 +4,7 @@
 //! (tests/fixtures/settings/bars/*.txt): a grid of palettes, jobs, roles and rows, and of fade directions.
 
 use super::*;
+use crate::domain::combat::Ownership;
 use crate::domain::settings::Settings;
 use serde_json::json;
 
@@ -30,14 +31,15 @@ fn palette_variants() -> Vec<(String, Settings)> {
 
 const COLOR_KEYS: [&str; 12] = ["WAR", "WHM", "BLM", "SCH", "DRK", "LMB", "CBO", "pet", "ds", "oh", "Other", "nothing"];
 const ROLE_KEYS: [&str; 7] = ["", "Tanker", "Healer", "Crafter", "Gathering", "DPS", "CBO"];
-const ROW_IDS: [&str; 5] = ["YOU", "YOU_pet", "Other", "Aw_aern", "YOUR"];
+const ROW_IDS: [(&str, Ownership); 4] =
+    [("YOU", Ownership::You), ("YOU_pet", Ownership::YourCompanion), ("Other", Ownership::Others), ("Aw_aern", Ownership::Others)];
 
 fn grid(bars: &BarSettings) -> String {
     let mut lines = String::new();
     for color_key in COLOR_KEYS {
         for role_key in ROLE_KEYS {
-            for row_id in ROW_IDS {
-                lines.push_str(&format!("{color_key}|{role_key}|{row_id} {}\n", bars.palette.color_of(color_key, role_key, row_id)));
+            for (row_id, ownership) in ROW_IDS {
+                lines.push_str(&format!("{color_key}|{role_key}|{row_id} {}\n", bars.palette.color_of(color_key, role_key, ownership)));
             }
         }
     }

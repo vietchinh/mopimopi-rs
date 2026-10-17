@@ -2,7 +2,8 @@
 
 use super::number_format::NumberFormat;
 use super::text_fragment::TextFragment;
-use crate::domain::settings::Settings;
+use crate::domain::combat::Amount;
+use crate::domain::settings::{Settings, SettingKey};
 
 /// Where the action name goes relative to the amount ("`MaxHit`" settings).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -25,11 +26,11 @@ impl ActionLayout {
 }
 
 // /// Fragments of the cell for `action`.
-pub fn strongest_action_fragments(action_name: &str, action_amount: f64,  settings: &Settings, number_format: &NumberFormat) -> Vec<TextFragment> {
+pub fn strongest_action_fragments(action_name: &str, action_amount: Amount,  settings: &Settings, number_format: &NumberFormat) -> Vec<TextFragment> {
     let action_name = shown_action_name(action_name, settings);
     let amount = number_format.strongest_action_amount_fragments(action_amount);
-    let separator = settings.option_text("mhh_unit");
-    match ActionLayout::from_option_number(settings.option_number("mhh") as i32) {
+    let separator = settings.text(SettingKey::StrongestActionSeparator);
+    match ActionLayout::from_option_number(settings.number(SettingKey::StrongestActionLayout) as i32) {
         ActionLayout::NameThenAmount => {
             let mut fragments = vec![TextFragment::Dimmed(format!("{action_name} {separator} "))];
             fragments.extend(amount);
@@ -47,7 +48,7 @@ pub fn strongest_action_fragments(action_name: &str, action_amount: f64,  settin
 
 /// The user's abbreviation for the action, when abbreviations are on and one is saved.
 fn shown_action_name(action_name: &str, settings: &Settings) -> String {
-    if !settings.option_enabled("abb") {
+    if !settings.is_on(SettingKey::AbbreviateActions) {
         return action_name.to_string();
     }
     settings

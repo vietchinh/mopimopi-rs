@@ -45,5 +45,35 @@ fn a_real_capture_parses() {
     let message = OverlayMessage::parse(text).unwrap();
     let combat_data = message.combat_data().expect("the capture is a CombatData message");
     assert!(!combat_data.combatants.is_empty());
-    assert!(crate::domain::combat::Encounter::from(combat_data.clone()).you().is_some());
+    assert!(crate::domain::combat::Encounter::from(combat_data.clone()).rows(crate::domain::combat::PetView::Separate).iter().any(|row| row.is_you()));
+}
+
+#[test]
+fn the_type_may_come_anywhere_in_the_message() {
+    let combat = r#"{"Encounter":{"title":"Boss"},"Combatant":{},"isActive":"true","type":"CombatData"}"#;
+    let message = OverlayMessage::parse(combat).unwrap();
+    assert_eq!(message.combat_data().unwrap().encounter.title, "Boss");
+    assert!(message.combat_data().unwrap().is_encounter_active);
+    let player = OverlayMessage::parse(r#"{"charID":7,"type":"ChangePrimaryPlayer","charName":"Future Fade"}"#).unwrap();
+    assert_eq!(player.change_primary_player().unwrap().char_name, "Future Fade");
+    assert_eq!(OverlayMessage::parse(r#"{"zoneID":132,"type":"ChangeZone"}"#).unwrap().kind(), MessageType::NotSupported);
+}
+
+#[test]
+fn a_message_without_a_type_is_an_error_and_so_is_trailing_text() {
+    assert!(OverlayMessage::parse(r#"{"Combatant":{},"isActive":"true"}"#).is_err());
+    assert!(OverlayMessage::parse("{}").is_err());
+    assert!(OverlayMessage::parse(r#"{"type":"ChangeZone"} x"#).is_err());
+    assert!(OverlayMessage::parse(r#"{"type":"CombatData","Combatant":{}} x"#).is_err());
+}
+
+#[test]
+fn reading_in_place_gives_the_same_message_as_reading_after_a_buffer() {
+    // The capture with its "type" moved to the end takes the slow route; both must give the same message.
+    let text = include_str!("samples/beastmaster.json");
+    let rest = text.trim().strip_prefix(r#"{"type":"CombatData","#).unwrap().strip_suffix('}').unwrap();
+    let moved = format!("{{{rest},\"type\":\"CombatData\"}}");
+    let fast = OverlayMessage::parse(text).unwrap();
+    let slow = OverlayMessage::parse(&moved).unwrap();
+    assert_eq!(fast, slow);
 }

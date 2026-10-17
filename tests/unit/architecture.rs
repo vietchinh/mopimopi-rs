@@ -112,3 +112,49 @@ fn acts_wire_types_stay_in_the_act_edge() {
     }
     assert!(offenders.is_empty(), "ACT's wire types leak out of the edge: {offenders:?}");
 }
+
+fn sources_outside(prefixes: &[&str]) -> Vec<(String, String)> {
+    let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut files = Vec::new();
+    rust_files(&src, &mut files);
+    files
+        .into_iter()
+        .filter_map(|file| {
+            let relative = file.strip_prefix(&src).unwrap().to_string_lossy().replace('\\', "/");
+            (!prefixes.iter().any(|prefix| relative.starts_with(prefix))).then(|| (relative, fs::read_to_string(&file).unwrap()))
+        })
+        .collect()
+}
+
+/// ACT's conventions (job "0" is a chocobo, a blank job a pet, "Name (Owner)") are translated at the edge. The domain
+/// receives placed participants and never matches on ACT's job text or name shapes.
+#[test]
+fn acts_conventions_stay_in_the_act_edge() {
+    let mut offenders = Vec::new();
+    for (relative, source) in sources_outside(&["infrastructure/act/"]) {
+        for word in ["split_owner", "\"Limit Break\"", "job == \"0\"", "ParticipantKind", "Participant::sort"] {
+            // production code only: the tests of a file come after its `#[cfg(test)]`
+            let production = source.split("#[cfg(test)]").next().unwrap();
+            if production.contains(word) {
+                offenders.push(format!("{relative}: {word}"));
+            }
+        }
+    }
+    assert!(offenders.is_empty(), "ACT's conventions leak out of the edge: {offenders:?}");
+}
+
+/// A setting the program knows by meaning is read through `SettingKey`; text keys are for the pages generated from the schema.
+#[test]
+fn known_settings_are_not_named_by_text_literals() {
+    let readers = ["option_enabled(\"", "option_number(\"", "option_text(\"", "option_value(\"", "slider_value(\"", "set_option(\"", "set_option_enabled(\"", "set_slider_value(\""];
+    let mut offenders = Vec::new();
+    for (relative, source) in sources_outside(&["domain/settings/"]) {
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        for reader in readers {
+            if production.contains(reader) {
+                offenders.push(format!("{relative}: {reader}"));
+            }
+        }
+    }
+    assert!(offenders.is_empty(), "use SettingKey instead of a text key: {offenders:?}");
+}

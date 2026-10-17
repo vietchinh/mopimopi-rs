@@ -1,7 +1,10 @@
 //! Helpers for the graph bars. Their colours and fade are `areas::BarSettings`.
 
+use crate::domain::combat::Amount;
+
 /// `part` as a whole percentage of `whole`, limited to 0-100.
-pub fn percent_of_whole(part: f64, whole: f64) -> i32 {
+pub fn percent_of_whole(part: Amount, whole: Amount) -> i32 {
+    let (part, whole) = (part.value(), whole.value());
     if whole <= 0.0 {
         return 0;
     }

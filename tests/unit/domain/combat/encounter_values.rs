@@ -33,6 +33,6 @@ fn percent_of_a_zero_whole_follows_javascript() {
 
 #[test]
 fn job_keeps_the_text_it_was_given() {
-    assert_eq!(Job::new("Limit Break").as_str(), "Limit Break");
-    assert_eq!(Job::new("").to_string(), "");
+    assert_eq!(Job::from("Limit Break".to_string()).as_str(), "Limit Break");
+    assert_eq!(Job::from(String::new()).to_string(), "");
 }

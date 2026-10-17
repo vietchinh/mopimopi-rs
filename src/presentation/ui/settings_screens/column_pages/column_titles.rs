@@ -12,5 +12,5 @@ pub(super) fn active_columns(page_context: &RowContext) -> Vec<String> {
 /// "Job  ❙ description of the column" – title used on all four column pages.
 pub(super) fn column_title(page_context: &RowContext, col: &str, suffix: &str) -> String {
     let explanation = translate(&translations().dictionary[col]["tt"]);
-    format!("{}<font class=\"ex\">　❙ {explanation}{suffix}</font>", page_context.settings.column_text(col, "tt"))
+    format!("{}<font class=\"ex\">　❙ {explanation}{suffix}</font>", page_context.settings.column_title(col))
 }

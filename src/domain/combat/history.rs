@@ -54,8 +54,8 @@ impl HistoryEntry {
     }
 
     /// The local player's row as the pet view shows it (their pets added when folded).
-    fn your_row(&self, pet_view: PetView<'_>) -> Option<Participant> {
-        self.encounter.rows(pet_view).into_iter().find(|row| matches!(row, Participant::You(_)))
+    fn your_row(&self, pet_view: PetView<'_>) -> Option<Rc<Participant>> {
+        self.encounter.rows(pet_view).into_iter().find(|row| matches!(row.as_ref(), Participant::You(_)))
     }
 
     pub fn your_dps(&self, pet_view: PetView<'_>) -> Option<f64> {

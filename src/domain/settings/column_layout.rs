@@ -9,6 +9,15 @@ impl Settings {
         self.file.columns.iter().filter(|(_, definition)| definition.is_on("DPS") || definition.is_on("HPS")).map(|(name, _)| name.clone()).collect()
     }
 
+    /// The heading of a column, as the user titled it.
+    pub fn column_title(&self, column: &str) -> String {
+        self.column_text(column, "tt")
+    }
+
+    pub fn set_column_title(&mut self, column: &str, title: &str) {
+        self.set_column_field(column, "tt", json!(title));
+    }
+
     /// A field of a column's definition as text (title, width, padding, alignment, ...); empty when there is none.
     pub fn column_text(&self, column: &str, field: &str) -> String {
         self.file.columns.get(column).map(|definition| definition.text(field)).unwrap_or_default()

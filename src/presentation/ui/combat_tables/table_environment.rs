@@ -61,10 +61,10 @@ impl TableEnvironment {
     }
 
     /// The main bar colour of a row: the original's palette, except an NPC while the port-only NPC look is on.
-    pub fn bar_color(&self, participant: &Participant, row_id: &str) -> String {
+    pub fn bar_color(&self, participant: &Participant) -> String {
         match &self.npc_color {
             Some(color) if participant.is_npc() => format!("#{color}"),
-            _ => self.bars.palette.participant_color(participant, row_id),
+            _ => self.bars.palette.participant_color(participant),
         }
     }
 

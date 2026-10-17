@@ -1,0 +1,77 @@
+pre|1|1 interpret: parse the wire message and build the model (pets separate, sorted)|375.0|833|493911
+pre|1|2b interpret with pets folded into owners (fold + sort inside)|432.9|845|514323
+pre|1|3 cells of one redraw (11 columns x all rows)|60.7|1848|24024
+pre|1|4 whole message: 2b + 3|553.3|2698|538353
+pre|1|5 clone of the model (what an Rc avoids)|5.3|100|9891
+post2|1|1 interpret: parse the wire message and build the model|236.7|898|502821
+post2|1|2a rows, pets separate|0.1|1|224
+post2|1|2b rows, pets folded into owners|2.5|32|4062
+post2|1|3 cells of one redraw (11 columns x all rows)|60.9|1848|24024
+post2|1|4 whole message: 1 + 2b + 3|318.6|2783|530913
+post2|1|5 clone of the model (what an Rc avoids)|0.1|1|224
+pre|2|1 interpret: parse the wire message and build the model (pets separate, sorted)|486.0|833|493911
+pre|2|2b interpret with pets folded into owners (fold + sort inside)|232.3|845|514323
+pre|2|3 cells of one redraw (11 columns x all rows)|61.1|1848|24024
+pre|2|4 whole message: 2b + 3|300.6|2698|538353
+pre|2|5 clone of the model (what an Rc avoids)|5.3|100|9891
+post2|2|1 interpret: parse the wire message and build the model|238.7|898|502821
+post2|2|2a rows, pets separate|0.1|1|224
+post2|2|2b rows, pets folded into owners|2.5|32|4062
+post2|2|3 cells of one redraw (11 columns x all rows)|60.8|1848|24024
+post2|2|4 whole message: 1 + 2b + 3|323.6|2783|530913
+post2|2|5 clone of the model (what an Rc avoids)|0.1|1|224
+pre|3|1 interpret: parse the wire message and build the model (pets separate, sorted)|424.6|833|493911
+pre|3|2b interpret with pets folded into owners (fold + sort inside)|233.2|845|514323
+pre|3|3 cells of one redraw (11 columns x all rows)|60.8|1848|24024
+pre|3|4 whole message: 2b + 3|310.8|2698|538353
+pre|3|5 clone of the model (what an Rc avoids)|5.3|100|9891
+post2|3|1 interpret: parse the wire message and build the model|264.9|898|502821
+post2|3|2a rows, pets separate|0.1|1|224
+post2|3|2b rows, pets folded into owners|2.5|32|4062
+post2|3|3 cells of one redraw (11 columns x all rows)|60.8|1848|24024
+post2|3|4 whole message: 1 + 2b + 3|309.4|2783|530913
+post2|3|5 clone of the model (what an Rc avoids)|0.1|1|224
+pre|4|1 interpret: parse the wire message and build the model (pets separate, sorted)|230.7|833|493911
+pre|4|2b interpret with pets folded into owners (fold + sort inside)|232.2|845|514323
+pre|4|3 cells of one redraw (11 columns x all rows)|61.1|1848|24024
+pre|4|4 whole message: 2b + 3|298.8|2698|538353
+pre|4|5 clone of the model (what an Rc avoids)|5.3|100|9891
+post2|4|1 interpret: parse the wire message and build the model|237.9|898|502821
+post2|4|2a rows, pets separate|0.1|1|224
+post2|4|2b rows, pets folded into owners|2.5|32|4062
+post2|4|3 cells of one redraw (11 columns x all rows)|60.9|1848|24024
+post2|4|4 whole message: 1 + 2b + 3|316.5|2783|530913
+post2|4|5 clone of the model (what an Rc avoids)|0.1|1|224
+pre|5|1 interpret: parse the wire message and build the model (pets separate, sorted)|229.7|833|493911
+pre|5|2b interpret with pets folded into owners (fold + sort inside)|231.9|845|514323
+pre|5|3 cells of one redraw (11 columns x all rows)|61.1|1848|24024
+pre|5|4 whole message: 2b + 3|301.5|2698|538353
+pre|5|5 clone of the model (what an Rc avoids)|5.1|100|9891
+post2|5|1 interpret: parse the wire message and build the model|238.6|898|502821
+post2|5|2a rows, pets separate|0.1|1|224
+post2|5|2b rows, pets folded into owners|2.5|32|4062
+post2|5|3 cells of one redraw (11 columns x all rows)|60.8|1848|24024
+post2|5|4 whole message: 1 + 2b + 3|309.1|2783|530913
+post2|5|5 clone of the model (what an Rc avoids)|0.1|1|224
+pre|6|1 interpret: parse the wire message and build the model (pets separate, sorted)|389.9|833|493911
+pre|6|2b interpret with pets folded into owners (fold + sort inside)|429.4|845|514323
+pre|6|3 cells of one redraw (11 columns x all rows)|131.8|1848|24024
+pre|6|4 whole message: 2b + 3|319.9|2698|538353
+pre|6|5 clone of the model (what an Rc avoids)|5.3|100|9891
+post2|6|1 interpret: parse the wire message and build the model|233.4|898|502821
+post2|6|2a rows, pets separate|0.1|1|224
+post2|6|2b rows, pets folded into owners|2.6|32|4062
+post2|6|3 cells of one redraw (11 columns x all rows)|60.9|1848|24024
+post2|6|4 whole message: 1 + 2b + 3|302.8|2783|530913
+post2|6|5 clone of the model (what an Rc avoids)|0.1|1|224
+pre|7|1 interpret: parse the wire message and build the model (pets separate, sorted)|262.3|833|493911
+pre|7|2b interpret with pets folded into owners (fold + sort inside)|260.8|845|514323
+pre|7|3 cells of one redraw (11 columns x all rows)|61.2|1848|24024
+pre|7|4 whole message: 2b + 3|310.4|2698|538353
+pre|7|5 clone of the model (what an Rc avoids)|5.3|100|9891
+post2|7|1 interpret: parse the wire message and build the model|243.2|898|502821
+post2|7|2a rows, pets separate|0.1|1|224
+post2|7|2b rows, pets folded into owners|2.5|32|4062
+post2|7|3 cells of one redraw (11 columns x all rows)|61.3|1848|24024
+post2|7|4 whole message: 1 + 2b + 3|321.7|2783|530913
+post2|7|5 clone of the model (what an Rc avoids)|0.1|1|224

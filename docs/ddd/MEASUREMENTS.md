@@ -69,3 +69,27 @@ Reading:
 * Wasm size: 2.30 MB before, 2.35 MB after (+2%).
 * Not covered: a real ACT session, a phone-class CPU, and wasm memory growth over hours. The first two need a device; the last one
   is bounded by the unbounded history (TO-CONFIRM item 9).
+
+## Third pass (after the conformance review)
+
+Native, release, median of 300 runs, the same message, the pre-review tree and the current tree measured alternately:
+
+| Step | Before the review | After |
+|---|---:|---:|
+| Parse the wire message | ~230 µs | ~230 µs |
+| Parse and build a fresh Encounter | ~235 µs | ~230 µs |
+| Cells of one redraw (11 columns x 28 rows) | ~52 µs | ~50 µs |
+| `rows`, pets folded | ~6.7 µs | ~6.7 µs |
+
+A first version of the typed `Stats` rounded every wire figure at ingest (`p_float` formats and parses a string): 30-90 µs more per message, and it rounded figures the original shows raw. `Reported` fixed both (CHANGES row 39). `tests/unit/benchmarks.rs` now has `measure_one_redraw_of_the_rows`.
+
+## Fourth pass: original, before DDD, after DDD (full report)
+
+Five interleaved browser rounds of all five scenarios, native time and allocations, instructions per function (callgrind), wasm size by function (twiggy) and start-up, for `4c46ec7` (before) and this branch (after). The report is the "MopiMopi performance: original vs before DDD vs after" document; the raw data is in `docs/ddd/measurements/`:
+
+* `browser-runs-5-rounds.jsonl`: one line per scenario run (labels `predd*` = before, `head*` = after; app `original` = upstream).
+* `native-timing-runs.txt`: `build|round|step|µs|allocations|bytes`.
+* `rust_profile_before_ddd.rs.txt`: the same workload as `tests/unit/rust_profile.rs`, written against the code before the rework (not compiled; rename to `.rs` and register it in `main.rs` in a checkout of `4c46ec7`).
+* `wasm-size-by-module.txt`, `startup-runs.json`.
+
+Headline (final build `87ccd18`): per message the port now costs 1,649,553 instructions against 3,334,195 before the rework (-50.5%; `04063f4` before the helpers were made pure: 1,633,732), 1,300 allocations against 2,698 (-52%), 134.2 µs against 293.4 µs native (same run); in the browser the main thread is level or better in every scenario (-0.5% to -14.8%, script -8% to -20%); wasm 2,284,390 B, -0.6%; start-up unchanged (measured on `04063f4`; browser runs not repeated for `87ccd18`). The first build had been +2.8% instructions; row sharing, a pruned model build, arithmetic rounding, one-pass message reading and single-string number formatting brought it down. Parity: `87ccd18` 600 passed, 3 failed (the known "small bars"), 30 skipped; `04063f4` had 599 passed, 4 failed (the same three plus the intermittent `animation.spec.ts:43` timing test). Raw data: `native-timing-runs-head.txt` (7 rounds, before DDD against `87ccd18`).

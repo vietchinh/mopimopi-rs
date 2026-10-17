@@ -111,7 +111,7 @@ mod tests {
         let result = interpret(text);
         match result {
             Ok(Some(OverlayPluginEvent::CombatData(data))) => {
-                assert!(!data.is_active());
+                assert!(!data.is_running());
                 assert_eq!(data.participants().len(), 3);
             }
             other => panic!("not understood: {other:?}"),
@@ -153,7 +153,7 @@ mod tests {
         let Ok(Some(OverlayPluginEvent::CombatData(e))) = interpret(text) else { panic!("not combat data") };
         assert_eq!((e.facts().title.as_str(), e.facts().zone_name.as_str(), e.facts().total_damage), ("Striking Dummy", "Shirogane", 24466.0));
         assert_eq!(e.participants()[0].name, "YOU");
-        assert_eq!(e.participants()[0].damage_per_second, 2740.98);
+        assert_eq!(e.participants()[0].damage_per_second, crate::domain::combat::Reported::new(2740.98));
     }
 
     #[test]
@@ -183,6 +183,6 @@ mod tests {
         assert_eq!(encounter.rows(PetView::Separate).len(), 2);
         let folded = encounter.rows(PetView::FoldedIntoOwners { local_player_name: Some("Future Fade") });
         assert_eq!(folded.len(), 1, "the pet's row is folded into YOU");
-        assert_eq!(folded[0].damage, 120.0);
+        assert_eq!(folded[0].damage, crate::domain::combat::Amount::new(120.0));
     }
 }

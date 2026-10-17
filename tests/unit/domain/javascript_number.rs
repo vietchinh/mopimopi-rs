@@ -69,3 +69,37 @@ fn to_fixed_fast_path_agrees_with_exact_expansion() {
         }
     }
 }
+
+#[test]
+fn rounding_to_two_decimals_gives_the_same_double_as_going_through_the_text() {
+    // The fast path (nearest hundredth, divided by 100) is held to the text route on two million values: random ones of every
+    // size, numbers with one to four decimals, values a hair either side of a tie, tiny and negative ones. Compared by bits,
+    // so a negative zero must also match.
+    let mut state = 0x9E37_79B9_7F4A_7C15u64;
+    let mut next = move || {
+        state ^= state << 13;
+        state ^= state >> 7;
+        state ^= state << 17;
+        state
+    };
+    let check = |value: f64| {
+        assert_eq!(round_to_two_decimals(value).to_bits(), round_to_two_decimals_by_text(value).to_bits(), "{value:e}");
+    };
+    for _ in 0..400_000 {
+        let bits = next();
+        let unit = (bits >> 11) as f64 / (1u64 << 53) as f64; // 0..1
+        let magnitude = 10f64.powi((bits % 12) as i32 - 3); // 0.001 .. 1e8
+        let sign = if bits & 1 == 0 { 1.0 } else { -1.0 };
+        check(sign * unit * magnitude);
+        check(sign * ((next() % 100_000_000) as f64) / 10f64.powi((next() % 5) as i32)); // a few decimals, as ACT writes them
+        let hundredths = (next() % 10_000_000) as f64;
+        check(sign * (hundredths + 0.5) / 100.0); // a tie in the third decimal
+        check(sign * f64::from_bits(((hundredths + 0.5) / 100.0).to_bits() + 1)); // a hair above it
+        check(sign * f64::from_bits(((hundredths + 0.5) / 100.0).to_bits() - 1)); // and below
+    }
+    for value in [0.0, -0.0, 0.004, -0.004, 0.005, -0.005, 0.0049999999, 1e-300, 9_999_999.994, 9_999_999.995, 10_000_000.0, 1e15, 1e21, 1e22] {
+        check(value);
+    }
+    assert_eq!(round_to_two_decimals(f64::NAN).is_nan(), true);
+    assert_eq!(round_to_two_decimals(f64::NEG_INFINITY), f64::NEG_INFINITY);
+}

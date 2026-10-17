@@ -7,20 +7,20 @@ use super::encounter::{Amount, Percent};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Healing {
-    pub healed: f64,
-    pub over_heal: f64,
-    pub damage_shield: f64,
+    pub healed: Amount,
+    pub over_heal: Amount,
+    pub damage_shield: Amount,
 }
 
 impl Healing {
     /// HP actually restored: everything minus overheal minus shields (mopimopi's "`EffHealed`").
-    pub fn effective(self) -> f64 {
-        self.healed - self.over_heal - self.damage_shield
+    pub fn effective(self) -> Amount {
+        Amount::new(self.healed.value() - self.over_heal.value() - self.damage_shield.value())
     }
 
     /// ACT's `OverHealPct`, rounded like the original; 0 when nothing was healed.
     pub fn overheal_share(self) -> Percent {
-        Percent::share(Amount::new(self.over_heal), Amount::new(self.healed))
+        Percent::share(self.over_heal, self.healed)
     }
 
     /// How much of `healed` was shields (mopimopi draws this on the HPS bar). Not read by any
@@ -28,7 +28,7 @@ impl Healing {
     /// behaviour with its own tests (`tests/unit/domain/combat/healing.rs`), not leftover cruft.
     #[allow(dead_code)]
     pub fn shield_share(self) -> Percent {
-        Percent::share(Amount::new(self.damage_shield), Amount::new(self.healed))
+        Percent::share(self.damage_shield, self.healed)
     }
 }
 

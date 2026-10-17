@@ -1,6 +1,6 @@
 //! Reading settings. Every reader takes the key used in `defaults.json` / `l.json`.
 
-use super::Settings;
+use super::{Settings, SettingKey};
 use serde_json::Value;
 
 impl Settings {
@@ -22,9 +22,29 @@ impl Settings {
         self.file.get_option(key).map(|value| value.as_text()).unwrap_or_default()
     }
 
+    // Typed readers: for the settings the program knows by meaning (see `SettingKey`).
+
+    pub fn is_on(&self, key: SettingKey) -> bool {
+        self.option_enabled(key.id())
+    }
+
+    pub fn number(&self, key: SettingKey) -> f64 {
+        self.option_number(key.id())
+    }
+
+    pub fn text(&self, key: SettingKey) -> String {
+        self.option_text(key.id())
+    }
+
+    pub fn slider(&self, key: SettingKey) -> f64 {
+        self.slider_value(key.id())
+    }
+
+    // The readers below take the key as text: they are for the settings pages, which are generated from the schema.
+
     /// UI language code: KR, JP, EN, FR, DE or CN.
     pub fn language_code(&self) -> String {
-        let code = self.option_text("Lang");
+        let code = self.text(SettingKey::Language);
         if code.is_empty() { "EN".into() } else { code }
     }
 

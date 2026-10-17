@@ -1,7 +1,7 @@
 # Deviations from the original MopiMopi
 
 The port is a conformist copy. Every place where it deliberately differs is listed here, with the reason, where it is
-visible and how the parity tests treat it. There is exactly one so far.
+visible and how the parity tests treat it. There are two so far (D1 is an option; D2 is an edge case).
 
 ## D1: "NPCs look like themselves" (port-only option)
 
@@ -18,3 +18,15 @@ visible and how the parity tests treat it. There is exactly one so far.
 * **To confirm with the raider.** The icon (a teal tint of the Limit Break icon, a placeholder) and the default colour `#4DB6AC`.
 * **DDD.** Anticorruption: the shared published language (the original's settings and code) is kept clean of the port's own
   extensions.
+
+## D2: a pet whose owner is not in the fight stays visible
+
+* **What.** With "Combine Pets with Owner" on, the original hides every pet row (`visible = false` for each `isPet`,
+  `Combatant.prototype.sort` in `core.js`), whether or not its owner is in the data, and throws when it later reads the missing
+  owner (`AttachPets`: `owner.mergedmaxhitval`). The port keeps such a pet as its own row, drawn as a pet (`Unclassified` with
+  `was_companion_of`).
+* **Why.** Nothing ACT sent should vanish, and a crash is not behaviour worth copying. ACT lists the owner in every real fight we
+  have captured, so this only shows with partial data.
+* **Parity tests.** The live comparison never feeds it (`ROSTER_WITHOUT_YOU` exists because the original crashes); unit tests cover it
+  (`tests/unit/domain/combat/encounter.rs`).
+* **DDD.** An aggregate invariant (a companion has an owner) with a safe place for data that breaks it.

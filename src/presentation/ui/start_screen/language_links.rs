@@ -1,5 +1,6 @@
 //! "Please select your language" links of the start screen.
 
+use crate::domain::settings::SettingKey;
 use crate::application::app_state::{show_toast_message, AppActions, SettingsContext};
 use dioxus::prelude::*;
 
@@ -23,7 +24,7 @@ pub(super) fn LanguageLinks() -> Element {
                 href: "#",
                 onclick: move |event| {
                     event.prevent_default();
-                    settings.edit_settings(|settings| settings.set_option("Lang", serde_json::json!(language_code)));
+                    settings.edit_settings(|settings| settings.set(SettingKey::Language, serde_json::json!(language_code)));
                     show_toast_message(actions, "submit", 0, 3000);
                 },
                 "{language_name}"

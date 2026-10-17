@@ -1,0 +1,31 @@
+4015389 4072570
+sections: names, data, bindgen           1613504   1623320    +9816
+app: presentation::ui                     649120    596159   -52961
+other / unattributed                      565747    565778      +31
+lib: dioxus                               369187    368219     -968
+lib: core                                 214584    232154   +17570
+app: application::app_state               115582    188365   +72783
+lib: serde_json                           112873    100738   -12135
+app: domain::settings                      92640     96005    +3365
+app: infrastructure::act                   63435     32699   -30736
+app: domain::combat                         4272     53879   +49607
+lib: alloc                                 36746     36746       +0
+lib: wasm_bindgen                          31572     31572       +0
+lib: hashbrown                             29654     30285     +631
+lib: tracing                               22801     22801       +0
+app: domain::formatting                    18085     16901    -1184
+lib: serde_core                            14948     16270    +1322
+lib: js_sys                                 7626      7626       +0
+app: infrastructure::browser_websocket      7461      7461       +0
+app: domain::set                            6808      6808       +0
+app: application::i18n                      6370      6370       +0
+lib: std                                    5040      5040       +0
+lib: generational                           4883      4883       +0
+app: doma                                   4659      4659       +0
+app: pres                                   3847      3847       +0
+lib: web_sys                                3537      3537       +0
+lib: futures                                3243      3243       +0
+app: common                                 2787         0    -2787
+app: domain::javascript_number                 0      2092    +2092
+lib: serde                                  1720      1720       +0
+lib: slab                                   1195      1195       +0
