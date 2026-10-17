@@ -1,7 +1,8 @@
 //! Everything the user sees.
 //!
-//! * `theme`  – the settings turned into one CSS stylesheet
-//! * `ui`     – Dioxus components (screens, tables, menus, settings pages)
+//! * `ui`  – Dioxus components (screens, tables, menus, settings pages). Styling driven by
+//!           settings lives directly in whichever component owns the element it styles, as
+//!           inline `--variable:value` declarations read by static Tailwind classes -- there is
+//!           no separate theme-generation module.
 
-pub mod theme;
 pub mod ui;

@@ -1,49 +1,47 @@
 //! Table columns: their definitions, which are enabled per table, and their order.
 
-use super::json_coercion::is_truthy;
-use super::user_settings::*;
 use super::Settings;
-use serde_json::{json, Map, Value};
+use serde_json::{json, Value};
 
 impl Settings {
-    /// All known columns with their definition (title, width, padding, alignment, table flags).
-    pub fn column_definitions(&self) -> &Map<String, Value> {
-        static EMPTY: std::sync::OnceLock<Map<String, Value>> = std::sync::OnceLock::new();
-        self.json_document[COLUMN_DEFINITIONS_SECTION].as_object().unwrap_or_else(|| EMPTY.get_or_init(Map::new))
+    /// Columns that are switched on in at least one table.
+    pub fn columns_enabled_anywhere(&self) -> Vec<String> {
+        self.file.columns.iter().filter(|(_, definition)| definition.is_on("DPS") || definition.is_on("HPS")).map(|(name, _)| name.clone()).collect()
     }
 
+    /// The heading of a column, as the user titled it.
+    pub fn column_title(&self, column: &str) -> String {
+        self.column_text(column, "tt")
+    }
+
+    pub fn set_column_title(&mut self, column: &str, title: &str) {
+        self.set_column_field(column, "tt", json!(title));
+    }
+
+    /// A field of a column's definition as text (title, width, padding, alignment, ...); empty when there is none.
     pub fn column_text(&self, column: &str, field: &str) -> String {
-        match self.json_document[COLUMN_DEFINITIONS_SECTION][column].get(field) {
-            Some(Value::String(text)) => text.clone(),
-            Some(Value::Number(number)) => number.to_string(),
-            _ => String::new(),
-        }
+        self.file.columns.get(column).map(|definition| definition.text(field)).unwrap_or_default()
     }
 
+    /// Changes a field of a column's definition. A column the file does not have, or a value that does not fit the field, is ignored.
     pub fn set_column_field(&mut self, column: &str, field: &str, value: Value) {
-        self.json_document[COLUMN_DEFINITIONS_SECTION][column][field] = value;
-    }
-
-    /// Whether `column` is switched on for the table (`"DPS"` or `"HPS"`).
-    pub fn column_enabled_in_table(&self, column: &str, table_label: &str) -> bool {
-        is_truthy(&self.json_document[COLUMN_DEFINITIONS_SECTION][column][table_label])
+        if let Some(definition) = self.file.columns.get_mut(column) {
+            definition.set(field, &value);
+        }
     }
 
     /// Columns of a table in display order.
     pub fn column_order(&self, table_label: &str) -> Vec<String> {
-        self.json_document[COLUMN_ORDER_SECTION][table_label]
-            .as_array()
-            .map(|names| names.iter().filter_map(|name| name.as_str().map(String::from)).collect())
-            .unwrap_or_default()
+        self.file.order.0.get(table_label).cloned().unwrap_or_default()
     }
 
-    fn set_column_order(&mut self, table_label: &str, order: Vec<String>) {
-        self.json_document[COLUMN_ORDER_SECTION][table_label] = json!(order);
+    fn set_column_order(&mut self, table_label: &str, order: &[String]) {
+        self.file.order.0.insert(table_label.to_string(), order.to_vec());
     }
 
     /// Switches a column on or off for a table, keeping the display order in sync.
     pub fn set_column_enabled(&mut self, column: &str, table_label: &str, enabled: bool) {
-        self.set_column_field(column, table_label, json!(enabled as i32));
+        self.set_column_field(column, table_label, json!(i32::from(enabled)));
         let mut order = self.column_order(table_label);
         if enabled {
             if !order.iter().any(|name| name == column) {
@@ -52,7 +50,7 @@ impl Settings {
         } else {
             order.retain(|name| name != column);
         }
-        self.set_column_order(table_label, order);
+        self.set_column_order(table_label, &order);
     }
 
     /// Swaps a column with its neighbour (`move_up`: towards the front).
@@ -62,7 +60,7 @@ impl Settings {
         let neighbour = if move_up { index.checked_sub(1) } else { Some(index + 1) };
         if let Some(neighbour) = neighbour.filter(|&position| position < order.len()) {
             order.swap(index, neighbour);
-            self.set_column_order(table_label, order);
+            self.set_column_order(table_label, &order);
         }
     }
 }

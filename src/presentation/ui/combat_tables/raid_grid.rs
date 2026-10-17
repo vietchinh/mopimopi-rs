@@ -1,46 +1,73 @@
-//! Raid mode: one small card per player (colour strip, icon, name, DPS or HPS).
+//! Raid mode: one small card per participant (colour strip, icon, name, DPS or HPS).
 
-use super::table_environment::TableEnvironment;
-use super::visible_players::visible_players;
-use crate::domain::combat::{EncounterRanking, Player, TableKind};
-use crate::domain::formatting::cell_fragments;
-use crate::presentation::ui::shared::palette::player_bar_color;
+use super::table_environment::SharedEnvironment;
+use super::visible_participants::visible_participants;
+use crate::domain::formatting::{cell_fragments, cell_fragments_ranked, ColumnKey};
+use crate::domain::combat::{EncounterFacts, Participant};
 use crate::presentation::ui::shared::row_identity::row_element_id;
 use crate::presentation::ui::shared::text_display::{job_icon_view, text_fragments_view};
 use dioxus::prelude::*;
+use std::rc::Rc;
 
-pub(super) fn raid_grid(environment: &TableEnvironment, ranking: &EncounterRanking, table: TableKind) -> Element {
-    let players = visible_players(environment.settings, ranking, table);
-    let cards_per_row = (environment.settings.slider_value("size24TableSlice") as usize).max(1);
-    let value_column = match table {
-        TableKind::Damage => "encdps",
-        TableKind::Healing => "enchps",
-    };
-    let label = table.short_label();
+pub(super) fn raid_grid(environment: &SharedEnvironment, participants: &[Rc<Participant>], encounter: &Rc<EncounterFacts>, is_healing: bool) -> Element {
+    let shown = visible_participants(&environment.table.kind(is_healing).filter, participants, is_healing);
+    let cards_per_row = environment.raid.cards_in_a_row();
+    let label = super::table_label(is_healing);
     let suffix = environment.element_id_suffix;
+    let grid_vars = environment.raid.grid_vars();
 
-    let rows = players.chunks(cards_per_row).map(|row_players| {
-        let cards = row_players.iter().map(|player| raid_card(environment, ranking, player, value_column));
-        rsx! { div { class: "rRow", {cards} } }
+    let rows = shown.chunks(cards_per_row).map(|row_shown| {
+        let cards = row_shown.iter().map(|ranked| {
+            rsx! {
+                RaidCard {
+                    key: "{row_element_id(&ranked.participant.name)}",
+                    environment: environment.clone(),
+                    participant: Rc::clone(ranked.participant),
+                    encounter: Rc::clone(encounter),
+                    rank: ranked.rank,
+                    is_healing,
+                }
+            }
+        });
+        // The card count is one value for the whole grid, so it is the `--raid-cards-per-row`
+        // variable (set once on the container) read by `raid-row`, not a style on every row.
+        rsx! { div { class: "rRow raid-row", {cards} } }
     });
-    rsx! { div { id: "{label}Body{suffix}", {rows} } }
+    // Raid mode has no header table, but the original still has the (empty) header `div` of each table,
+    // and it is that element that carries the "Spacing of DPS/HPS Table" margin: without it the HPS grid
+    // would sit against the end of the DPS grid.
+    let table_gap = environment.table.kind(is_healing).gap;
+    rsx! {
+        div { id: "{label}Header{suffix}", margin_top: "{table_gap}", div { id: "{label}oldHeader{suffix}" } }
+        div { id: "{label}Body{suffix}", style: "{grid_vars}", {rows} }
+    }
 }
 
-fn raid_card(environment: &TableEnvironment, ranking: &EncounterRanking, player: &Player, value_column: &str) -> Element {
-    let row_id = row_element_id(&player.name);
-    let color_strip = player_bar_color(environment.settings, player, &row_id);
-    let icon = job_icon_view(environment.settings, player);
-    let name = text_fragments_view(cell_fragments("name", player, ranking, &environment.cell_context));
-    let value = text_fragments_view(cell_fragments(value_column, player, ranking, &environment.cell_context));
+/// One card of the raid grid. A component, so a card whose data and settings did not change is not drawn again.
+#[component]
+fn RaidCard(environment: SharedEnvironment, participant: Rc<Participant>, encounter: Rc<EncounterFacts>, rank: usize, is_healing: bool) -> Element {
+    let value_column = if is_healing { ColumnKey::Enchps } else { ColumnKey::Encdps };
+    let cell_context = environment.cell_context();
+    let row_id = row_element_id(&participant.name);
+    let color_strip = environment.bar_color(&participant);
+    let icon = job_icon_view(&environment.table.icon_set, &participant, false, environment.npc_look());
+    let name = text_fragments_view(cell_fragments_ranked(&ColumnKey::Name, &participant, &encounter, &cell_context, rank), false);
+    let value = text_fragments_view(cell_fragments(&value_column, &participant, &encounter, &cell_context), false);
+    let is_own = participant.is_you();
+    let card_style = if is_own { "raid-cell-own" } else { "raid-cell-other" };
     rsx! {
-        table { key: "{row_id}", id: "{row_id}", class: "rCell",
+        table {
+            id: "{row_id}",
+            class: "rCell {card_style} themed-text",
+            class: if is_own { "text-own" },
+            width: "100%",
             tbody {
                 tr {
-                    td { class: "rIdx", rowspan: "2", style: "background:{color_strip}" }
-                    td { class: "rIcon", {icon} }
-                    td { class: "rName", {name} }
+                    td { class: "rIdx w-(--raid-idx-width)", rowspan: "2", background: "{color_strip}", opacity: "var(--raid-idx-opacity)" }
+                    td { class: "rIcon w-(--raid-icon-width) [&_img]:w-(--raid-icon-width)", {icon} }
+                    td { class: "rName raid-name", {name} }
                 }
-                tr { td { class: "rData", colspan: "2", {value} } }
+                tr { td { class: "rData raid-data", colspan: "2", {value} } }
             }
         }
     }

@@ -1,0 +1,28 @@
+/* The overlay's own palette, as theme variables in the `--color-*` namespace
+   (https://tailwindcss.com/docs/colors#customizing-your-colors). Only the colour picker's panel uses it so far: these are
+   the values the original's jscolor was configured with (`borderColor:'#212121'`, `insetColor:'#161616'`,
+   `backgroundColor:'#212121'`, `pointerColor:'#4C4C4C'`), set inline by src/presentation/ui/settings_screens/js_color.rs.
+   `static` because Tailwind only writes out a theme variable that its own output uses, and a `var(--color-panel)` inside a
+   Rust `style` string is invisible to it: without `static` the variable would not exist at runtime.
+   Not moved here on purpose: the legacy block's 80 literal colours (kept verbatim, that is what makes it the original), the
+   colours users pick in the settings (runtime values, set inline / as `--accent` etc.), and the picker's canvas gradient
+   stops (the Canvas API cannot read a CSS variable). Utilities such as `bg-panel` also exist for these, but the picker sets
+   `border: 1px solid` inline, which would reset a `border-panel` class, so it uses the variables directly. */
+@theme static {
+  --color-panel: #212121;
+  --color-panel-inset: #161616;
+  --color-pointer: #4c4c4c;
+}
+
+/* The spacing unit of the spacing utilities (`w-15`, `p-4`, ...) is a tenth of a rem, not Tailwind's quarter. The overlay's root font size is 10px (62.5%)
+   and follows the resolution setting, and its sizes (the settings sliders, the original's stylesheet) are tenths of a rem: `w-15` is 1.5rem. Font sizes
+   are arbitrary values (`text-[1.2rem]`): Tailwind's named sizes assume a 16px root. */
+@theme {
+  --spacing: 0.1rem;
+}
+
+/* The accent colour is a runtime variable (`--accent`, from the settings, set on :root by areas/page.rs). Mapped to a theme colour it is `text-accent`,
+   `bg-accent` and `border-accent` in our own markup. `inline` because the value must stay `var(--accent)` and not be resolved at the theme. */
+@theme inline {
+  --color-accent: var(--accent);
+}

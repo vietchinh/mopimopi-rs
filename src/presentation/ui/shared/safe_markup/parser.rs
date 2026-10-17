@@ -32,7 +32,8 @@ pub(super) fn parse_markup(markup: &str) -> Vec<MarkupNode> {
         let rest = &markup[position..];
         if rest.starts_with('<') {
             if let Some((tag, length)) = parse_tag(rest) {
-                builder.add_text(std::mem::take(&mut text));
+                builder.add_text(&text);
+                text.clear();
                 builder.add_tag(tag);
                 position += length;
                 continue;
@@ -42,7 +43,7 @@ pub(super) fn parse_markup(markup: &str) -> Vec<MarkupNode> {
         text.push(character);
         position += character.len_utf8();
     }
-    builder.add_text(text);
+    builder.add_text(&text);
     builder.finish()
 }
 
@@ -60,9 +61,9 @@ impl TreeBuilder {
         }
     }
 
-    fn add_text(&mut self, text: String) {
+    fn add_text(&mut self, text: &str) {
         if !text.is_empty() {
-            self.current_children().push(MarkupNode::Text(decode_entities(&text)));
+            self.current_children().push(MarkupNode::Text(decode_entities(text)));
         }
     }
 
@@ -165,18 +166,15 @@ fn parse_attributes(text: &str) -> Vec<(String, String)> {
             continue; // a flag without a value
         };
         let after_equals = after_equals.trim_start();
-        let (value, remaining) = match after_equals.chars().next() {
-            Some(quote @ ('"' | '\'')) => {
-                let body = &after_equals[1..];
-                match body.find(quote) {
-                    Some(close) => (&body[..close], &body[close + 1..]),
-                    None => (body, ""),
-                }
+        let (value, remaining) = if let Some(quote @ ('"' | '\'')) = after_equals.chars().next() {
+            let body = &after_equals[1..];
+            match body.find(quote) {
+                Some(close) => (&body[..close], &body[close + 1..]),
+                None => (body, ""),
             }
-            _ => {
-                let end = after_equals.find(char::is_whitespace).unwrap_or(after_equals.len());
-                (&after_equals[..end], &after_equals[end..])
-            }
+        } else {
+            let end = after_equals.find(char::is_whitespace).unwrap_or(after_equals.len());
+            (&after_equals[..end], &after_equals[end..])
         };
         if !name.is_empty() {
             attributes.push((name, decode_entities(value)));

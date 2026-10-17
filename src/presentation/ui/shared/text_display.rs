@@ -1,24 +1,59 @@
 //! Cell text and job icons as DOM.
 
-use crate::domain::combat::Player;
 use crate::domain::formatting::TextFragment;
-use crate::domain::settings::Settings;
 use dioxus::prelude::*;
+use crate::domain::combat::CompanionKind;
+use crate::domain::combat::Participant;
 
-/// Fragments as DOM: plain text, and dimmed text in a `span.ex`.
-pub fn text_fragments_view(fragments: Vec<TextFragment>) -> Element {
+/// Fragments as DOM: plain text, and dimmed text in a `span.ex`. `sized_by_table` says whether the
+/// dimmed span takes the table's dimmed-text size (`chrome-ex`, from `--chrome-ex-size`) -- that
+/// never applied to raid-mode cards in the original (a different selector scope), so they pass `false`.
+pub fn text_fragments_view(fragments: Vec<TextFragment>, sized_by_table: bool) -> Element {
     rsx! {
         for fragment in fragments {
             match fragment {
                 TextFragment::Plain(text) => rsx! { "{text}" },
-                TextFragment::Dimmed(text) => rsx! { span { class: "ex", "{text}" } },
+                TextFragment::Dimmed(text) => rsx! { span { class: "ex", class: if sized_by_table { "text-(length:--chrome-ex-size)" }, "{text}" } },
             }
         }
     }
 }
 
-/// Job icon image for a player (`images/icon/<icon set>/<JOB>.png`).
-pub fn job_icon_view(settings: &Settings, player: &Player) -> Element {
-    let source = format!("images/icon/{}/{}.png", settings.option_text("iconSet"), player.job_code.to_uppercase());
-    rsx! { img { src: "{source}" } }
+/// The job codes that have an icon file (`public/images/icon/<set>/<CODE>.png`, the same files in every set: a unit test
+/// keeps this list and the folders in step). Anything else has no icon, and shows Limit Break's.
+/// The port-only icon of an NPC row (see `PortPreferences`): not in the original, so only used while the NPC look is on.
+const NPC_ICON_CODE: &str = "NPC";
+
+const ICON_CODES: [&str; 47] = [
+    "ACN", "ALC", "ARC", "ARM", "AST", "AVA", "BLM", "BLU", "BRD", "BSM", "BST", "BTN", "CBO", "CNJ", "CRP", "CUL", "DNC", "DRG", "DRK", "FSH", "GLA",
+    "GNB", "GSM", "LMB", "LNC", "LTW", "MCH", "MIN", "MNK", "MRD", "NIN", "NPC", "PCT", "PGL", "PLD", "RDM", "ROG", "RPR", "SAM", "SCH", "SGE", "SMN", "THM",
+    "VPR", "WAR", "WHM", "WVR",
+];
+
+/// The icon file to show for a job code: its own when there is one, Limit Break's (`LMB`) for anything else (a job that
+/// ACT sends that the overlay has no icon for, an empty one, ...) rather than a broken image.
+fn icon_code(job_code: &str) -> &str {
+    if ICON_CODES.contains(&job_code) { job_code } else { "LMB" }
 }
+
+/// Job icon image for a player (`images/icon/<icon set>/<JOB TEXT>.png`). `sized_by_table` says
+/// whether the image takes the table's icon width (`chrome-icon`, from `--chrome-icon-size`) --
+/// raid mode's cards size their icon through the parent `.rIcon`'s own nested `& img` rule
+/// instead, so they pass `false`. `aspect-ratio: auto 1` reserves a square until the image loads (icons are square), so a
+/// newly added row does not grow, and push the rows below it, when its icon arrives.
+pub fn job_icon_view(icon_set: &str, participant: &Participant, sized_by_table: bool, npc_look: bool) -> Element {
+    let job_code = match participant.companion_of() {
+        _ if npc_look && participant.is_npc() => NPC_ICON_CODE.to_string(),
+        _ if participant.looks_like_limit_break() => "LMB".to_string(),
+        Some((_, CompanionKind::Pet(_))) => "AVA".to_string(),
+        Some((_, CompanionKind::Chocobo)) => "CBO".to_string(),
+        None => participant.job.to_uppercase(),
+    };
+
+    let source = format!("images/icon/{icon_set}/{}.png", icon_code(&job_code));
+    rsx! { img { class: if sized_by_table { "w-(--chrome-icon-size) [aspect-ratio:auto_1]" }, src: "{source}", alt: "{job_code}" } }
+}
+
+#[cfg(test)]
+#[path = "../../../../tests/unit/presentation/ui/shared/text_display.rs"]
+mod tests;

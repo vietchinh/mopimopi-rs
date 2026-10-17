@@ -1,0 +1,10 @@
+false 0 0
+false 1 2.2
+false 3 6.6
+false 9 19.8
+false 30 55
+true 0 0
+true 1 2.2
+true 3 6.6
+true 9 19.8
+true 30 55

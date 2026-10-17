@@ -10,15 +10,12 @@ pub(super) fn decode_entities(text: &str) -> String {
     while let Some(start) = rest.find('&') {
         decoded.push_str(&rest[..start]);
         rest = &rest[start..];
-        match rest.find(';').filter(|&end| end <= 10).and_then(|end| decode_reference(&rest[1..end]).map(|c| (c, end))) {
-            Some((character, end)) => {
-                decoded.push(character);
-                rest = &rest[end + 1..];
-            }
-            None => {
-                decoded.push('&');
-                rest = &rest[1..];
-            }
+        if let Some((character, end)) = rest.find(';').filter(|&end| end <= 10).and_then(|end| decode_reference(&rest[1..end]).map(|c| (c, end))) {
+            decoded.push(character);
+            rest = &rest[end + 1..];
+        } else {
+            decoded.push('&');
+            rest = &rest[1..];
         }
     }
     decoded.push_str(rest);

@@ -3,3 +3,4 @@
 //! * `app_state`  – shared context, data ingestion, history, navigation, toasts, standby
 
 pub mod app_state;
+pub mod i18n;

@@ -1,104 +1,181 @@
 //! Content of every table column. The column names are ACT's / the original's field names.
 
+use super::column_key::ColumnKey;
 use super::number_format::NumberFormat;
 use super::player_name::{display_name, NameOptions};
 use super::strongest_action_text::strongest_action_fragments;
 use super::text_fragment::{join_plain_text, TextFragment};
-use crate::domain::combat::{EncounterRanking, Player};
+use crate::domain::combat::{Amount, Percent, Reported};
 use crate::domain::settings::Settings;
-use crate::domain::translations::Translations;
+use crate::domain::combat::{EncounterFacts, Participant};
 
 /// Everything needed to format cells, gathered once per table.
 pub struct CellContext<'a> {
     pub settings: &'a Settings,
-    pub translations: &'a Translations,
+    /// What the name cell shows for the Limit Break row when names are hidden (a translated text, so the caller supplies it).
+    pub limit_break_name: String,
     pub local_player_name: &'a str,
     number_format: NumberFormat,
     name_options: NameOptions,
-    language_code: String,
 }
 
 impl<'a> CellContext<'a> {
-    pub fn new(settings: &'a Settings, translations: &'a Translations, local_player_name: &'a str) -> CellContext<'a> {
+    pub fn new(settings: &'a Settings, limit_break_name: String, local_player_name: &'a str) -> CellContext<'a> {
         CellContext {
             settings,
-            translations,
+            limit_break_name,
             local_player_name,
             number_format: NumberFormat::from_settings(settings),
             name_options: NameOptions::from_settings(settings),
-            language_code: settings.language_code(),
         }
     }
 }
 
-/// Fragments of one cell. The job icon column (`Class`) is drawn by the caller.
-pub fn cell_fragments(column: &str, player: &Player, ranking: &EncounterRanking, context: &CellContext) -> Vec<TextFragment> {
+/// A percentage, or 0 when the whole is 0 (ACT would show NaN there).
+fn share(part: Amount, whole: Amount, format: &NumberFormat) -> Vec<TextFragment> {
+    format.percent_fragments(Percent::share(part, whole))
+}
+
+/// Fragments of one cell, for a row with no rank (see `cell_fragments_ranked`).
+pub fn cell_fragments(column: &ColumnKey, participant: &Participant, encounter: &EncounterFacts, context: &CellContext) -> Vec<TextFragment> {
+    cell_fragments_ranked(column, participant, encounter, context, 0)
+}
+
+/// Fragments of one cell. The job icon column (`Class`) is drawn by the caller. `rank` is the row's
+/// 0-based position in its table, which the name cell prints when the "rank" setting is on.
+pub fn cell_fragments_ranked(column: &ColumnKey, participant: &Participant, encounter: &EncounterFacts, context: &CellContext, rank: usize) -> Vec<TextFragment> {
     let format = &context.number_format;
-    let merged = &player.merged_stats;
-    let rates = &player.rates;
     match column {
-        "name" => vec![TextFragment::Plain(display_name(
-            player,
+        ColumnKey::Name => vec![TextFragment::Plain(display_name(
+            participant,
             context.local_player_name,
             &context.name_options,
-            context.translations,
-            &context.language_code,
+            &context.limit_break_name,
+            rank,
         ))],
-        "duration" => vec![TextFragment::Plain(player.personal_duration_text.clone())],
-        "EncounterDuration" => vec![TextFragment::Plain(ranking.encounter.duration_text.clone())],
+        ColumnKey::Duration => vec![TextFragment::Plain(participant.duration_text.clone())],
+        ColumnKey::EncounterDuration => vec![TextFragment::Plain(encounter.duration_text.clone())],
 
-        "dps" => format.rate_fragments(rates.damage_per_second),
-        "encdps" => format.rate_fragments(rates.encounter_damage_per_second),
-        "enchps" => format.rate_fragments(rates.encounter_heal_per_second),
-        "mergedLast10DPS" => format.rate_fragments(merged.damage_per_second_last_10_seconds),
-        "mergedLast30DPS" => format.rate_fragments(merged.damage_per_second_last_30_seconds),
-        "mergedLast60DPS" => format.rate_fragments(merged.damage_per_second_last_60_seconds),
-        "mergedLast180DPS" => format.rate_fragments(merged.damage_per_second_last_180_seconds),
+        // The original (core.js, Person.prototype.recalculate) never trusts ACT's own per-participant
+        // rate fields for these: it recomputes damage/duration itself on every redraw, using the
+        // participant's own duration for "dps" and the *encounter's* duration for "encdps"/"enchps".
+        // That matters while a player is still in the fight but not currently dealing damage: their
+        // own raw stat block can go a while without a fresh update from ACT, but the encounter's
+        // duration keeps ticking every message, so recomputing here is what makes DPS visibly fall
+        // as time passes with no new damage, instead of freezing at whatever ACT last reported.
+        ColumnKey::Dps => format.rate_fragments(participant.personal_damage_per_second()),
+        ColumnKey::Encdps => format.rate_fragments(encounter.damage_per_second_of(participant)),
+        ColumnKey::Enchps => format.rate_fragments(encounter.healing_per_second_of(participant)),
+        ColumnKey::MergedLast10DPS => format.reported_rate_fragments(participant.damage_per_second_last_10_seconds),
+        ColumnKey::MergedLast30DPS => format.reported_rate_fragments(participant.damage_per_second_last_30_seconds),
+        ColumnKey::MergedLast60DPS => format.reported_rate_fragments(participant.damage_per_second_last_60_seconds),
+        ColumnKey::MergedLast180DPS => format.reported_rate_fragments(participant.damage_per_second_last_180_seconds),
 
-        "mergedDamage" => format.amount_fragments(merged.damage),
-        "mergedSwings" => format.amount_fragments(merged.swings),
-        "mergedHits" => format.amount_fragments(merged.hits),
-        "mergedDirectHitCount" => format.amount_fragments(merged.direct_hits),
-        "mergedCrithits" => format.amount_fragments(merged.critical_hits),
-        "mergedCritDirectHitCount" => format.amount_fragments(merged.critical_direct_hits),
-        "mergedMisses" => format.amount_fragments(merged.misses),
-        "hitfailed" => format.amount_fragments(player.avoided_hits),
-        "mergedDamagetaken" => format.amount_fragments(merged.damage_taken),
-        "mergedHealstaken" => format.amount_fragments(merged.heals_taken),
-        "mergedHealed" => format.amount_fragments(merged.healed),
-        "mergedEffHealed" => format.amount_fragments(merged.effective_healed),
-        "mergedDamageShield" => format.amount_fragments(merged.damage_shield),
-        "mergedOverHeal" => format.amount_fragments(merged.over_heal),
-        "mergedHeals" => format.amount_fragments(merged.heals),
-        "mergedCritheals" => format.amount_fragments(merged.critical_heals),
-        "mergedCures" => format.amount_fragments(merged.cures),
-        "mergedAbsorbHeal" => format.amount_fragments(merged.absorb_heal),
-        "powerheal" => format.amount_fragments(player.mana_restored),
-        "deaths" => format.amount_fragments(player.deaths),
+        ColumnKey::MergedDamage => format.amount_fragments(participant.damage),
+        ColumnKey::MergedSwings => format.amount_fragments(participant.swings),
+        ColumnKey::MergedHits => format.amount_fragments(participant.hits),
+        ColumnKey::MergedDirectHitCount => format.amount_fragments(participant.direct_hits),
+        ColumnKey::MergedCrithits => format.amount_fragments(participant.critical_hits),
+        ColumnKey::MergedCritDirectHitCount => format.amount_fragments(participant.critical_direct_hits),
+        ColumnKey::MergedMisses => format.amount_fragments(participant.misses),
+        ColumnKey::Hitfailed => format.amount_fragments(participant.avoided_hits),
+        ColumnKey::MergedDamagetaken => format.amount_fragments(participant.damage_taken),
+        ColumnKey::MergedHealstaken => format.amount_fragments(participant.heals_taken),
+        ColumnKey::MergedHealed => format.amount_fragments(participant.healed),
+        ColumnKey::MergedEffHealed => format.amount_fragments(participant.healing().effective()),
+        ColumnKey::MergedDamageShield => format.amount_fragments(participant.damage_shield),
+        ColumnKey::MergedOverHeal => format.amount_fragments(participant.over_heal),
+        ColumnKey::MergedHeals => format.amount_fragments(participant.heals),
+        ColumnKey::MergedCritheals => format.amount_fragments(participant.critical_heals),
+        ColumnKey::MergedCures => format.amount_fragments(participant.cures),
+        ColumnKey::MergedAbsorbHeal => format.amount_fragments(participant.absorb_heal),
+        ColumnKey::Powerheal => format.amount_fragments(participant.mana_restored),
+        ColumnKey::Deaths => format.amount_fragments(participant.deaths),
 
-        "ParryPct" => whole_percent(player.parry_percent, format),
-        "BlockPct" => whole_percent(player.block_percent, format),
-        "maxhit" => strongest_action_fragments(&player.merged_strongest_hit, context.settings, format),
-        "maxheal" => strongest_action_fragments(&player.merged_strongest_heal, context.settings, format),
+        ColumnKey::ParryPct => whole_percent(participant.parry_percent, format),
+        ColumnKey::BlockPct => whole_percent(participant.block_percent, format),
+        ColumnKey::Maxhit => strongest_action_fragments(&participant.strongest_hit_name, participant.strongest_hit_amount, context.settings, format),
+        ColumnKey::Maxheal => strongest_action_fragments(&participant.strongest_heal_name, participant.strongest_heal_amount, context.settings, format),
 
-        "damagePct" => format.percent_fragments(rates.damage_percent),
-        "healedPct" => format.percent_fragments(rates.healed_percent),
-        "overHealPct" => format.percent_fragments(rates.over_heal_percent),
-        "DirectHitPct" => format.percent_fragments(rates.direct_hit_percent),
-        "crithitPct" => format.percent_fragments(rates.critical_hit_percent),
-        "CritDirectHitPct" => format.percent_fragments(rates.critical_direct_hit_percent),
-        "crithealPct" => format.percent_fragments(rates.critical_heal_percent),
-        "tohit" => format.percent_fragments(rates.accuracy_percent),
-        _ => format.percent_fragments(0.0),
+        ColumnKey::DamagePct => share(participant.damage, Amount::new(encounter.total_damage), format),
+        ColumnKey::HealedPct => share(participant.healed, Amount::new(encounter.total_healed), format),
+        ColumnKey::OverHealPct => format.percent_fragments(participant.healing().overheal_share()),
+        ColumnKey::DirectHitPct => share(participant.direct_hits, participant.hits, format),
+        ColumnKey::CrithitPct => share(participant.critical_hits, participant.hits, format),
+        ColumnKey::CritDirectHitPct => share(participant.critical_direct_hits, participant.hits, format),
+        ColumnKey::CrithealPct => format.percent_fragments(participant.critical_heal_share()),
+        ColumnKey::Tohit => share(participant.hits, participant.swings, format),
+
+        ColumnKey::Class | ColumnKey::Unknown(_) => format.percent_fragments(Percent::default()),
     }
 }
 
 /// Parry and block are shown without decimals whatever the percentage setting says.
-fn whole_percent(value: f64, format: &NumberFormat) -> Vec<TextFragment> {
-    vec![TextFragment::Plain(format.format_number(value, 1.0, 0)), TextFragment::Dimmed("%".into())]
+fn whole_percent(percent: Reported, format: &NumberFormat) -> Vec<TextFragment> {
+    vec![TextFragment::Plain(format.format_number(percent.value(), 1.0, 0)), TextFragment::Dimmed("%".into())]
 }
 
 /// Plain text of a cell (used where dimming does not matter, e.g. the summary line).
-pub fn cell_plain_text(column: &str, player: &Player, ranking: &EncounterRanking, context: &CellContext) -> String {
-    join_plain_text(&cell_fragments(column, player, ranking, context))
+pub fn cell_plain_text(column: &ColumnKey, participant: &Participant, encounter: &EncounterFacts, context: &CellContext) -> String {
+    join_plain_text(&cell_fragments(column, participant, encounter, context))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::combat::Reported;
+    use crate::domain::combat::Stats;
+    use crate::domain::settings::Settings;
+
+    fn participant(damage: f64, hits: f64, swings: f64) -> Participant {
+        Participant::player(Stats { damage: Amount::new(damage), hits: Amount::new(hits), swings: Amount::new(swings), damage_per_second: Reported::new(damage), ..Default::default() })
+    }
+
+    #[test]
+    fn zero_over_zero_percentages_are_zero_not_nan() {
+        let settings = Settings::defaults();
+        let context = CellContext::new(&settings, "Limit Break".to_string(), "");
+        let participant = participant(0.0, 0.0, 0.0);
+        let encounter = EncounterFacts::default();
+        for column in [ColumnKey::DamagePct, ColumnKey::HealedPct, ColumnKey::DirectHitPct, ColumnKey::CrithitPct, ColumnKey::CritDirectHitPct, ColumnKey::CrithealPct, ColumnKey::Tohit] {
+            let text = cell_plain_text(&column, &participant, &encounter, &context);
+            assert!(!text.contains("NaN"), "{column:?} produced {text:?}");
+        }
+    }
+
+    #[test]
+    fn dps_uses_personal_duration_encdps_uses_the_encounters() {
+        let settings = Settings::defaults();
+        let context = CellContext::new(&settings, "Limit Break".to_string(), "");
+        let participant = Participant::player(Stats { damage: Amount::new(1000.0), duration_seconds: 10.0, ..Default::default() });
+        let encounter = EncounterFacts { duration_seconds: 20.0, ..Default::default() };
+        assert_eq!(cell_plain_text(&ColumnKey::Dps, &participant, &encounter, &context), "100"); // 1000 / 10 (personal)
+        assert_eq!(cell_plain_text(&ColumnKey::Encdps, &participant, &encounter, &context), "50"); // 1000 / 20 (encounter)
+    }
+
+    #[test]
+    fn a_personal_duration_of_zero_divides_by_one_instead_of_by_zero() {
+        let settings = Settings::defaults();
+        let context = CellContext::new(&settings, "Limit Break".to_string(), "");
+        let participant = Participant::player(Stats { damage: Amount::new(1234.0), duration_seconds: 0.0, ..Default::default() });
+        let encounter = EncounterFacts::default();
+        assert_eq!(cell_plain_text(&ColumnKey::Dps, &participant, &encounter, &context), "1,234");
+    }
+
+    /// The regression this pair of columns exists to fix: a player's own raw rate field can go
+    /// stale while they land no new hits, but "encdps" must still visibly fall as the fight goes on
+    /// without them, because it is recomputed from the (unchanging) damage and the (ever-increasing)
+    /// encounter duration on every redraw, exactly like the original overlay's own `recalculate()`.
+    #[test]
+    fn encdps_keeps_falling_while_damage_is_flat_and_the_encounter_keeps_going() {
+        let settings = Settings::defaults();
+        let context = CellContext::new(&settings, "Limit Break".to_string(), "");
+        // Same participant, same damage, only the encounter's duration has moved on: this is exactly
+        // what "still in combat but not attacking" looks like across two messages.
+        let participant = Participant::player(Stats { damage: Amount::new(1000.0), ..Default::default() });
+        let earlier = EncounterFacts { duration_seconds: 10.0, ..Default::default() };
+        let later = EncounterFacts { duration_seconds: 20.0, ..Default::default() };
+        assert_eq!(cell_plain_text(&ColumnKey::Encdps, &participant, &earlier, &context), "100");
+        assert_eq!(cell_plain_text(&ColumnKey::Encdps, &participant, &later, &context), "50");
+    }
 }

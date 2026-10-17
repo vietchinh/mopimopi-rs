@@ -1,67 +1,78 @@
 //! The summary text in the top bar.
 
-use crate::application::app_state::AppContext;
-use crate::domain::combat::EncounterRankings;
-use crate::domain::formatting::{cell_plain_text, CellContext, NumberFormat};
-use crate::domain::settings::Settings;
-use crate::domain::translations::{translate, translations};
+use crate::application::app_state::{SettingsContext, TablesContext};
+use crate::domain::formatting::{cell_plain_text, CellContext, ColumnKey, NumberFormat};
+use crate::domain::settings::{Settings, SettingKey};
+use crate::presentation::ui::areas::SummaryParts;
+use crate::application::i18n::{dictionary_title, translate};
+use crate::domain::formatting::LIMIT_BREAK_JOB_CODE;
+use crate::domain::translations::translations;
+use crate::domain::combat::{Encounter, PetView};
 use dioxus::prelude::*;
+use std::fmt::Write;
 
 /// Shows only the parts the user enabled ("Display Type of Combatant Data" settings). Without a
 /// local player row it shows the "Please start the combat." hint.
 pub(super) fn summary_line(
-    context: AppContext,
+    settings_context: SettingsContext,
+    tables: TablesContext,
     settings: &Settings,
-    language: &str,
-    rankings: Option<&EncounterRankings>,
+    parts: &SummaryParts,
+    message: &Encounter,
+    pet_view: PetView<'_>,
     is_settings_preview: bool,
 ) -> Element {
-    let waiting_hint = translate(&translations().ui_schema["NAV"]["main"]["tt"]["rps"], language);
-    let Some(rankings) = rankings else { return rsx! { "{waiting_hint}" } };
-    let (Some(local_damage), Some(local_healing)) = (rankings.by_damage.local_player(), rankings.by_healing.local_player()) else {
-        return rsx! { "{waiting_hint}" };
-    };
+    let waiting_hint = translate(&translations().ui_schema["NAV"]["main"]["tt"]["rps"]);
 
+    let Some(standing) = message.local_standing(pet_view) else { return rsx! { "{waiting_hint}" } };
+    let rows = message.rows(pet_view);
+    let you = &rows[standing.damage_rank - 1];
+    let encounter = message.facts();
     let number_format = NumberFormat::from_settings(settings);
-    let rate = |value: f64| number_format.format_number(value, 1.0, number_format.rate_decimals);
-    let local_player_name = context.local_player_name.read().clone();
-    let cell_context = CellContext::new(settings, translations(), &local_player_name);
+    // The top bar always shows whole numbers (the original's `addComma(x)` with no decimals), whatever
+    // the DPS/HPS decimals setting says for the tables.
+    let whole = |value: f64| number_format.format_number(value, 1.0, 0);
+    let local_player_name = tables.local_player_name.read().clone();
+    let cell_context = CellContext::new(settings, dictionary_title(LIMIT_BREAK_JOB_CODE), &local_player_name);
 
     let mut summary = String::new();
-    if settings.option_enabled("act_rd") {
-        summary += &format!("Total DPS {}　", rate(rankings.by_damage.encounter.damage_per_second));
+    if parts.total_dps {
+        let _ = write!(summary, "Total DPS {}　", whole(encounter.damage_per_second_whole));
     }
-    if settings.option_enabled("act_rh") {
-        summary += &format!("Total HPS {}　", rate(rankings.by_healing.encounter.heal_per_second));
+    if parts.total_hps {
+        let _ = write!(summary, "Total HPS {}　", whole(encounter.heal_per_second_whole));
     }
-    if settings.option_enabled("act_md") {
-        summary += &format!("My DPS {}　", rate(local_damage.rates.encounter_damage_per_second));
+    if parts.max_hit_damage {
+        // Recomputed from the raw accumulator and the encounter's own duration, same as the
+        // "encdps" table column and for the same reason (see `column_cell::cell_fragments`): the
+        // local player's own raw rate field can go stale while they aren't dealing damage, but the
+        // encounter's duration keeps advancing every message.
+        let _ = write!(summary, "My DPS {}　", whole(standing.damage_per_second.value()));
     }
-    if settings.option_enabled("act_mh") {
-        summary += &format!("My HPS {}　", rate(local_healing.rates.encounter_heal_per_second));
+    if parts.max_hit_heal {
+        let _ = write!(summary, "My HPS {}　", whole(standing.healing_per_second.value()));
     }
-    if settings.option_enabled("act_rank") {
-        summary += &format!("Rank {}/{}/{}　", local_damage.rank + 1, local_healing.rank + 1, rankings.by_damage.party_size);
+    if parts.rank {
+        let _ = write!(summary, "Rank {}/{}/{}　", standing.damage_rank, standing.healing_rank, standing.of);
     }
 
     // Clicking the "MaxHit" label switches it to "MaxHeal" and back.
-    let shows_strongest_heal = settings.option_enabled("swap");
-    let (label, strongest_action_text) = if shows_strongest_heal {
-        ("MaxHeal ", cell_plain_text("maxheal", local_healing, &rankings.by_healing, &cell_context))
+    let (label, strongest_action_text) = if parts.shows_strongest_heal {
+        ("MaxHeal ", cell_plain_text(&ColumnKey::Maxheal, you, encounter, &cell_context))
     } else {
-        ("MaxHit ", cell_plain_text("maxhit", local_damage, &rankings.by_damage, &cell_context))
+        ("MaxHit ", cell_plain_text(&ColumnKey::Maxhit, you, encounter, &cell_context))
     };
     let toggle_strongest_action_kind = move |_| {
         if !is_settings_preview {
-            context.edit_settings(|settings| {
-                let was_showing_heal = settings.option_enabled("swap");
-                settings.set_option_enabled("swap", !was_showing_heal);
+            settings_context.edit_settings(|settings| {
+                let was_showing_heal = settings.is_on(SettingKey::SwapTables);
+                settings.set_on(SettingKey::SwapTables, !was_showing_heal);
             });
         }
     };
     rsx! {
         "{summary}"
-        if settings.option_enabled("act_max") {
+        if parts.max_hit {
             span { "name": "swapBtn", onclick: toggle_strongest_action_kind, "{label}" }
             "{strongest_action_text}"
         }

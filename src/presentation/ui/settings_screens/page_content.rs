@@ -1,7 +1,7 @@
 //! Which content a settings page shows, taken from the schema in `data/l.json`.
 
 use crate::application::app_state::{SettingsLocation, PAGES_WITH_TABS};
-use crate::domain::settings::Settings;
+use crate::domain::settings::{Settings, SettingKey};
 use crate::domain::translations::translations;
 use serde_json::Value;
 
@@ -22,7 +22,7 @@ pub(super) enum PageContent {
     SchemaRows(Vec<SchemaEntry>),
     /// Column order list for "DPS" or "HPS".
     ColumnOrder(String),
-    /// Width / margin / align / header-text pages ("tab_width", ...).
+    /// Width / margin / align / header-text pages ("`tab_width`", ...).
     ColumnSettings(String),
     /// Abbreviation page: a form plus the list of saved abbreviations.
     Abbreviations(Vec<SchemaEntry>),
@@ -51,10 +51,10 @@ pub(super) fn tabs_of(page: &str) -> Vec<(String, Value)> {
 }
 
 /// The selected tab: the remembered one if valid, otherwise the first.
-pub(super) fn current_tab(page: &str, wanted: &Option<String>) -> Option<String> {
+pub(super) fn current_tab(page: &str, wanted: Option<&String>) -> Option<String> {
     let tabs = tabs_of(page);
     let first = tabs.first()?.0.clone();
-    Some(wanted.clone().filter(|t| tabs.iter().any(|(k, _)| k == t)).unwrap_or(first))
+    Some(wanted.cloned().filter(|t| tabs.iter().any(|(k, _)| k == t)).unwrap_or(first))
 }
 
 pub(super) fn content_for(settings: &Settings, location: &SettingsLocation) -> PageContent {
@@ -63,12 +63,12 @@ pub(super) fn content_for(settings: &Settings, location: &SettingsLocation) -> P
     if page == "abbset" {
         return PageContent::Abbreviations(entries_of(&schema["abbset"], None));
     }
-    let Some(tab) = current_tab(page, &location.tab) else {
+    let Some(tab) = current_tab(page, location.tab.as_ref()) else {
         return PageContent::SchemaRows(entries_of(&schema[page], None)); // page without tabs
     };
     let column_flag = tab.trim_start_matches("tab_").to_string();
     match (page, tab.as_str()) {
-        ("color", "tab_graph") => PageContent::SchemaRows(entries_of(&schema["Graph"][settings.option_text("palette").as_str()], None)),
+        ("color", "tab_graph") => PageContent::SchemaRows(entries_of(&schema["Graph"][settings.text(SettingKey::Palette).as_str()], None)),
         ("order", _) => PageContent::ColumnOrder(column_flag),
         ("cells", "tab_title" | "tab_width" | "tab_padding" | "tab_align") => PageContent::ColumnSettings(tab),
         ("format", _) => PageContent::SchemaRows(entries_of(&schema[page][tab.as_str()]["inner"], Some(&column_flag))),

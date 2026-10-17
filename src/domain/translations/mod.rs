@@ -1,23 +1,25 @@
-//! Translated text and the settings-page layout.
+//! The settings-page layout, and which text each part of it shows.
 //!
-//! Two JSON files, converted from the original `lang.js` and `dic.js` by `tools/extract.js`:
-//! * `data/l.json` (`ui_schema`)   – every settings page: its rows, their types and their texts
+//! Two JSON files, converted from the original `lang.js` and `dic.js` by `tools/i18n-split.mjs`:
+//! * `data/l.json` (`ui_schema`)   – every settings page: its rows, their types, icons and ranges
 //! * `data/d.json` (`dictionary`)  – short labels: column hints, alignment names, warnings
 //!
-//! A translated text is an object keyed by language code (`{"KR": "...", "EN": "..."}`);
-//! `translate` picks the requested language and falls back to English.
+//! They hold no text. Where a row shows a translated text, the JSON holds its message id (`"i18n:l-Design-font-tt"`),
+//! and the texts themselves are Project Fluent files, one per language, in `src/locales/`. Turning an id into text
+//! in the language in use is `application::i18n`'s job (it needs the running app); this module stays plain data.
 
 use serde_json::Value;
 use std::sync::OnceLock;
 
-const FALLBACK_LANGUAGE_CODE: &str = "EN";
+/// What marks a JSON string as a message id rather than plain text.
+pub const ID_PREFIX: &str = "i18n:";
 
 pub struct Translations {
     pub ui_schema: Value,
     pub dictionary: Value,
 }
 
-/// The translations, parsed once.
+/// The layout files, parsed once.
 pub fn translations() -> &'static Translations {
     static TRANSLATIONS: OnceLock<Translations> = OnceLock::new();
     TRANSLATIONS.get_or_init(|| Translations {
@@ -26,29 +28,20 @@ pub fn translations() -> &'static Translations {
     })
 }
 
-/// Text of a translatable value: a plain string, or an object keyed by language code.
-pub fn translate(value: &Value, language_code: &str) -> String {
-    match value {
-        Value::String(text) => text.clone(),
-        Value::Object(by_language) => by_language
-            .get(language_code)
-            .or_else(|| by_language.get(FALLBACK_LANGUAGE_CODE))
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string(),
-        _ => String::new(),
-    }
+/// The message id a translatable value stands for, or `None` for a plain string (or anything else).
+pub fn message_id(value: &Value) -> Option<&str> {
+    value.as_str()?.strip_prefix(ID_PREFIX)
 }
 
 impl Translations {
-    /// Toast / dialog message (`ui_schema.msg[id].m`).
-    pub fn message(&self, message_id: &str, language_code: &str) -> String {
-        translate(&self.ui_schema["msg"][message_id]["m"], language_code)
+    /// Toast / dialog message: the translatable value at `ui_schema.msg[id].m`.
+    pub fn message(&self, message_id: &str) -> &Value {
+        &self.ui_schema["msg"][message_id]["m"]
     }
 
     /// Short title of a dictionary entry (`dictionary[key].tt`), for example "Chocobo".
-    pub fn dictionary_title(&self, key: &str, language_code: &str) -> String {
-        translate(&self.dictionary[key]["tt"], language_code)
+    pub fn dictionary_title(&self, key: &str) -> &Value {
+        &self.dictionary[key]["tt"]
     }
 }
 

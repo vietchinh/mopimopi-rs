@@ -1,0 +1,12 @@
+gradient-false-top #ABCDEF
+gradient-false-bottom #ABCDEF
+gradient-false-left #ABCDEF
+gradient-false-right #ABCDEF
+gradient-false-diagonal #ABCDEF
+gradient-false- #ABCDEF
+gradient-true-top linear-gradient(to bottom, rgba(0,0,0,0), #ABCDEF)
+gradient-true-bottom linear-gradient(to top, rgba(0,0,0,0), #ABCDEF)
+gradient-true-left linear-gradient(to right, rgba(0,0,0,0), #ABCDEF)
+gradient-true-right linear-gradient(to left, rgba(0,0,0,0), #ABCDEF)
+gradient-true-diagonal #ABCDEF
+gradient-true- #ABCDEF

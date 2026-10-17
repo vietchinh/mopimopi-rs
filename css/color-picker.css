@@ -1,0 +1,3 @@
+/* color-picker.css: the colour picker of the settings screens (settings_screens/js_color.rs). It styles itself inline, from Rust constants that mirror
+   jscolor's own geometry, and its palette is the `--color-panel`, `--color-panel-inset` and `--color-pointer` tokens of theme.css. This is where
+   its static rules go; there are none yet. */

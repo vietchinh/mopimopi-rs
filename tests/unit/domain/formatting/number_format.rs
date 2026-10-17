@@ -30,7 +30,49 @@ fn custom_separators() {
 fn large_rates_are_shortened_when_enabled() {
     let format = default_format();
     assert_eq!(
-        format.rate_fragments(12345.0),
+        format.rate_fragments(Rate::new(12345.0)),
         vec![TextFragment::Plain("12".into()), TextFragment::Dimmed("k".into())]
     );
+}
+
+#[test]
+fn a_rate_acts_reports_is_shown_as_reported_but_a_derived_one_is_rounded_twice_like_the_original() {
+    let mut format = default_format();
+    format.rate_decimals = 1;
+    let shown = |fragments: Vec<TextFragment>| fragments.iter().map(|fragment| match fragment {
+        TextFragment::Plain(text) | TextFragment::Dimmed(text) => text.clone(),
+    }).collect::<String>();
+    // 21.1538: shown to one decimal straight from ACT it is 21.2; the original's pFloat on a derived rate first makes it 21.15, then 21.1
+    assert_eq!(shown(format.reported_rate_fragments(Reported::new(21.1538))), "21.2");
+    assert_eq!(shown(format.rate_fragments(Rate::new(21.1538))), "21.1");
+}
+
+/// The grouping the app had before it wrote into one string: kept here as the reference the new code is held to.
+fn grouped_the_old_way(integer_part: &str, separator: &str) -> String {
+    let is_negative = integer_part.starts_with('-');
+    let digits = integer_part.trim_start_matches('-');
+    let mut grouped = String::new();
+    for (index, digit) in digits.chars().enumerate() {
+        if index > 0 && (digits.len() - index) % 3 == 0 {
+            grouped.push_str(separator);
+        }
+        grouped.push(digit);
+    }
+    if is_negative { format!("-{grouped}") } else { grouped }
+}
+
+#[test]
+fn grouping_in_pieces_gives_the_text_the_old_grouping_gave() {
+    for separator in [",", ".", " ", "\u{202f}", "'"] {
+        for length in 0..=24 {
+            let digits: String = (0..length).map(|index| char::from(b'0' + (index % 10) as u8)).collect();
+            for negative in [false, true] {
+                let integer_part = if negative { format!("-{digits}") } else { digits.clone() };
+                let mut written = String::new();
+                if negative { written.push('-'); }
+                written.extend(grouped_by_three(&digits, separator));
+                assert_eq!(written, grouped_the_old_way(&integer_part, separator), "separator {separator:?}, {integer_part:?}");
+            }
+        }
+    }
 }

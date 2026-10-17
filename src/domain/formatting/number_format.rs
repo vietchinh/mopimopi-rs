@@ -1,8 +1,9 @@
 //! Number formatting driven by the "Number" settings page.
 
 use super::text_fragment::TextFragment;
-use crate::common::javascript_compat::to_fixed;
-use crate::domain::settings::Settings;
+use crate::domain::combat::{Amount, Percent, Rate, Reported};
+use crate::domain::javascript_number::to_fixed;
+use crate::domain::settings::{Settings, SettingKey};
 
 const THOUSAND: f64 = 1_000.0;
 const MILLION: f64 = 1_000_000.0;
@@ -23,16 +24,16 @@ pub struct NumberFormat {
     pub amount_decimals: usize,
     /// Show large DPS and damage values as "12.3k" / "1.2M".
     pub shorten_large_values: bool,
-    /// Show large MaxHit / MaxHeal values as "12.3k" / "1.2M".
+    /// Show large `MaxHit` / `MaxHeal` values as "12.3k" / "1.2M".
     pub shorten_strongest_action_values: bool,
 }
 
 impl NumberFormat {
     pub fn from_settings(settings: &Settings) -> NumberFormat {
-        let digits_after_decimal = settings.option_number("ns");
-        let decimals_for = |kind_option: &str| (digits_after_decimal * settings.option_number(kind_option)).max(0.0) as usize;
-        let grouping = settings.option_text("gs");
-        let decimal_mark = settings.option_text("ds");
+        let digits_after_decimal = settings.number(SettingKey::DecimalPlaces);
+        let decimals_for = |kind_option: SettingKey| (digits_after_decimal * settings.number(kind_option)).max(0.0) as usize;
+        let grouping = settings.text(SettingKey::ThousandsMark);
+        let decimal_mark = settings.text(SettingKey::DecimalMark);
         NumberFormat {
             thousands_separator: match grouping.as_str() {
                 "" | "0" => None,
@@ -44,11 +45,11 @@ impl NumberFormat {
                 "_" => " ".to_string(),
                 other => other.to_string(),
             },
-            rate_decimals: decimals_for("dpsType"),
-            percent_decimals: decimals_for("perType"),
-            amount_decimals: decimals_for("dmgType"),
-            shorten_large_values: settings.option_enabled("unit"),
-            shorten_strongest_action_values: settings.option_enabled("max_unit"),
+            rate_decimals: decimals_for(SettingKey::RateDecimals),
+            percent_decimals: decimals_for(SettingKey::PercentDecimals),
+            amount_decimals: decimals_for(SettingKey::AmountDecimals),
+            shorten_large_values: settings.is_on(SettingKey::ShortenValues),
+            shorten_strongest_action_values: settings.is_on(SettingKey::ShortenStrongestAction),
         }
     }
 
@@ -58,18 +59,23 @@ impl NumberFormat {
             return "0".into();
         }
         let fixed = to_fixed(value / divisor, decimals);
+        // Written into one string: the grouped whole part, then the decimal mark and the fraction.
         let (integer_part, fraction) = match fixed.split_once('.') {
-            Some((integer, fraction)) => (integer.to_string(), Some(fraction.to_string())),
-            None => (fixed, None),
+            Some((integer, fraction)) => (integer, Some(fraction)),
+            None => (fixed.as_str(), None),
         };
-        let grouped = match &self.thousands_separator {
-            Some(separator) => group_thousands(&integer_part, separator),
-            None => integer_part,
-        };
-        match fraction {
-            Some(fraction) => format!("{grouped}{}{fraction}", self.decimal_separator),
-            None => grouped,
+        let mut formatted = String::with_capacity(fixed.len() + fixed.len() / 3 + self.decimal_separator.len());
+        let (sign, digits) = integer_part.strip_prefix('-').map_or(("", integer_part), |digits| ("-", digits));
+        formatted.push_str(sign);
+        match &self.thousands_separator {
+            Some(separator) => formatted.extend(grouped_by_three(digits, separator)),
+            None => formatted.push_str(digits),
         }
+        if let Some(fraction) = fraction {
+            formatted.push_str(&self.decimal_separator);
+            formatted.push_str(fraction);
+        }
+        formatted
     }
 
     /// The number followed by a dimmed unit when `divisor` is 1,000 ("k") or 1,000,000 ("M").
@@ -86,7 +92,16 @@ impl NumberFormat {
     }
 
     /// A DPS / HPS value: "∞" for infinity, shortened to k when large and enabled.
-    pub fn rate_fragments(&self, value: f64) -> Vec<TextFragment> {
+    pub fn rate_fragments(&self, rate: Rate) -> Vec<TextFragment> {
+        self.per_second_fragments(rate.value())
+    }
+
+    /// A per-second figure as ACT reported it.
+    pub fn reported_rate_fragments(&self, rate: Reported) -> Vec<TextFragment> {
+        self.per_second_fragments(rate.value())
+    }
+
+    fn per_second_fragments(&self, value: f64) -> Vec<TextFragment> {
         if value == f64::INFINITY {
             return vec![TextFragment::Plain("∞".into())];
         }
@@ -95,7 +110,8 @@ impl NumberFormat {
     }
 
     /// A damage / healing amount: k / M when large and enabled, otherwise a whole number.
-    pub fn amount_fragments(&self, value: f64) -> Vec<TextFragment> {
+    pub fn amount_fragments(&self, amount: Amount) -> Vec<TextFragment> {
+        let value = amount.value();
         if self.shorten_large_values && value >= MILLION {
             self.number_with_unit(value, MILLION, self.amount_decimals)
         } else if self.shorten_large_values && value >= MINIMUM_FOR_THOUSANDS_UNIT {
@@ -105,8 +121,9 @@ impl NumberFormat {
         }
     }
 
-    /// A MaxHit / MaxHeal amount (has its own unit switch and starts shortening at 1,000).
-    pub fn strongest_action_amount_fragments(&self, value: f64) -> Vec<TextFragment> {
+    /// A `MaxHit` / `MaxHeal` amount (has its own unit switch and starts shortening at 1,000).
+    pub fn strongest_action_amount_fragments(&self, amount: Amount) -> Vec<TextFragment> {
+        let value = amount.value();
         if self.shorten_strongest_action_values && value >= MILLION {
             self.number_with_unit(value, MILLION, self.amount_decimals)
         } else if self.shorten_strongest_action_values && value >= THOUSAND {
@@ -117,7 +134,8 @@ impl NumberFormat {
     }
 
     /// A percentage with a dimmed "%" sign.
-    pub fn percent_fragments(&self, value: f64) -> Vec<TextFragment> {
+    pub fn percent_fragments(&self, percent: Percent) -> Vec<TextFragment> {
+        let value = percent.value();
         vec![
             TextFragment::Plain(self.format_number(value, 1.0, self.percent_decimals)),
             TextFragment::Dimmed("%".into()),
@@ -125,18 +143,18 @@ impl NumberFormat {
     }
 }
 
-/// Inserts `separator` between groups of three digits ("1234567" -> "1,234,567").
-fn group_thousands(integer_part: &str, separator: &str) -> String {
-    let is_negative = integer_part.starts_with('-');
-    let digits = integer_part.trim_start_matches('-');
-    let mut grouped = String::new();
-    for (index, digit) in digits.chars().enumerate() {
-        if index > 0 && (digits.len() - index) % 3 == 0 {
-            grouped.push_str(separator);
-        }
-        grouped.push(digit);
-    }
-    if is_negative { format!("-{grouped}") } else { grouped }
+/// The pieces of `digits` with `separator` between groups of three, counted from the right ("1234567" -> "1", ",", "234", ",", "567").
+/// Pieces rather than a built string, so the caller writes them straight into the one string it is making.
+fn grouped_by_three<'a>(digits: &'a str, separator: &'a str) -> impl Iterator<Item = &'a str> {
+    let first_group = match digits.len() % 3 {
+        0 => digits.len().min(3),
+        remainder => remainder,
+    };
+    let (first, rest) = digits.split_at(first_group);
+    std::iter::once(first).chain(rest.as_bytes().chunks(3).zip(0..).flat_map(move |(group, index)| {
+        let start = first_group + index * 3;
+        [separator, &digits[start..start + group.len()]]
+    }))
 }
 
 #[cfg(test)]

@@ -1,0 +1,393 @@
+/* The base layout: what has to be in place when the app first paints, so that refreshing the page does not bounce.
+
+   The app is a wasm module. Until it has run, the page is empty; the moment it has, the first frame is drawn, and the stylesheets that
+   `document::Stylesheet` adds at runtime (tailwind.css) have not arrived yet. Measured on a refresh at 2560px wide: that frame had
+   `html` at 16px (rem sizes all wrong), the body 377px tall instead of the window's 1300px, and about 50 ms later the sheets landed
+   and everything jumped (a layout shift of ~0.9), after which `html{transition:.3s}` slid the font-size from 16px to 10px, resizing
+   everything for another 300 ms. So this file is a plain, render-blocking `<link>` in the page's head (`style` in Dioxus.toml,
+   `<link>` in web/index.html), served straight from `public/` (a stylesheet listed in `style` is not processed or hashed by `dx`, but
+   files in `public/` are copied and served next to the page). It holds the window/page structure and the two screens that paint on a
+   refresh (the start screen and the tables), i.e. everything that sets the size or position of something on those screens.
+
+   It is layered exactly as the rest (the order is declared here first, and tailwind.css repeats it):
+
+       theme < base (Preflight) < app < legacy < components < utilities
+
+   - `app`: what used to be assets/app.css, the layout glue the original did with JS.
+   - `legacy`: the first part of the original overlay's stylesheet, through the tables. The rest (menus, settings screens, animations, form
+     controls, tooltip and toasts) is in tailwind.css, in the same layer and after this: rules in one layer keep their order across
+     sheets, so nothing is reordered. What is here must stay a prefix of that stylesheet for the same reason.
+   The Tailwind utilities (`nav-bar`, `chrome-*`, ...) are generated and arrive with tailwind.css; nothing here depends on them. */
+@layer theme, base, app, legacy, components, utilities;
+
+@layer app {
+/* Layout glue that the original did with JS (resizeWindow) */
+#wrap{display:flex;flex-direction:column;position:relative;overflow:hidden}
+#content{flex:1;min-height:0;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.mainBody{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
+.noticeBody{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.noticeBody>#strong,.noticeBody>#tip{flex:none}
+.noticeBody>#update{flex:1 1 0;min-height:0}
+.setBody{display:flex;flex-direction:column;height:100%}
+.setBody .previewArea{flex:none}
+.setBody .scrollArea{flex:1;min-height:0}
+.histBody{display:flex;flex-direction:column;height:100%}
+.histBody #HISTORYBody{flex:1;min-height:0}
+.dropdown{position:absolute;top:0;left:0;width:100%;height:100%}
+.dropdown ul{max-height:80%}
+.connectBox{padding:1rem;text-align:center;background:rgba(0,0,0,.6)}
+.connectBox input{width:70%;padding:.6rem;background:#212121;color:#fff;border:.1rem solid #616161;font-size:1.2rem}
+.connectBox button,.connectBox .cbtn{margin:.5rem;padding:.6rem 1.2rem;background:#03A9F4;color:#000;border:0;cursor:pointer;font-size:1.2rem;border-radius:.2rem}
+.connectBox .cbtn.alt{background:#616161;color:#fff}
+.connectBox .stat{font-size:1.2rem;margin:.4rem}
+.inputEff{background:transparent;color:#fff;width:100%;outline:0}
+.li_text .inputBox{position:relative}
+.focus-border{position:absolute;bottom:0;left:0;width:100%;height:.2rem}
+/* Hide scrollbars (Chrome ignores ::-webkit-scrollbar when other scrollbar props apply) */
+#DPSBody,#HPSBody,#DPSBody_P,#HPSBody_P,#HISTORYBody,.mainBody,.noticeBody,.scrollArea,.dropdown ul,#update{scrollbar-width:none}
+#DPSBody::-webkit-scrollbar,#HPSBody::-webkit-scrollbar,#DPSBody_P::-webkit-scrollbar,#HPSBody_P::-webkit-scrollbar,#HISTORYBody::-webkit-scrollbar,.mainBody::-webkit-scrollbar,.noticeBody::-webkit-scrollbar,.scrollArea::-webkit-scrollbar,.dropdown ul::-webkit-scrollbar,#update::-webkit-scrollbar{display:none;width:0;height:0}
+/* Dioxus mounts into #main; #wrap uses height:100% so #main must fill the window */
+#main{width:100%;height:100%}
+
+/* checklists under the connection status (start screen) and the missing-YOU hint */
+.connectHelp{margin-top:1.2rem;font-size:1.3rem;line-height:1.5;text-align:left}
+.connectHelp ul{margin:.4rem 0 0 1.6rem;list-style:disc}
+.connectHelp li{margin:.3rem 0;list-style:disc}
+
+/* Icons: dioxus-material-icons draws every icon as `<span class="material-icons ...">` with an inline `font-size` (`inherit`,
+   unless given a size), and takes no class. The original had `<i class="material-icons">` sized by `.material-icons{font-size:2.4rem}`
+   and coloured by its surroundings. An `!important` rule beats a plain inline style, so the stylesheet stays in charge, as it was. */
+.material-icons{font-size:2.4rem!important}
+/* The nav bars' icons (`nav-icon`: their size and colour come from the nav bar's settings, see tailwind.css) are wrapped in a
+   span that draws no box, so it cannot change the layout; the icon inside takes its size from the wrapper. */
+.nav-icon{display:contents}
+.nav-icon .material-icons{font-size:inherit!important}
+/* What `nav[name=settings] i` did in the original stylesheet, for the span the icon now is. */
+nav[name=settings] .material-icons{color:var(--accent)}
+/* `.animated` + `.flash` (tailwind.css, legacy block) animate the element that has the class; the wrapper draws no box, so its icon animates instead. */
+.animated.flash>.material-icons{animation-duration:.75s;animation-fill-mode:both;animation-name:flash}
+}
+
+@layer legacy {
+/* --- Reset, page and typography --- */
+* {
+  margin: 0;
+  padding: 0;
+  touch-action: manipulation;
+}
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+html {
+  font-size: 62.5%;
+  font-family: "Segoe UI","sans-serif";
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: .3s;
+}
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+div,
+li {
+  user-select: none;
+  list-style: none;
+}
+table {
+  border-collapse: collapse;
+}
+
+/* --- Helper classes the markup uses by name --- */
+.material-icons {
+  font-size: 2.4rem;
+}
+.right {
+  position: absolute;
+  right: 0;
+}
+.left {
+  position: absolute;
+  left: 0;
+}
+.top {
+  position: fixed;
+  top: 0;
+  margin: 0 auto;
+}
+.right div,
+.left div {
+  float: left!important;
+}
+.flex {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shadow {
+  box-shadow: 0 .2rem .2rem 0 rgba(0,0,0,.14),0 .1rem .5rem 0 rgba(0,0,0,.12),0 .3rem .1rem -.2rem rgba(0,0,0,.2);
+}
+ul li:not(:last-child) {
+  border-bottom: solid .1rem rgba(255,255,255,.07);
+}
+:hover {
+  outline: none;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.hidden {
+  visibility: hidden;
+}
+
+/* --- The window and the top bar --- */
+#wrap {
+  width: 100%;
+  height: 100%;
+  cursor: default;
+  background-attachment: fixed;
+  background-size: 1.25rem 1.25rem;
+  background-position: bottom right;
+  background-repeat: no-repeat;
+}
+nav {
+  position: relative;
+  height: 4.2rem;
+  padding: .1rem;
+  background-color: #212121;
+  z-index: 998;
+}
+nav table {
+  height: inherit;
+  table-layout: fixed;
+  cursor: move;
+  font-size: 1.4rem;
+  -webkit-app-region: drag;
+}
+.nav_title {
+  height: inherit;
+  margin-left: 4.4rem;
+  width: 100%;
+  color: #fff;
+  position: relative;
+}
+[name=rps],
+[name=target] {
+  white-space: nowrap;
+  padding-left: 1rem;
+}
+[name=target] {
+  vertical-align: bottom;
+}
+[name=rps] {
+  vertical-align: top;
+  width: 100%;
+}
+.btn {
+  height: inherit;
+  padding: 0 1rem;
+  cursor: pointer;
+}
+.btn:hover {
+  background: rgba(0,0,0,.25);
+}
+.btn_wrap {
+  height: inherit;
+  margin: .1rem;
+}
+[name=swapBtn]:hover,
+.UBtn:hover,
+.DBtn:hover,
+.sendBtn:hover,
+.removeBtn:hover {
+  cursor: pointer;
+}
+
+/* --- Start screen (notice, update log) --- */
+[name=notice] {
+  color: #bdbdbd;
+  font-size: 1.2rem;
+}
+[name=notice] div#strong {
+  text-align: center;
+  color: #bdbdbd;
+  background: rgba(0,0,0,.75);
+  line-height: 1.3;
+  padding: 1rem;
+}
+#tip {
+  text-align: center;
+  background: rgba(132,0,255,.5);
+  color: #fff;
+  padding: .5rem;
+}
+#update {
+  overflow-x: hidden;
+  overflow-y: scroll;
+  text-shadow: 0 0 .3rem #000;
+}
+.b,
+.u,
+.n,
+.c {
+  text-align: center;
+  float: left;
+  width: 5rem;
+}
+.m {
+  display: table-cell;
+  line-height: 1.3;
+}
+#update .b {
+  color: #FF4081;
+}
+#update .u {
+  color: #C6FF00;
+}
+#update .n {
+  color: #FB0;
+}
+#update .c {
+  color: #00E5FF;
+}
+#update [name=row]:nth-child(2n) {
+  padding: .5rem 0;
+  background: rgba(0,0,0,.50);
+}
+#update [name=row]:nth-child(2n-1) {
+  padding: .5rem 0;
+  background: rgba(0,0,0,.25);
+}
+a:link,
+a:visited {
+  color: #03A9F4;
+}
+
+/* --- Tables: header, bars, cells, raid cards --- */
+#DPSBody,
+#HPSBody,
+#HISTORYBody {
+  width: 100%;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+#DPSBody_P,
+#HPSBody_P {
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+#HISTORYBody div {
+  cursor: pointer;
+}
+.tableWrap {
+  position: relative;
+}
+.tableHeader {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.ds,
+.oh,
+.pet {
+  position: relative;
+  height: inherit;
+  z-index: 3;
+}
+.bar {
+  position: absolute;
+  height: inherit;
+  z-index: 2;
+  background: #353535;
+}
+.barBg {
+  position: relative;
+  height: inherit;
+  z-index: 1;
+}
+.tableBody {
+  position: absolute;
+  z-index: 4;
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  height: inherit;
+}
+.tableBody td {
+  height: inherit;
+}
+.title {
+  font-weight: 700;
+  margin-bottom: .2rem;
+}
+.ex {
+  font-size: 1.1rem;
+  color: #ccc;
+}
+.cell,
+.cell_1,
+.cell_5,
+.cell_6 {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+  text-align: center;
+  vertical-align: middle;
+  table-layout: fixed;
+}
+.cell_1 {
+  width: 100%;
+  text-align: left;
+}
+.cell_5 {
+  width: 4rem;
+}
+.cell_6 {
+  width: 6.5rem;
+}
+#DPSBody .rRow:first-child .rCell,
+#HPSBody .rRow:first-child .rCell {
+  border-top: .1rem solid rgba(255,255,255,.1);
+}
+.rRow .rCell:last-child {
+  border-right: .1rem solid rgba(255,255,255,.1);
+}
+.rCell {
+  box-sizing: border-box;
+  table-layout: fixed;
+  float: left;
+  background: #353535;
+  border-bottom: .1rem solid rgba(255,255,255,.1);
+}
+.rIdx {
+  background: #353535;
+}
+.rIcon {
+  padding: .1rem 0;
+  vertical-align: middle;
+  text-align: center;
+}
+.rName {
+  white-space: nowrap;
+  text-align: left;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.rData {
+  text-align: right;
+  padding: 0 .3rem .3rem 0;
+}
+#preview24 {
+  margin-left: auto;
+}
+#preview24 td {
+  padding: 1rem 1rem 0 0;
+  cursor: pointer;
+}
+}

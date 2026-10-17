@@ -1,20 +1,19 @@
-//! The settings document.
+//! The settings.
 
-use serde_json::Value;
+use super::settings_file::SettingsFile;
 
-/// Section names of the settings JSON document.
-pub(super) const OPTIONS_SECTION: &str = "q";
-pub(super) const COLORS_SECTION: &str = "Color";
-pub(super) const SLIDERS_SECTION: &str = "Range";
-pub(super) const ABBREVIATIONS_SECTION: &str = "Alias";
-pub(super) const COLUMN_ORDER_SECTION: &str = "Order";
-pub(super) const COLUMN_DEFINITIONS_SECTION: &str = "ColData";
+/// Settings shared with others (the "Custom UI Data" code): these sections, and not the personal ones.
+pub(super) const SHAREABLE_SECTIONS: [&str; 3] = [super::settings_file::OPTIONS_SECTION, super::settings_file::COLORS_SECTION, super::settings_file::RANGES_SECTION];
 
-/// Settings sections that hold user-visible options and can be shared with others.
-pub(super) const SHAREABLE_SECTIONS: [&str; 3] = [OPTIONS_SECTION, COLORS_SECTION, SLIDERS_SECTION];
-
-/// Overlay settings, stored as the original overlay's JSON document.
+/// Overlay settings: the settings file, with the readers and writers the app uses (`option_access`, `option_updates`, `column_layout`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Settings {
-    pub(super) json_document: Value,
+    pub(super) file: SettingsFile,
+}
+
+impl Settings {
+    /// The typed file, for what needs to see all of it.
+    pub fn file(&self) -> &SettingsFile {
+        &self.file
+    }
 }

@@ -1,0 +1,65 @@
+/* text.css: shapes shared by several areas.
+
+   Themed text. A row, or any element that holds `td` cells, carries `themed-text` and shows its text as the variables on it, or on an
+   ancestor, say (`--text-color`, `--text-opacity`, `--text-ex-color`, `--text-font`, `--text-size`, `--text-style`, `--text-weight`,
+   `--text-shadow`). A row that is the local player's adds `text-own`, which swaps all of them for the `--own-*` ones set (one that is not set, such as a size the cells set themselves, leaves the text's fallback)
+   next to them. So one pair of rules serves every table, instead of one pair per table and per row kind. Set by Rust: `TextStyle::write`
+   (shared/style/shapes.rs), under the prefixes `text` and `own`, from areas/table.rs.
+     - `:where(td)` keeps the cell part at zero specificity, so a class on a cell can still override it.
+     - The text is set on the cells, not on the row: an opacity on the row would also fade the graph bars drawn in it.
+     - `.ex` (the dimmed part of a cell) sets its own colour in the legacy stylesheet, so it needs its own rule.
+     - Italic is a variable and not Tailwind's `italic`, which is one of the words excluded by `@source not inline`.
+
+   Corners. The corner radii of the table header and body, which the tables and the history screen both use. `corner-header-left/right`
+   go on the first and last header cell (`first:` / `last:`), so the corners follow whichever columns the user has switched on.
+
+   Variables read here, and the Rust file that sets them:
+     presentation/ui/areas/table.rs (through TextStyle::write and Corners::write, names built with format!):
+       --text-color, --text-opacity, --text-ex-color, --text-font, --text-size, --text-style, --text-weight, --text-shadow,
+       --own-color, --own-opacity, --own-ex-color, --own-weight, --own-shadow,
+       --table-radius-header-tl, --table-radius-header-tr, --table-radius-header-bl, --table-radius-header-br,
+       --table-radius-body-tl, --table-radius-body-tr, --table-radius-body-bl, --table-radius-body-br */
+
+/* Applied to an element that holds text cells (a row, a header, a card), or to a single cell (the nav's texts). */
+@utility themed-text {
+  &:where(td),
+  & :where(td) {
+    color: var(--text-color);
+    opacity: var(--text-opacity, 1);
+    font-family: var(--text-font);
+    font-size: var(--text-size, inherit);
+    font-style: var(--text-style, normal);
+    font-weight: var(--text-weight, normal);
+    text-shadow: var(--text-shadow, none);
+  }
+  &:where(td) .ex,
+  & :where(td) .ex {
+    color: var(--text-ex-color, var(--text-color));
+    opacity: var(--text-opacity, 1);
+    text-shadow: var(--text-shadow, none);
+  }
+}
+
+/* The local player's rows (you, and your pet) switch to the own-row values. */
+@utility text-own {
+  --text-color: var(--own-color);
+  --text-opacity: var(--own-opacity);
+  --text-ex-color: var(--own-ex-color);
+  --text-font: var(--own-font);
+  --text-size: var(--own-size);
+  --text-style: var(--own-style);
+  --text-weight: var(--own-weight);
+  --text-shadow: var(--own-shadow);
+}
+
+@utility corner-header-left {
+  border-top-left-radius: var(--table-radius-header-tl);
+  border-bottom-left-radius: var(--table-radius-header-bl);
+}
+@utility corner-header-right {
+  border-top-right-radius: var(--table-radius-header-tr);
+  border-bottom-right-radius: var(--table-radius-header-br);
+}
+@utility corner-body {
+  border-radius: var(--table-radius-body-tl) var(--table-radius-body-tr) var(--table-radius-body-br) var(--table-radius-body-bl);
+}

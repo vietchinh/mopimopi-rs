@@ -6,6 +6,7 @@
 //! * `live_preview`    – sample tables above the rows
 //! * `tab_bar`         – tab buttons
 //! * `row_groups`      – rows grouped into boxes
+//! * `port_section`    – the options only this port has (separate store, own export), on the "Custom UI Data" page
 //! * `schema_rows`     – one builder per schema entry type
 //! * `column_pages`    – special pages built from the settings (column order, sizes, ...)
 //! * `row_context`, `row_layout`, `slider_row`, `text_box`, `form_actions`, `base64_encoding` – row building blocks
@@ -13,9 +14,11 @@
 mod base64_encoding;
 mod column_pages;
 mod form_actions;
+pub mod js_color;
 mod live_preview;
 mod navigation_bar;
 mod page_content;
+mod port_section;
 mod row_context;
 mod row_groups;
 mod row_layout;
@@ -25,8 +28,9 @@ mod tab_bar;
 mod text_box;
 
 pub use navigation_bar::SettingsNavigationBar;
+pub use js_color::{ColorPickerHost, ColorPickerState};
 
-use crate::application::app_state::*;
+use crate::application::app_state::{AppActions, DropdownContext, SettingsContext, SettingsScreenContext, PAGES_WITH_LIVE_PREVIEW};
 use dioxus::prelude::*;
 use live_preview::LivePreview;
 use page_content::{content_for, PageContent};
@@ -38,15 +42,21 @@ use tab_bar::tab_bar;
 /// Layout: [live preview] [tab buttons] [scrollable list of rows].
 #[component]
 pub fn SettingsScreen() -> Element {
-    let context = use_context::<AppContext>();
+    let settings_context = use_context::<SettingsContext>();
+    let settings_screen = use_context::<SettingsScreenContext>();
+    let dropdown = use_context::<DropdownContext>();
+    let actions = use_context::<AppActions>();
     let typed_texts: TypedTexts = use_signal(HashMap::new);
-    let settings = context.settings.read();
-    let location = context.settings_location.read().clone();
-    let show_preview = PAGES_WITH_LIVE_PREVIEW.contains(&location.page.as_str()) && *context.settings_preview_enabled.read();
-    let language_code = settings.language_code();
+    let settings = settings_context.settings.read();
+    let location = settings_screen.settings_location.read().clone();
+    let show_preview = PAGES_WITH_LIVE_PREVIEW.contains(&location.page.as_str()) && *settings_screen.settings_preview_enabled.read();
 
-    let page_context = RowContext { context, settings: &settings, language_code: &language_code, typed_texts };
+    let page_context = RowContext { settings_context, dropdown, actions, settings: &settings, typed_texts };
     let body = match content_for(&settings, &location) {
+        PageContent::SchemaRows(entries) if location.page == "custom" => rsx! {
+            {grouped_rows(&page_context, &entries)}
+            {port_section::port_section(&page_context)}
+        },
         PageContent::SchemaRows(entries) => grouped_rows(&page_context, &entries),
         PageContent::Abbreviations(entries) => rsx! {
             {grouped_rows(&page_context, &entries)}

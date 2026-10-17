@@ -1,0 +1,12 @@
+{
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  },
+  "private": true,
+  "scripts": {
+    "css:watch": "npx @tailwindcss/cli -i ./tailwind.css -o ./assets/tailwind.css --watch",
+    "css:build": "npx @tailwindcss/cli -i ./tailwind.css -o ./assets/tailwind.css --minify",
+    "check:css": "node tools/check-tailwind.mjs && node tools/cancel-preflight.mjs --check"
+  }
+}
