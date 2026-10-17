@@ -45,5 +45,5 @@ fn a_real_capture_parses() {
     let message = OverlayMessage::parse(text).unwrap();
     let combat_data = message.combat_data().expect("the capture is a CombatData message");
     assert!(!combat_data.combatants.is_empty());
-    assert!(crate::domain::combat::Encounter::from(combat_data.clone()).local_player().is_some());
+    assert!(crate::domain::combat::Encounter::from(combat_data.clone()).you().is_some());
 }

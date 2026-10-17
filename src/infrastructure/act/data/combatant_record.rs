@@ -1,7 +1,7 @@
 //! One entry of the `Combatant` object: a player, a pet, a chocobo or the Limit Break.
 
 use super::lenient_values::{lenient_number, lenient_rate, lenient_text, lenient_action_name};
-use crate::domain::combat::Figures;
+use crate::domain::combat::Stats;
 use serde::Deserialize;
 
 /// Field names follow ACT's JSON (see the `rename` attributes); Rust names say what the value is.
@@ -104,9 +104,9 @@ pub(in crate::infrastructure::act) struct CombatantRecord {
     pub pet_effective_healed: f64,
 }
 
-impl From<CombatantRecord> for Figures {
-    fn from(record: CombatantRecord) -> Figures {
-        Figures {
+impl From<CombatantRecord> for Stats {
+    fn from(record: CombatantRecord) -> Stats {
+        Stats {
             arrival_index: record.arrival_index,
             name: record.name,
             job: record.job_text.into(),

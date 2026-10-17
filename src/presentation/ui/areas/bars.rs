@@ -1,7 +1,7 @@
 //! The graph bars behind the rows: their colours, the fade, the side the small bars float to, and which small bars show.
 
 use crate::domain::settings::SettingsFile;
-use crate::domain::combat::Member;
+use crate::domain::combat::Participant;
 use crate::presentation::ui::shared::style::StyleReads;
 use indexmap::IndexMap;
 
@@ -81,10 +81,10 @@ impl BarPalette {
         }
     }
 
-    /// Colour of a player's main bar. The colour key is the row's `class_code()` (not the raw job text the icon uses); the role key is
+    /// Colour of a participant's main bar. The colour key is the row's `class_code()` (not the raw job text the icon uses); the role key is
     /// only used by the role palette.
-    pub fn player_color(&self, player: &Member, row_id: &str) -> String {
-        self.color_of(&player.class_code(), player.role_palette_key(), row_id)
+    pub fn participant_color(&self, participant: &Participant, row_id: &str) -> String {
+        self.color_of(&participant.class_code(), participant.role_palette_key(), row_id)
     }
 }
 

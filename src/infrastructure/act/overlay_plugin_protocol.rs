@@ -112,7 +112,7 @@ mod tests {
         match result {
             Ok(Some(OverlayPluginEvent::CombatData(data))) => {
                 assert!(!data.is_active());
-                assert_eq!(data.members().len(), 3);
+                assert_eq!(data.participants().len(), 3);
             }
             other => panic!("not understood: {other:?}"),
         }
@@ -152,8 +152,8 @@ mod tests {
         let text = r#"{"type":"CombatData","Encounter":{"title":"Striking Dummy","DURATION":"10","damage":"24,466","CurrentZoneName":"Shirogane"},"Combatant":{"YOU":{"name":"YOU","Job":"Drk","damage":"24466","encdps":"2740.98","maxhit":"attack-8273","MAXHIT":"8273"}},"isActive":"true"}"#;
         let Ok(Some(OverlayPluginEvent::CombatData(e))) = interpret(text) else { panic!("not combat data") };
         assert_eq!((e.facts().title.as_str(), e.facts().zone_name.as_str(), e.facts().total_damage), ("Striking Dummy", "Shirogane", 24466.0));
-        assert_eq!(e.members()[0].name, "YOU");
-        assert_eq!(e.members()[0].damage_per_second, 2740.98);
+        assert_eq!(e.participants()[0].name, "YOU");
+        assert_eq!(e.participants()[0].damage_per_second, 2740.98);
     }
 
     #[test]
@@ -179,7 +179,7 @@ mod tests {
             "Eos (Future Fade)":{"name":"Eos (Future Fade)","damage":"20"}
         },"isActive":"true"}"#;
         let Ok(Some(OverlayPluginEvent::CombatData(encounter))) = interpret(text) else { panic!("not combat data") };
-        assert_eq!(encounter.members().len(), 2, "the Encounter keeps both rows");
+        assert_eq!(encounter.participants().len(), 2, "the Encounter keeps both rows");
         assert_eq!(encounter.rows(PetView::Separate).len(), 2);
         let folded = encounter.rows(PetView::FoldedIntoOwners { local_player_name: Some("Future Fade") });
         assert_eq!(folded.len(), 1, "the pet's row is folded into YOU");

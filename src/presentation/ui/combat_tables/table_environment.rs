@@ -5,7 +5,7 @@
 //! two of them is a pointer check.
 
 use crate::application::i18n::dictionary_title;
-use crate::domain::combat::Member;
+use crate::domain::combat::Participant;
 use crate::domain::formatting::CellContext;
 use crate::domain::formatting::LIMIT_BREAK_JOB_CODE;
 use crate::domain::settings::Settings;
@@ -61,10 +61,10 @@ impl TableEnvironment {
     }
 
     /// The main bar colour of a row: the original's palette, except an NPC while the port-only NPC look is on.
-    pub fn bar_color(&self, member: &Member, row_id: &str) -> String {
+    pub fn bar_color(&self, participant: &Participant, row_id: &str) -> String {
         match &self.npc_color {
-            Some(color) if member.is_npc() => format!("#{color}"),
-            _ => self.bars.palette.player_color(member, row_id),
+            Some(color) if participant.is_npc() => format!("#{color}"),
+            _ => self.bars.palette.participant_color(participant, row_id),
         }
     }
 

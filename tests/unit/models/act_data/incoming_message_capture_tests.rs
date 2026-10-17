@@ -14,8 +14,8 @@
 //     };
 //     assert!(message.is_encounter_active);
 //     assert_eq!(message.encounter.zone_name, "Shirogane");
-//     assert_eq!(message.members.len(), 2);
-//     let you = message.members.iter().find(|c| c.name == "YOU").unwrap();
+//     assert_eq!(message.participants.len(), 2);
+//     let you = message.participants.iter().find(|c| c.name == "YOU").unwrap();
 //     assert_eq!(you.job_text, "Bst");
 //     assert_eq!(you.damage, 1714.0);
 //     assert_eq!(you.strongest_hit_text, "attack-53");

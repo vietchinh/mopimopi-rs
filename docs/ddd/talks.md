@@ -12,10 +12,10 @@ parable, Sean Parent's "C++ Seasoning", and Tony Van Eerd's value-oriented progr
 | Preconditions in types (T1) | `EncounterKey`, `Rate`, `Percent`, `Amount`, `ColumnKey`, `PortPreferences::from_code` (hex colours checked once) |
 | One abstraction level / no raw loops (T1, T2) | `History::record` reads as its two rules; `fold_pets_into_owners` is the one place that adds pets up |
 | Name for what it does (T3) | `ended_since`, `damage_per_second_of`, `personal_damage_per_second`, `whole_damage_per_second_of` |
-| Value types by default, strong ids (T2, T3) | `EncounterKey`, `ColumnKey`, `Member` is a plain cloneable value |
+| Value types by default, strong ids (T2, T3) | `EncounterKey`, `ColumnKey`, `Participant` is a plain cloneable value |
 | Avoid shared mutable state (T2) | The Encounter is rebuilt per message and never changed; views are computed from it; `Rc` is only used for immutable sharing |
 | Polymorphism as a value (T2) | `ColumnKey` and `PetView` are enums matched in one place instead of strings and booleans |
-| Behaviour near the data (T3) | DPS/HPS on `EncounterFacts`/`Member`, no longer inline in the cells and the summary line |
+| Behaviour near the data (T3) | DPS/HPS on `EncounterFacts`/`Participant`, no longer inline in the cells and the summary line |
 
 Rules that did not apply, and why: the concurrency rules of T2 (the app is single-threaded wasm), and the C++-specific
 ones (iterator pairs, `shared_ptr`).

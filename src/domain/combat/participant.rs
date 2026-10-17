@@ -1,7 +1,8 @@
-//! The kinds of member an Encounter holds. Who is a player, an NPC, a companion, the Limit Break or none of these is
-//! decided once, when the Encounter is built (`Member::sort`); everything after that asks the type.
+//! The kinds of participant an Encounter holds. Who is a player, an NPC, a companion, the Limit Break or none of these is
+//! decided once, when the Encounter is built (`Participant::sort`); everything after that asks the type.
 //!
-//! * `Player`          – a character; "YOU" is the local one.
+//! * `You`             – the local player, whom ACT always lists as "YOU". At most one per Encounter.
+//! * `Player`          – any other player character.
 //! * `Npc`             – a trust or duty-support helper: no job, no owner in its name, not the gauge.
 //! * `PlayerCompanion` – a pet or chocobo; it always has an owner, named as ACT names it.
 //! * `LimitBreak`      – the shared gauge. There is at most one per Encounter.
@@ -10,22 +11,27 @@
 //!
 //! (DDD: entities of the aggregate; the weakest-parameter and "preconditions in types" rules of the talks.)
 
-use super::{Figures, MemberKind, PetJob};
+use super::{ParticipantKind, PetJob, Stats, LOCAL_PLAYER};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Player {
-    pub figures: Figures,
+    pub stats: Stats,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct You {
+    pub stats: Stats,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Npc {
-    pub figures: Figures,
+    pub stats: Stats,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LimitBreak {
-    pub figures: Figures,
+    pub stats: Stats,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,7 +42,7 @@ pub enum CompanionKind {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PlayerCompanion {
-    pub figures: Figures,
+    pub stats: Stats,
     /// The owner's name as it stands in the companion's own name: "Eos (Future Fade)" has owner "Future Fade".
     pub owner: String,
     pub kind: CompanionKind,
@@ -44,13 +50,14 @@ pub struct PlayerCompanion {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Unclassified {
-    pub figures: Figures,
+    pub stats: Stats,
     /// Set when this was a companion whose owner is not in the fight: it still looks like the pet or chocobo it is.
     pub was_companion_of: Option<(String, CompanionKind)>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Member {
+pub enum Participant {
+    You(You),
     Player(Player),
     Npc(Npc),
     Companion(PlayerCompanion),
@@ -58,90 +65,95 @@ pub enum Member {
     Unclassified(Unclassified),
 }
 
-impl Default for Member {
+impl Default for Participant {
     fn default() -> Self {
-        Member::Player(Player::default())
+        Participant::Player(Player::default())
     }
 }
 
-impl Deref for Member {
-    type Target = Figures;
-    fn deref(&self) -> &Figures {
+impl Deref for Participant {
+    type Target = Stats;
+    fn deref(&self) -> &Stats {
         match self {
-            Member::Player(m) => &m.figures,
-            Member::Npc(m) => &m.figures,
-            Member::Companion(m) => &m.figures,
-            Member::LimitBreak(m) => &m.figures,
-            Member::Unclassified(m) => &m.figures,
+            Participant::You(m) => &m.stats,
+            Participant::Player(m) => &m.stats,
+            Participant::Npc(m) => &m.stats,
+            Participant::Companion(m) => &m.stats,
+            Participant::LimitBreak(m) => &m.stats,
+            Participant::Unclassified(m) => &m.stats,
         }
     }
 }
 
-impl DerefMut for Member {
-    fn deref_mut(&mut self) -> &mut Figures {
+impl DerefMut for Participant {
+    fn deref_mut(&mut self) -> &mut Stats {
         match self {
-            Member::Player(m) => &mut m.figures,
-            Member::Npc(m) => &mut m.figures,
-            Member::Companion(m) => &mut m.figures,
-            Member::LimitBreak(m) => &mut m.figures,
-            Member::Unclassified(m) => &mut m.figures,
+            Participant::You(m) => &mut m.stats,
+            Participant::Player(m) => &mut m.stats,
+            Participant::Npc(m) => &mut m.stats,
+            Participant::Companion(m) => &mut m.stats,
+            Participant::LimitBreak(m) => &mut m.stats,
+            Participant::Unclassified(m) => &mut m.stats,
         }
     }
 }
 
-impl Member {
-    pub fn player(figures: Figures) -> Self {
-        Member::Player(Player { figures })
+impl Participant {
+    pub fn player(stats: Stats) -> Self {
+        Participant::Player(Player { stats })
     }
 
     /// Decides what ACT's row is, from its name and job text, the way the original does. A pet or chocobo is a companion
-    /// here whatever its owner; `Encounter::from_figures` demotes the ones whose owner is absent.
-    pub fn sort(figures: Figures) -> Self {
-        let kind = MemberKind::classify(figures.identity());
+    /// here whatever its owner; `Encounter::from_stats` demotes the ones whose owner is absent.
+    pub fn sort(stats: Stats) -> Self {
+        if stats.name == LOCAL_PLAYER {
+            return Participant::You(You { stats });
+        }
+        let kind = ParticipantKind::classify(stats.identity());
         match kind {
-            MemberKind::Player => Member::Player(Player { figures }),
-            MemberKind::LimitBreak if figures.job == "Limit Break" || figures.name == "Limit Break" => {
-                Member::LimitBreak(LimitBreak { figures })
+            ParticipantKind::Player => Participant::Player(Player { stats }),
+            ParticipantKind::LimitBreak if stats.job == "Limit Break" || is_limit_break_name(&stats.name) => {
+                Participant::LimitBreak(LimitBreak { stats })
             }
-            MemberKind::LimitBreak => Member::Npc(Npc { figures }),
-            MemberKind::Pet { owner_name, job } => {
+            ParticipantKind::LimitBreak => Participant::Npc(Npc { stats }),
+            ParticipantKind::Pet { owner_name, job } => {
                 let owner = owner_name.to_owned();
-                Member::Companion(PlayerCompanion { figures, owner, kind: CompanionKind::Pet(job) })
+                Participant::Companion(PlayerCompanion { stats, owner, kind: CompanionKind::Pet(job) })
             }
-            MemberKind::Chocobo { owner_name } => {
+            ParticipantKind::Chocobo { owner_name } => {
                 let owner = owner_name.to_owned();
-                Member::Companion(PlayerCompanion { figures, owner, kind: CompanionKind::Chocobo })
+                Participant::Companion(PlayerCompanion { stats, owner, kind: CompanionKind::Chocobo })
             }
-            MemberKind::Unknown => Member::Unclassified(Unclassified { figures, was_companion_of: None }),
+            ParticipantKind::Unknown => Participant::Unclassified(Unclassified { stats, was_companion_of: None }),
         }
     }
 
     /// This companion, placed as unclassified because its owner is not in the fight.
     pub(super) fn demoted(self) -> Self {
         match self {
-            Member::Companion(PlayerCompanion { figures, owner, kind }) => {
-                Member::Unclassified(Unclassified { figures, was_companion_of: Some((owner, kind)) })
+            Participant::Companion(PlayerCompanion { stats, owner, kind }) => {
+                Participant::Unclassified(Unclassified { stats, was_companion_of: Some((owner, kind)) })
             }
-            Member::LimitBreak(LimitBreak { figures }) => Member::Unclassified(Unclassified { figures, was_companion_of: None }),
+            Participant::LimitBreak(LimitBreak { stats }) => Participant::Unclassified(Unclassified { stats, was_companion_of: None }),
             other => other,
         }
     }
 
-    /// A trust or duty-support NPC. The original draws these exactly like the gauge (see `MemberKind::classify`);
+    /// A trust or duty-support NPC. The original draws these exactly like the gauge (see `ParticipantKind::classify`);
     /// that is a Display decision.
     pub fn is_npc(&self) -> bool {
-        matches!(self, Member::Npc(_))
+        matches!(self, Participant::Npc(_))
     }
 
-    /// Player, pet, chocobo or Limit Break, as the original's look decides them (see `MemberKind`). NPCs look like the gauge.
-    pub fn kind(&self) -> MemberKind<'_> {
+    /// Player, pet, chocobo or Limit Break, as the original's look decides them (see `ParticipantKind`). NPCs look like the gauge.
+    pub fn kind(&self) -> ParticipantKind<'_> {
         match self {
-            Member::Player(_) => MemberKind::Player,
-            Member::Npc(_) | Member::LimitBreak(_) => MemberKind::LimitBreak,
-            Member::Companion(c) => companion_kind(&c.owner, c.kind),
-            Member::Unclassified(u) => match &u.was_companion_of {
+            Participant::You(_) | Participant::Player(_) => ParticipantKind::Player,
+            Participant::Npc(_) | Participant::LimitBreak(_) => ParticipantKind::LimitBreak,
+            Participant::Companion(c) => companion_kind(&c.owner, c.kind),
+            Participant::Unclassified(u) => match &u.was_companion_of {
                 Some((owner, kind)) => companion_kind(owner, *kind),
-                None => MemberKind::Unknown,
+                None => ParticipantKind::Unknown,
             },
         }
     }
@@ -154,9 +166,9 @@ impl Member {
     pub fn class_code(&self) -> String {
         use crate::domain::combat::PetJob::*;
         match self.kind() {
-            MemberKind::LimitBreak => "LMB".into(),
-            MemberKind::Chocobo { .. } => "CBO".into(),
-            MemberKind::Pet { job, .. } => match job {
+            ParticipantKind::LimitBreak => "LMB".into(),
+            ParticipantKind::Chocobo { .. } => "CBO".into(),
+            ParticipantKind::Pet { job, .. } => match job {
                 Summoner => "SMN",
                 Scholar => "SCH",
                 Machinist => "MCH",
@@ -183,8 +195,8 @@ impl Member {
         }
     }
 
-    /// Whether this member counts as a tank / healer / crafter-or-gatherer for the job-filter
-    /// settings ("`DPS_T`", "`HPS_H`", ... in `visible_players`) and the "role" palette mode. Checked
+    /// Whether this participant counts as a tank / healer / crafter-or-gatherer for the job-filter
+    /// settings ("`DPS_T`", "`HPS_H`", ... in `visible_participants`) and the "role" palette mode. Checked
     /// directly against `job_text` (base classes included as their own entries, not remapped to
     /// their advanced job), the same way the icon is looked up (`job_text.to_uppercase()`) --
     /// except for a handful of specific pets the original also hardcodes a role for (`core.js`:
@@ -196,12 +208,12 @@ impl Member {
     /// in the original either, and stays plain DPS here too.
     pub fn is_tank(&self) -> bool {
         matches!(self.job.to_uppercase().as_str(), "PLD" | "WAR" | "DRK" | "GNB" | "GLA" | "MRD")
-            || matches!(self.kind(), MemberKind::Pet { job: PetJob::DarkKnight, .. })
+            || matches!(self.kind(), ParticipantKind::Pet { job: PetJob::DarkKnight, .. })
     }
 
     pub fn is_healer(&self) -> bool {
         matches!(self.job.to_uppercase().as_str(), "SCH" | "WHM" | "AST" | "SGE" | "CNJ")
-            || matches!(self.kind(), MemberKind::Pet { job: PetJob::Scholar | PetJob::Astrologian | PetJob::WhiteMage | PetJob::Sage, .. })
+            || matches!(self.kind(), ParticipantKind::Pet { job: PetJob::Scholar | PetJob::Astrologian | PetJob::WhiteMage | PetJob::Sage, .. })
     }
 
     pub fn is_crafter(&self) -> bool {
@@ -230,10 +242,10 @@ impl Member {
             "Crafter"
         } else if self.is_gatherer() {
             "Gathering"
-        } else if matches!(self.kind(), MemberKind::Player | MemberKind::Pet { .. }) {
+        } else if matches!(self.kind(), ParticipantKind::Player | ParticipantKind::Pet { .. }) {
             // A pet is a plain "DPS" unless it is one of the healing/tanking pets handled above.
             "DPS"
-        } else if matches!(self.kind(), MemberKind::Chocobo { .. }) {
+        } else if matches!(self.kind(), ParticipantKind::Chocobo { .. }) {
             "CBO"
         } else {
             ""
@@ -244,13 +256,22 @@ impl Member {
 
 }
 
-fn companion_kind(owner: &str, kind: CompanionKind) -> MemberKind<'_> {
+/// The gauge's name in every language the original's dictionary (`dic.js`, `LMB.tt`) translates it into. Only the English
+/// name has been seen in ACT data; the others are a guess that costs nothing (it only decides whether the port-only NPC look
+/// applies, never what the original would draw: both kinds look like the gauge by default). A capture would confirm it.
+const LIMIT_BREAK_NAMES: [&str; 6] = ["Limit Break", "리미트 브레이크", "リミットブレイク", "Transcendance", "Limitrausch", "极限技"];
+
+fn is_limit_break_name(name: &str) -> bool {
+    LIMIT_BREAK_NAMES.contains(&name)
+}
+
+fn companion_kind(owner: &str, kind: CompanionKind) -> ParticipantKind<'_> {
     match kind {
-        CompanionKind::Pet(job) => MemberKind::Pet { owner_name: owner, job },
-        CompanionKind::Chocobo => MemberKind::Chocobo { owner_name: owner },
+        CompanionKind::Pet(job) => ParticipantKind::Pet { owner_name: owner, job },
+        CompanionKind::Chocobo => ParticipantKind::Chocobo { owner_name: owner },
     }
 }
 
 #[cfg(test)]
-#[path = "../../../tests/unit/domain/combat/member.rs"]
+#[path = "../../../tests/unit/domain/combat/participant.rs"]
 mod tests;

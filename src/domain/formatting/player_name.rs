@@ -1,9 +1,9 @@
-//! How a player's name is displayed in the name column.
+//! How a participant's name is displayed in the name column.
 
-use crate::domain::combat::MemberKind::LimitBreak;
+use crate::domain::combat::ParticipantKind::LimitBreak;
 use crate::domain::combat::LOCAL_PLAYER;
 use crate::domain::settings::Settings;
-use crate::domain::combat::Member;
+use crate::domain::combat::Participant;
 
 /// How much of a "First Last" name is shortened (the "Name" settings page).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -81,26 +81,26 @@ fn abbreviate_pet_or_player_name(name: &str, local_player_name: &str, options: &
 
 /// The text of the name cell. `rank` is the row's 0-based position in its table.
 pub fn display_name(
-    player: &Member,
+    participant: &Participant,
     local_player_name: &str,
     options: &NameOptions,
     limit_break_name: &str,
     rank: usize,
 ) -> String {
-    let is_local_row = player.name == LOCAL_PLAYER;
+    let is_you = matches!(participant, Participant::You(_));
     let name = if !options.hide_names {
-        if is_local_row && !options.keep_you_label {
+        if is_you && !options.keep_you_label {
             if local_player_name.is_empty() {
-                player.name.clone()
+                participant.name.clone()
             } else {
                 abbreviate_pet_or_player_name(local_player_name, local_player_name, options)
             }
         } else {
-            abbreviate_pet_or_player_name(&player.name, local_player_name, options)
+            abbreviate_pet_or_player_name(&participant.name, local_player_name, options)
         }
-    } else if is_local_row {
-        player.name.clone()
-    } else if player.kind() == LimitBreak {
+    } else if is_you {
+        participant.name.clone()
+    } else if participant.kind() == LimitBreak {
         limit_break_name.to_string()
     } else {
         String::new()

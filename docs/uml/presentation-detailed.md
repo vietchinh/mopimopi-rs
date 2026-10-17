@@ -17,7 +17,7 @@ The presentation layer is `src/presentation/ui` — **74 files, 492 items**. It 
 
 | Notation | Meaning |
 |---|---|
-| class box | one source file (`foo/bar.rs`); its members are its public functions, components (`«C»`) and types |
+| class box | one source file (`foo/bar.rs`); its participants are its public functions, components (`«C»`) and types |
 | `A ..> B : x, y` | code in A calls / uses `x`, `y` defined in B |
 | `A *--> B : renders X` | the component A draws component X (defined in B) in its `rsx!` |
 | `<<application>>`, `<<domain>>`, `<<infrastructure>>` | a file outside the presentation layer |
@@ -126,7 +126,7 @@ sequenceDiagram
   DI->>Disp: show (also leaves the start screen, restarts standby)
   DI->>DI: a finished fight is added to the history
   Disp-->>CT: re-render
-  CT->>CT: visible_players, standard_table or raid_grid
+  CT->>CT: visible_participants, standard_table or raid_grid
 ```
 
 ### 3.3 Drawing one table
@@ -137,7 +137,7 @@ sequenceDiagram
   participant CT as CombatTables
   participant TE as TableEnvironment
   participant ST as standard_table
-  participant VP as visible_players
+  participant VP as visible_participants
   participant PR as player_row
   participant GB as graph_bars
   participant BH as BarHistory
@@ -459,7 +459,7 @@ classDiagram
   areas_bars : +float_class()
   areas_bars : +struct BarPalette
   areas_bars : +color_of()
-  areas_bars : +player_color()
+  areas_bars : +participant_color()
   areas_bars : +enum Fade
   areas_bars : +apply()
   class areas_columns["columns"]
@@ -539,7 +539,7 @@ The graph bars behind the rows: their colours, the fade, the side the small bars
 | `PaletteMode` *(private)* | enum | "Palette": the bars follow the player's job, the player's role, or are only told apart as me and the others. | value type | — |
 | `BarPalette` | struct | The colours of the bars: a colour per job, per role, per small bar, and for me and the others, with the rules that pick one. | value type | — |
 | `color_of` | method | CSS colour of a bar. | `String` | — |
-| `player_color` | method | Colour of a player's main bar. | `String` | `infrastructure/act/data/combatant_record`: `.class_code()`, `.role_palette_key()`, `CombatantRecord` |
+| `participant_color` | method | Colour of a player's main bar. | `String` | `infrastructure/act/data/combatant_record`: `.class_code()`, `.role_palette_key()`, `CombatantRecord` |
 | `Fade` | enum | The fade-in gradient of the bars ("Gradient" and its direction). | value type | — |
 | `apply` | method | The background of a bar of this colour. | `String` | — |
 | `BarSettings` | struct |  | value type | — |
@@ -659,9 +659,9 @@ classDiagram
   combat_tables_table_environment : +cell_context()
   combat_tables_table_environment : +struct SharedEnvironment
   combat_tables_table_environment : +new()
-  class combat_tables_visible_players["visible_players"]
-  combat_tables_visible_players : +struct RankedPlayer
-  combat_tables_visible_players : +visible_players()
+  class combat_tables_visible_participants["visible_participants"]
+  combat_tables_visible_participants : +struct RankedPlayer
+  combat_tables_visible_participants : +visible_participants()
   class x_infrastructure_act_data_combatant_record["infrastructure/act/data/combatant_record"]
   <<infrastructure>> x_infrastructure_act_data_combatant_record
   class x_areas_bars["areas/bars"]
@@ -709,7 +709,7 @@ classDiagram
   class x_domain_settings_user_settings["domain/settings/user_settings"]
   <<domain>> x_domain_settings_user_settings
   combat_tables_graph_bars ..> x_infrastructure_act_data_combatant_record : CombatantRecord
-  combat_tables_graph_bars ..> x_areas_bars : .color_of(), .float_class(), .player_color() 
+  combat_tables_graph_bars ..> x_areas_bars : .color_of(), .float_class(), .participant_color() 
   combat_tables_graph_bars ..> combat_tables_table_environment : SharedEnvironment
   combat_tables_graph_bars ..> x_shared_palette : percent_of_whole
   combat_tables_mod ..> x_application_app_state_contexts_settings_context : SettingsContext, context SettingsContext
@@ -728,11 +728,11 @@ classDiagram
   combat_tables_raid_grid ..> x_domain_formatting_column_cell : cell_fragments, cell_fragments_ranked
   combat_tables_raid_grid ..> x_infrastructure_act_data_combatant_record : CombatantRecord
   combat_tables_raid_grid ..> x_infrastructure_act_data_encounter_record : EncounterRecord
-  combat_tables_raid_grid ..> x_areas_bars : .player_color()
+  combat_tables_raid_grid ..> x_areas_bars : .participant_color()
   combat_tables_raid_grid ..> x_areas_raid : .cards_in_a_row(), .grid_vars()
   combat_tables_raid_grid ..> combat_tables_mod : table_label
   combat_tables_raid_grid ..> combat_tables_table_environment : .cell_context(), SharedEnvironment
-  combat_tables_raid_grid ..> combat_tables_visible_players : visible_players
+  combat_tables_raid_grid ..> combat_tables_visible_participants : visible_participants
   combat_tables_raid_grid ..> x_shared_row_identity : row_element_id
   combat_tables_raid_grid ..> x_shared_text_display : job_icon_view, text_fragments_view
   combat_tables_standard_table ..> x_application_app_state_contexts_tables_context : TablesContext, context TablesContext
@@ -748,7 +748,7 @@ classDiagram
   combat_tables_standard_table ..> combat_tables_graph_bars : graph_bars
   combat_tables_standard_table ..> combat_tables_mod : table_label
   combat_tables_standard_table ..> combat_tables_table_environment : .cell_context(), SharedEnvironment
-  combat_tables_standard_table ..> combat_tables_visible_players : visible_players
+  combat_tables_standard_table ..> combat_tables_visible_participants : visible_participants
   combat_tables_standard_table ..> x_shared_row_identity : row_element_id
   combat_tables_standard_table ..> x_shared_text_display : job_icon_view, text_fragments_view
   combat_tables_table_environment ..> x_application_i18n : dictionary_title
@@ -759,9 +759,9 @@ classDiagram
   combat_tables_table_environment ..> x_areas_columns : ColumnSettings
   combat_tables_table_environment ..> x_areas_raid : RaidSettings
   combat_tables_table_environment ..> x_areas_table : TableSettings
-  combat_tables_visible_players ..> x_domain_combat_combatant_kind : CombatantKind
-  combat_tables_visible_players ..> x_infrastructure_act_data_combatant_record : .is_crafter_or_gatherer(), .is_healer(), .is_tank() 
-  combat_tables_visible_players ..> x_areas_table : JobFilter
+  combat_tables_visible_participants ..> x_domain_combat_combatant_kind : CombatantKind
+  combat_tables_visible_participants ..> x_infrastructure_act_data_combatant_record : .is_crafter_or_gatherer(), .is_healer(), .is_tank() 
+  combat_tables_visible_participants ..> x_areas_table : JobFilter
 ```
 
 #### `combat_tables/cell_classes`  (14 lines)
@@ -792,7 +792,7 @@ The coloured bar behind a row and the small pet / overheal / shield bars.
 | `forget_all` | method |  | — | — |
 | `BarAnimation` *(private)* | struct | The classes and inline custom properties that play a bar's move. | value type | — |
 | `animation_of` *(private)* | function | Decides the animation of the bar `key` (which row, which bar) now that it should be at `geometry`. | `BarAnimation` | — |
-| `graph_bars` | function | Draws the main bar and the small pet / overheal / shield bars of one row, each with the move it should play (see `animation_of`). | DOM (Dioxus `Element`) | `combat_tables/table_environment`: `SharedEnvironment`; `infrastructure/act/data/combatant_record`: `CombatantRecord`; `areas/bars`: `.color_of()`, `.float_class()`, `.player_color()` |
+| `graph_bars` | function | Draws the main bar and the small pet / overheal / shield bars of one row, each with the move it should play (see `animation_of`). | DOM (Dioxus `Element`) | `combat_tables/table_environment`: `SharedEnvironment`; `infrastructure/act/data/combatant_record`: `CombatantRecord`; `areas/bars`: `.color_of()`, `.float_class()`, `.participant_color()` |
 
 #### `combat_tables/mod`  (100 lines)
 
@@ -810,8 +810,8 @@ Raid mode: one small card per player (colour strip, icon, name, DPS or HPS).
 
 | Item | Kind | What it does | Produces | Calls / uses |
 |---|---|---|---|---|
-| `raid_grid` | function | One grid of cards for a table: the visible players, each as a `raid_card`. | DOM (Dioxus `Element`) | `combat_tables/table_environment`: `SharedEnvironment`; `combat_tables/visible_players`: `visible_players`; `infrastructure/act/data/combatant_record`: `CombatantRecord`; `infrastructure/act/data/encounter_record`: `EncounterRecord`; `shared/row_identity`: `row_element_id`; `combat_tables/mod`: `table_label`; `areas/raid`: `.cards_in_a_row()`, `.grid_vars()` |
-| `RaidCard` «C» | component | One card of the raid grid. | DOM (Dioxus `Element`) | `combat_tables/table_environment`: `.cell_context()`, `SharedEnvironment`; `domain/formatting/column_cell`: `cell_fragments`, `cell_fragments_ranked`; `infrastructure/act/data/combatant_record`: `CombatantRecord`; `infrastructure/act/data/encounter_record`: `EncounterRecord`; `shared/row_identity`: `row_element_id`; `shared/text_display`: `job_icon_view`, `text_fragments_view`; `areas/bars`: `.player_color()` |
+| `raid_grid` | function | One grid of cards for a table: the visible players, each as a `raid_card`. | DOM (Dioxus `Element`) | `combat_tables/table_environment`: `SharedEnvironment`; `combat_tables/visible_participants`: `visible_participants`; `infrastructure/act/data/combatant_record`: `CombatantRecord`; `infrastructure/act/data/encounter_record`: `EncounterRecord`; `shared/row_identity`: `row_element_id`; `combat_tables/mod`: `table_label`; `areas/raid`: `.cards_in_a_row()`, `.grid_vars()` |
+| `RaidCard` «C» | component | One card of the raid grid. | DOM (Dioxus `Element`) | `combat_tables/table_environment`: `.cell_context()`, `SharedEnvironment`; `domain/formatting/column_cell`: `cell_fragments`, `cell_fragments_ranked`; `infrastructure/act/data/combatant_record`: `CombatantRecord`; `infrastructure/act/data/encounter_record`: `EncounterRecord`; `shared/row_identity`: `row_element_id`; `shared/text_display`: `job_icon_view`, `text_fragments_view`; `areas/bars`: `.participant_color()` |
 
 #### `combat_tables/standard_table`  (201 lines)
 
@@ -819,7 +819,7 @@ The normal table: a header row and one row per player.
 
 | Item | Kind | What it does | Produces | Calls / uses |
 |---|---|---|---|---|
-| `standard_table` | function | One whole table: the header and a body with a row per visible player. Sets every shared CSS variable once on the wrappers. | DOM (Dioxus `Element`) | `combat_tables/table_environment`: `SharedEnvironment`; `combat_tables/visible_players`: `visible_players`; `infrastructure/act/data/combatant_record`: `CombatantRecord`; `infrastructure/act/data/encounter_record`: `EncounterRecord`; `shared/row_identity`: `row_element_id`; `combat_tables/mod`: `table_label`; `areas/table`: `.body_height_rem()`, `.body_vars()`, `.header_vars()` |
+| `standard_table` | function | One whole table: the header and a body with a row per visible player. Sets every shared CSS variable once on the wrappers. | DOM (Dioxus `Element`) | `combat_tables/table_environment`: `SharedEnvironment`; `combat_tables/visible_participants`: `visible_participants`; `infrastructure/act/data/combatant_record`: `CombatantRecord`; `infrastructure/act/data/encounter_record`: `EncounterRecord`; `shared/row_identity`: `row_element_id`; `combat_tables/mod`: `table_label`; `areas/table`: `.body_height_rem()`, `.body_vars()`, `.header_vars()` |
 | `TableHeader` «C» | component | The column titles. | DOM (Dioxus `Element`) | `combat_tables/cell_classes`: `HEADER_CELL`, `HEADER_TABLE`; `application/i18n`: `translate`; `domain/translations/mod`: `translations`; `areas/columns`: `.padding_css()`, `Column` |
 | `PlayerRow` «C» | component | One player's row: the cells, then the bars behind them. | DOM (Dioxus `Element`) | `combat_tables/graph_bars`: `graph_bars`; `combat_tables/table_environment`: `.cell_context()`, `SharedEnvironment`; `application/app_state/contexts/tables_context`: `TablesContext`; `domain/combat/combatant_kind`: `CombatantKind`; `infrastructure/act/data/combatant_record`: `CombatantRecord`; `infrastructure/act/data/encounter_record`: `EncounterRecord`; `shared/row_identity`: `row_element_id`; … (+2) |
 | `cell` *(private)* | function | One body cell: the column's value for the player, as text fragments. | DOM (Dioxus `Element`) | `combat_tables/cell_classes`: `BODY_CELL_BORDER`; `domain/formatting/column_cell`: `CellContext`, `cell_fragments_ranked`; `infrastructure/act/data/combatant_record`: `CombatantRecord`; `infrastructure/act/data/encounter_record`: `EncounterRecord`; `areas/columns`: `.padding_css()`, `Column`; `shared/text_display`: `text_fragments_view` |
@@ -837,7 +837,7 @@ Everything the table drawing needs, bundled so that rows can take it as one prop
 | `SharedEnvironment` | struct | A `TableEnvironment` shared by every row. | value type | — |
 | `new` | method |  | `Self` | — |
 
-#### `combat_tables/visible_players`  (42 lines)
+#### `combat_tables/visible_participants`  (42 lines)
 
 Which combatants a table shows, in the order it should show them.
 
@@ -845,7 +845,7 @@ Which combatants a table shows, in the order it should show them.
 |---|---|---|---|---|
 | `passes_job_filter` *(private)* | function | The job filter of the table ("tanks in the damage table", "healers in the healing table", ...). | `bool` | `domain/combat/combatant_kind`: `CombatantKind`; `areas/table`: `JobFilter`; `infrastructure/act/data/combatant_record`: `.is_crafter_or_gatherer()`, `.is_healer()`, `.is_tank()` |
 | `RankedPlayer` | struct | A row of a table together with its rank in that table (0 = first), which is what `rank` in the name cell prints. | value type | `infrastructure/act/data/combatant_record`: `CombatantRecord` |
-| `visible_players` | function | Combatants a table shows, in the order it draws them, after the job filter. | `Vec<RankedPlayer<'a>>` | `areas/table`: `JobFilter`; `infrastructure/act/data/combatant_record`: `CombatantRecord` |
+| `visible_participants` | function | Combatants a table shows, in the order it draws them, after the job filter. | `Vec<RankedPlayer<'a>>` | `areas/table`: `JobFilter`; `infrastructure/act/data/combatant_record`: `CombatantRecord` |
 
 ### 6.4 `dropdown_menus`
 
@@ -2110,7 +2110,7 @@ The main screen before any data arrived (start screen), and the switch to the ta
 | `combat_tables/raid_grid` | 74 | combat_tables |
 | `combat_tables/standard_table` | 201 | combat_tables |
 | `combat_tables/table_environment` | 87 | combat_tables |
-| `combat_tables/visible_players` | 42 | combat_tables |
+| `combat_tables/visible_participants` | 42 | combat_tables |
 | `dropdown_menus/choice_menus` | 51 | dropdown_menus |
 | `dropdown_menus/menu_item` | 17 | dropdown_menus |
 | `dropdown_menus/mod` | 33 | dropdown_menus |

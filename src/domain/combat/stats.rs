@@ -1,20 +1,20 @@
-//! A member's numbers and names as the domain keeps them: a plain value, with no serde and no ACT field names.
-//! The kind of member (player, NPC, companion, Limit Break) is not stored here; the Encounter decides it once and
-//! wraps these in the matching type (`member.rs`).
+//! A participant's numbers and names as the domain keeps them: a plain value, with no serde and no ACT field names.
+//! The kind of participant (player, NPC, companion, Limit Break) is not stored here; the Encounter decides it once and
+//! wraps these in the matching type (`participant.rs`).
 //!
 //! (DDD: the wire type stays at the edge, an anticorruption layer; the domain owns its own model.)
 
 use super::encounter::{Amount, Job, Percent, Rate};
-use super::{Healing, MemberIdentity};
+use super::{Healing, ParticipantIdentity};
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Figures {
+pub struct Stats {
     /// Position in ACT's message (0 = first). Not part of the JSON. Rows that tie on the value a table
     /// is sorted by keep this order, which is what the original's stable sort does.
     pub arrival_index: usize,
     pub name: String,
     pub job: Job,
-    /// The member's own duration, e.g. "00:34".
+    /// The participant's own duration, e.g. "00:34".
     pub duration_text: String,
     pub duration_seconds: f64,
 
@@ -68,8 +68,8 @@ pub struct Figures {
     pub pet_effective_healed: f64,
 }
 
-impl Figures {
-    /// Damage per second over the member's *own* active time (ACT's `dps`, the overlay's "P.DPS"). A time of 0 counts as
+impl Stats {
+    /// Damage per second over the participant's *own* active time (ACT's `dps`, the overlay's "P.DPS"). A time of 0 counts as
     /// 1 second, as in the original.
     pub fn personal_damage_per_second(&self) -> Rate {
         let seconds = if self.duration_seconds == 0.0 { 1.0 } else { self.duration_seconds };
@@ -77,8 +77,8 @@ impl Figures {
     }
 
     /// The name and job the domain rules work with.
-    pub fn identity(&self) -> MemberIdentity<'_> {
-        MemberIdentity { name: &self.name, job: self.job.as_str() }
+    pub fn identity(&self) -> ParticipantIdentity<'_> {
+        ParticipantIdentity { name: &self.name, job: self.job.as_str() }
     }
 
     /// Healing split into what was restored, overhealed and shielded.
@@ -91,7 +91,7 @@ impl Figures {
         Percent::share(Amount::new(self.critical_heals), Amount::new(self.heals))
     }
 
-    pub fn absorb_pet(&mut self, pet: &Figures) {
+    pub fn absorb_pet(&mut self, pet: &Stats) {
         self.damage += pet.damage;
         self.damage_per_second += pet.damage_per_second;
         self.hits += pet.hits;
@@ -133,5 +133,5 @@ impl Figures {
 }
 
 #[cfg(test)]
-#[path = "../../../tests/unit/domain/combat/figures.rs"]
+#[path = "../../../tests/unit/domain/combat/stats.rs"]
 mod tests;

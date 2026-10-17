@@ -8,7 +8,7 @@ const COMBAT: &str = r#"{"type":"CombatData","Encounter":{"title":"x"},"Combatan
 const ZONE_CHANGE: &str = r#"{"type":"ChangeZone","zoneID":1}"#;
 
 fn names(snapshot: &CombatDataMessage) -> Vec<&str> {
-    let mut names: Vec<&str> = snapshot.members.iter().map(|c| c.name.as_str()).collect();
+    let mut names: Vec<&str> = snapshot.participants.iter().map(|c| c.name.as_str()).collect();
     names.sort();
     names
 }
@@ -23,7 +23,7 @@ fn remembers_the_player_name_for_the_next_merge() {
 
     let snapshot = session.receive(COMBAT).unwrap().unwrap();
     assert_eq!(names(&snapshot), ["YOU"]);
-    assert_eq!(snapshot.member("YOU").unwrap().damage, 120.0);
+    assert_eq!(snapshot.participant("YOU").unwrap().damage, 120.0);
 }
 
 #[test]

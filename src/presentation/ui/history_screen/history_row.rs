@@ -12,7 +12,7 @@ pub(super) fn history_row(actions: AppActions, entry: &HistoryEntry, is_shown_no
     let rate = |value: f64| number_format.format_number(value, 1.0, number_format.rate_decimals);
     let rate_or_no_data = |value: Option<f64>| value.map_or_else(|| "No Data".into(), &rate);
     let (encounter_dps, encounter_hps) = (rate(entry.encounter_dps()), rate(entry.encounter_hps()));
-    let (local_dps, local_hps) = (rate_or_no_data(entry.local_player_dps(pet_view)), rate_or_no_data(entry.local_player_hps(pet_view)));
+    let (local_dps, local_hps) = (rate_or_no_data(entry.your_dps(pet_view)), rate_or_no_data(entry.your_hps(pet_view)));
     let (title, zone_name, duration_text) = (entry.title(), entry.zone_name(), entry.duration_text());
     let encounter_key = entry.key().clone();
 

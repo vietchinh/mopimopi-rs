@@ -235,7 +235,7 @@ classDiagram
   }
   class BarPalette {
     +color_of(key, role, row)
-    +player_color(player, row)
+    +participant_color(player, row)
   }
   class RaidSettings {
     +from_raw(raw)
@@ -300,7 +300,7 @@ flowchart LR
   mod -->|"mode: raid"| raid["raid_grid.rs"]
   env --> areas["areas/mod.rs<br/>Table, Columns, Bars, Raid"]
   std --> env
-  std --> vis["visible_players.rs"]
+  std --> vis["visible_participants.rs"]
   std --> bars["graph_bars.rs<br/>BarGeometry, Flip, BarHistory"]
   std --> cls["cell_classes.rs"]
   std --> td["shared/text_display.rs"]
@@ -430,7 +430,7 @@ sequenceDiagram
   CT->>CT: read SettingsView memos (table, columns, bars, raid)
   CT->>Env: TableEnvironment::new(...)
   CT->>Tbl: raid_mode ? raid_grid : standard_table
-  Tbl->>Tbl: visible_players, cell_fragments (domain::formatting)
+  Tbl->>Tbl: visible_participants, cell_fragments (domain::formatting)
   Tbl->>Bars: graph_bars(geometry, BarHistory)
   Bars-->>Tbl: bar element, flip animation a/b
   Tbl-->>CT: rows as Element

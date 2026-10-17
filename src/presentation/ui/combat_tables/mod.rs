@@ -3,7 +3,7 @@
 //! Reading order: `CombatTables` (entry) -> `standard_table` / `raid_grid` -> `player_row` -> `graph_bars`.
 //!
 //! * `table_environment`  – everything the drawing functions share
-//! * `visible_players`    – which players a table shows
+//! * `visible_participants`    – which participants a table shows
 //! * `standard_table`     – header, body and one row per player
 //! * `graph_bars`         – the coloured bars behind a row
 //! * `raid_grid`          – the compact cards
@@ -15,7 +15,7 @@ mod raid_grid;
 pub(crate) mod cell_classes;
 pub(crate) mod standard_table;
 mod table_environment;
-mod visible_players;
+mod visible_participants;
 
 use crate::application::app_state::{SettingsContext, SettingsScreenContext, TablesContext};
 use crate::application::app_state::OverlayPluginContext;
@@ -42,7 +42,7 @@ fn empty_tables() -> Element {
 ///
 /// What every row shares (the settings that shape it, the player's name, whether a fight is running) is worked out in a memo, so
 /// it is rebuilt, and the rows are told, only when one of those really changed. A row is a component: when its own data and
-/// that shared environment are unchanged it is not drawn again (see `PlayerRow` and `RaidCard`).
+/// that shared environment are unchanged it is not drawn again (see `ParticipantRow` and `RaidCard`).
 #[component]
 pub fn CombatTables(is_settings_preview: bool) -> Element {
     let overlay_plugin_context = use_context::<OverlayPluginContext>();
@@ -79,24 +79,24 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
         message
     };
     let local_player_name = tables.local_player_name.read().clone();
-    let members = &message.rows(crate::application::app_state::pet_view(merge_pets, &local_player_name));
+    let participants = &message.rows(crate::application::app_state::pet_view(merge_pets, &local_player_name));
     let encounter = message.facts();
 
-    // The original only builds its tables when the data has a member named "YOU" (`onCombatDataUpdate`
+    // The original only builds its tables when the data has a participant named "YOU" (`onCombatDataUpdate`
     // starts with that check); without one both tables stay empty.
-    if !members.iter().any(|member| member.name == "YOU") {
+    if !participants.iter().any(|participant| participant.name == "YOU") {
         return empty_tables();
     }
 
     let environment = environment();
-    let raid_mode = environment.table.raid_mode(members.len()) || (is_settings_preview && *settings_screen.settings_preview_raid_mode.read());
+    let raid_mode = environment.table.raid_mode(participants.len()) || (is_settings_preview && *settings_screen.settings_preview_raid_mode.read());
     let blurred_rows = tables.blurred_player_rows.read();
 
     let sections = environment.table.tables_in_order().into_iter().map(|is_healing| {
         if raid_mode {
-            raid_grid::raid_grid(&environment, members, encounter, is_healing)
+            raid_grid::raid_grid(&environment, participants, encounter, is_healing)
         } else {
-            standard_table::standard_table(&environment, members, encounter, is_healing, &blurred_rows)
+            standard_table::standard_table(&environment, participants, encounter, is_healing, &blurred_rows)
         }
     });
     rsx! { {sections} }

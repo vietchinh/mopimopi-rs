@@ -1,13 +1,13 @@
 //! Combat's open host service, tested from the outside: one test per consumer, each using only what
 //! `domain::combat` publishes (see the module's doc comment and docs/ddd/decisions/0003-combat-open-host-service.md).
 
-use crate::domain::combat::{Amount, Encounter, EncounterFacts, Figures, History, Percent, PetView, Rate};
+use crate::domain::combat::{Amount, Encounter, EncounterFacts, Stats, History, Percent, PetView, Rate};
 use crate::domain::formatting::{cell_plain_text, CellContext, ColumnKey};
 use crate::domain::settings::Settings;
 use std::rc::Rc;
 
-fn figures(name: &str, job: &str, damage: f64) -> Figures {
-    Figures { name: name.into(), job: job.to_string().into(), damage, healed: damage / 2.0, duration_seconds: 10.0, ..Figures::default() }
+fn stats(name: &str, job: &str, damage: f64) -> Stats {
+    Stats { name: name.into(), job: job.to_string().into(), damage, healed: damage / 2.0, duration_seconds: 10.0, ..Stats::default() }
 }
 
 fn fight(title: &str) -> Encounter {
@@ -19,10 +19,10 @@ fn fight(title: &str) -> Encounter {
         total_healed: 300.0,
         ..EncounterFacts::default()
     };
-    Encounter::from_figures(facts, vec![figures("YOU", "Sch", 400.0), figures("Eos (Future Fade)", "", 100.0), figures("Tank", "Pld", 100.0)], false)
+    Encounter::from_stats(facts, vec![stats("YOU", "Sch", 400.0), stats("Eos (Future Fade)", "", 100.0), stats("Tank", "Pld", 100.0)], false)
 }
 
-/// Consumer: Formatting. It reads members and the Encounter's facts, and asks the Encounter for rates.
+/// Consumer: Formatting. It reads participants and the Encounter's facts, and asks the Encounter for rates.
 #[test]
 fn formatting_reads_cells_through_the_published_language() {
     let encounter = fight("Boss");
@@ -41,7 +41,7 @@ fn the_tables_ask_for_rows_in_either_pet_view() {
     let folded = encounter.rows(PetView::FoldedIntoOwners { local_player_name: Some("Future Fade") });
     assert_eq!(folded.len(), 2);
     assert_eq!(folded[0].damage, 500.0);
-    assert_eq!(encounter.members().len(), 3);
+    assert_eq!(encounter.participants().len(), 3);
 }
 
 /// Consumer: the top bar. It asks for the local player's standing.
@@ -61,7 +61,7 @@ fn the_history_screen_reads_entries_numbered_within_their_zone() {
     let second = history.record(Rc::new(fight("Adds"))).unwrap();
     assert_eq!(second.number_in_zone(), 2);
     assert_eq!(history.entries().len(), 2);
-    assert_eq!(history.entries()[1].local_player_dps(PetView::Separate), Some(40.0));
+    assert_eq!(history.entries()[1].your_dps(PetView::Separate), Some(40.0));
 }
 
 /// Consumer: the application layer. It learns that a fight ended, and nothing else.

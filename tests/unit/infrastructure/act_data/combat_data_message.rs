@@ -2,7 +2,7 @@
 //! that file (so they can use its private items) but kept here, outside `src/`.
 
 use super::*;
-use crate::domain::combat::Member;
+use crate::domain::combat::Participant;
 use crate::domain::combat::PetView;
 
 fn parse(json: &str) -> Encounter {
@@ -11,21 +11,21 @@ fn parse(json: &str) -> Encounter {
 
 const FOLDED: PetView<'static> = PetView::FoldedIntoOwners { local_player_name: None };
 
-fn names(rows: &[Member]) -> Vec<&str> {
+fn names(rows: &[Participant]) -> Vec<&str> {
     rows.iter().map(|row| row.name.as_str()).collect()
 }
 
 #[test]
 fn keys_are_dropped_and_arrival_order_is_kept() {
     let message = parse(r#"{"Encounter":{},"Combatant":{"B":{"name":"B","damage":"1"},"A":{"name":"A","damage":"2"}}}"#);
-    assert_eq!(names(message.members()), ["B", "A"], "the object's own key order is kept; keys are not used to sort");
+    assert_eq!(names(message.participants()), ["B", "A"], "the object's own key order is kept; keys are not used to sort");
 }
 
 #[test]
 fn the_local_player_is_the_row_called_you() {
     let message = parse(r#"{"Encounter":{},"Combatant":{"YOU":{"name":"YOU","damage":"5"}}}"#);
-    assert_eq!(message.local_player().unwrap().damage, 5.0);
-    assert!(parse(r#"{"Encounter":{},"Combatant":{"Nobody":{"name":"Nobody"}}}"#).local_player().is_none());
+    assert_eq!(message.you().unwrap().damage, 5.0);
+    assert!(parse(r#"{"Encounter":{},"Combatant":{"Nobody":{"name":"Nobody"}}}"#).you().is_none());
 }
 
 #[test]
@@ -35,7 +35,7 @@ fn folding_with_no_pets_present_changes_nothing_and_rows_are_sorted_by_damage() 
         "A":{"name":"A","damage":"10"},
         "B":{"name":"B","damage":"90"}
     }}"#);
-    assert_eq!(names(message.members()), ["A", "B"], "the Encounter keeps ACT's order");
+    assert_eq!(names(message.participants()), ["A", "B"], "the Encounter keeps ACT's order");
     assert_eq!(names(&message.rows(FOLDED)), ["B", "A"], "the original always sorts by damage");
     assert_eq!(names(&message.rows(PetView::Separate)), ["B", "A"]);
 }
@@ -46,7 +46,7 @@ fn folding_a_pet_removes_its_row_and_adds_its_numbers_to_the_owner() {
         "YOU":{"name":"YOU","Job":"Sch","damage":"100","healed":"50"},
         "Eos (YOU)":{"name":"Eos (YOU)","damage":"20","healed":"5"}
     }}"#);
-    assert_eq!(message.members().len(), 2, "the Encounter itself keeps the pet");
+    assert_eq!(message.participants().len(), 2, "the Encounter itself keeps the pet");
     let rows = message.rows(FOLDED);
     assert_eq!(rows.len(), 1, "the pet's row is gone from the view");
     let owner = &rows[0];

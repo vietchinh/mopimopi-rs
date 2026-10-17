@@ -11,7 +11,7 @@ with each other, not as browser timings. Message: 24 players + 4 pets, about 80 
 | `rows`, pets separate (clone + sort) | ~4.5 µs | Paid per redraw of the tables, summary line and history. |
 | `rows`, pets folded into owners | ~6.5 µs | The folded view costs ~2 µs more; no cache is needed. |
 
-| History size | Time to record (incl. building each Encounter) | History screen redraw (`entries().to_vec()`) | Member data kept alive (structs only) |
+| History size | Time to record (incl. building each Encounter) | History screen redraw (`entries().to_vec()`) | Participant data kept alive (structs only) |
 |---:|---:|---:|---:|
 | 10 fights | 6 ms | 0.2 µs | ~105 KiB |
 | 100 fights | 62 ms | 3.8 µs | ~1 MiB |
@@ -21,14 +21,14 @@ with each other, not as browser timings. Message: 24 players + 4 pets, about 80 
 
 * The DDD design (Encounter per message, views computed on demand) is not a performance risk. No memo or cache was added for
   the folded view; add one only if a profile in the browser ever shows `rows` on the hot path.
-* The history is **unbounded**, as before. A raid night (about 100 fights) is about 1 MiB of member data plus their strings,
+* The history is **unbounded**, as before. A raid night (about 100 fights) is about 1 MiB of participant data plus their strings,
   which is fine. Thousands of fights in one session would grow without limit. A cap is a one-line rule in
   `History::record` if the raider wants one (listed in `TO-CONFIRM.md`, item 9); it was not added because the original
   has none and the port must match it.
 * Not measured here: wasm timings in the browser. The existing Playwright `performance.spec.ts` (skipped in the parity
   run) is the place for those.
 
-## Second pass (typed members): in-depth browser test
+## Second pass (typed participants): in-depth browser test
 
 Spec: `playwright-tests/tests/performance-deep.spec.ts` (its name keeps it out of the parity run). A raid of 24 players with pets, a
 chocobo, a trust NPC and the Limit Break (36 rows), served by the test server to three builds in headless Chromium, one test at a
@@ -64,7 +64,7 @@ Reading:
   counter ranged from 738 to 2450 across repeats of the same build, so it reflects garbage-collection timing, not growth. The
   Encounters themselves live in wasm memory, which this probe does not read: the native number below stands (~10 KiB per fight).
 * **Native, quiet machine:** wire parse 236 µs; parse plus building the typed Encounter 244 µs (+8 µs, 3%; it was +3 µs before the
-  members were sorted into kinds); `rows` 5.3 µs separate, 6.9 µs folded; 1000 fights recorded in 0.9 s.
+  participants were sorted into kinds); `rows` 5.3 µs separate, 6.9 µs folded; 1000 fights recorded in 0.9 s.
   (A first run during a parallel build showed +64 µs; it was CPU contention. Run benchmarks on a quiet machine.)
 * Wasm size: 2.30 MB before, 2.35 MB after (+2%).
 * Not covered: a real ACT session, a phone-class CPU, and wasm memory growth over hours. The first two need a device; the last one

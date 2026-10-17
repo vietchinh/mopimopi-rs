@@ -1,4 +1,4 @@
-//! What a member's healing numbers mean.
+//! What a participant's healing numbers mean.
 //!
 //! ACT's `healed` is everything: HP restored, overheal, and shields (`damageShield`). A
 //! Paladin whose only "healing" is Divine Veil has `healed` equal to `damageShield`.

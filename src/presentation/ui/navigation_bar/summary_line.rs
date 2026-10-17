@@ -26,7 +26,7 @@ pub(super) fn summary_line(
 
     let Some(standing) = message.local_standing(pet_view) else { return rsx! { "{waiting_hint}" } };
     let rows = message.rows(pet_view);
-    let player = &rows[standing.damage_rank - 1];
+    let you = &rows[standing.damage_rank - 1];
     let encounter = message.facts();
     let number_format = NumberFormat::from_settings(settings);
     // The top bar always shows whole numbers (the original's `addComma(x)` with no decimals), whatever
@@ -58,9 +58,9 @@ pub(super) fn summary_line(
 
     // Clicking the "MaxHit" label switches it to "MaxHeal" and back.
     let (label, strongest_action_text) = if parts.shows_strongest_heal {
-        ("MaxHeal ", cell_plain_text(&ColumnKey::Maxheal, player, encounter, &cell_context))
+        ("MaxHeal ", cell_plain_text(&ColumnKey::Maxheal, you, encounter, &cell_context))
     } else {
-        ("MaxHit ", cell_plain_text(&ColumnKey::Maxhit, player, encounter, &cell_context))
+        ("MaxHit ", cell_plain_text(&ColumnKey::Maxhit, you, encounter, &cell_context))
     };
     let toggle_strongest_action_kind = move |_| {
         if !is_settings_preview {

@@ -4,7 +4,7 @@
 use super::combatant_record::CombatantRecord;
 use super::encounter_record::EncounterRecord;
 use super::lenient_values::lenient_bool;
-use crate::domain::combat::{Encounter, Figures};
+use crate::domain::combat::{Encounter, Stats};
 use serde::de::{Deserializer, IgnoredAny, MapAccess, Visitor};
 use serde::Deserialize;
 use std::fmt;
@@ -26,8 +26,8 @@ pub(in crate::infrastructure::act) struct CombatDataMessage {
 /// The translation from ACT's wire shape into the domain's Encounter (an anticorruption layer): the wire type ends here.
 impl From<CombatDataMessage> for Encounter {
     fn from(message: CombatDataMessage) -> Encounter {
-        let figures = message.combatants.into_iter().map(Figures::from).collect();
-        Encounter::from_figures(message.encounter.into(), figures, message.is_encounter_active)
+        let stats = message.combatants.into_iter().map(Stats::from).collect();
+        Encounter::from_stats(message.encounter.into(), stats, message.is_encounter_active)
     }
 }
 

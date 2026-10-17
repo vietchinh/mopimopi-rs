@@ -7,7 +7,7 @@
 //! (DDD: aggregate with invariants that no single Encounter can hold; rules live in the model, not in the signals
 //! that happen to store it.) The list is newest first and has no size limit; phase 7 of the plan measures what that costs.
 
-use super::{Encounter, EncounterKey, Member, PetView, LOCAL_PLAYER};
+use super::{Encounter, EncounterKey, Participant, PetView};
 use std::rc::Rc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -54,16 +54,16 @@ impl HistoryEntry {
     }
 
     /// The local player's row as the pet view shows it (their pets added when folded).
-    fn local_player_row(&self, pet_view: PetView<'_>) -> Option<Member> {
-        self.encounter.rows(pet_view).into_iter().find(|row| row.name == LOCAL_PLAYER)
+    fn your_row(&self, pet_view: PetView<'_>) -> Option<Participant> {
+        self.encounter.rows(pet_view).into_iter().find(|row| matches!(row, Participant::You(_)))
     }
 
-    pub fn local_player_dps(&self, pet_view: PetView<'_>) -> Option<f64> {
-        self.local_player_row(pet_view).map(|player| self.encounter.facts().whole_damage_per_second_of(&player))
+    pub fn your_dps(&self, pet_view: PetView<'_>) -> Option<f64> {
+        self.your_row(pet_view).map(|you| self.encounter.facts().whole_damage_per_second_of(&you))
     }
 
-    pub fn local_player_hps(&self, pet_view: PetView<'_>) -> Option<f64> {
-        self.local_player_row(pet_view).map(|player| self.encounter.facts().whole_healing_per_second_of(&player))
+    pub fn your_hps(&self, pet_view: PetView<'_>) -> Option<f64> {
+        self.your_row(pet_view).map(|you| self.encounter.facts().whole_healing_per_second_of(&you))
     }
 }
 

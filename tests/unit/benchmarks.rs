@@ -14,34 +14,34 @@ use std::time::Instant;
 const PLAYERS: usize = 24;
 const ITERATIONS: u32 = 300;
 
-/// A CombatData message shaped like a real 24-player raid: every member carries ~80 fields, plus four pets.
+/// A CombatData message shaped like a real 24-player raid: every participant carries ~80 fields, plus four pets.
 fn synthetic_message(active: bool, damage_scale: usize) -> String {
     let template: Value = serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/data/captures/overlay_plugin_beastmaster.json"))).unwrap();
-    let mut member = template["Combatant"]["YOU"].clone();
+    let mut participant = template["Combatant"]["YOU"].clone();
     for index in 0..60 {
-        member[format!("extra-{index}")] = json!("1.00K");
+        participant[format!("extra-{index}")] = json!("1.00K");
     }
     let jobs = ["Sch", "War", "Drg", "Blm", "Mch", "Whm", "Nin", "Brd"];
-    let mut members = serde_json::Map::new();
+    let mut participants = serde_json::Map::new();
     for index in 0..PLAYERS {
         let name = if index == 0 { "YOU".to_string() } else { format!("Player {index} Name") };
-        let mut record = member.clone();
+        let mut record = participant.clone();
         record["name"] = json!(name);
         record["Job"] = json!(jobs[index % jobs.len()]);
         record["damage"] = json!(((100_000 - index * 3_000) * damage_scale).to_string());
         record["healed"] = json!((50_000 - index * 1_000).to_string());
-        members.insert(name, record);
+        participants.insert(name, record);
     }
     for pet in 0..4 {
         let owner = if pet == 0 { "YOU".to_string() } else { format!("Player {pet} Name") };
         let name = format!("Eos ({owner})");
-        let mut record = member.clone();
+        let mut record = participant.clone();
         record["name"] = json!(name);
         record["Job"] = json!("");
-        members.insert(name, record);
+        participants.insert(name, record);
     }
     let mut message = template.clone();
-    message["Combatant"] = Value::Object(members);
+    message["Combatant"] = Value::Object(participants);
     message["isActive"] = json!(active.to_string());
     // a different title per fight, or the history would (correctly) skip every one as a repeat of the previous fight
     message["Encounter"]["title"] = json!(format!("Fight {damage_scale}"));
@@ -72,7 +72,7 @@ fn encounter_of(text: &str) -> Encounter {
 #[ignore]
 fn measure_per_message_cost() {
     let text = synthetic_message(true, 1);
-    println!("\nmessage size: {} bytes, {} members", text.len(), PLAYERS + 4);
+    println!("\nmessage size: {} bytes, {} participants", text.len(), PLAYERS + 4);
     let wire = time("parse the wire message (serde)", || assert!(crate::infrastructure::act::overlay_plugin_protocol::parse_wire_only(&text)));
     let whole = time("parse + build a fresh Encounter", || encounter_of(&text));
     println!("  -> building the Encounter adds {:.1} µs ({:.0}% of the parse)", whole - wire, (whole - wire) / wire * 100.0);
@@ -94,7 +94,7 @@ fn measure_the_unbounded_history() {
         println!("recorded {fights:>4} fights in {:>8.1} ms (building each Encounter included)", start.elapsed().as_secs_f64() * 1e3);
         time(&format!("history screen: entries().to_vec() at {fights}"), || history.entries().to_vec());
         assert_eq!(history.entries().len(), fights, "every fight must have been recorded");
-        let bytes_per_fight = std::mem::size_of::<crate::domain::combat::Member>() * (PLAYERS + 4);
-        println!("  ~{} KiB of member data kept alive for {fights} fights (members only, excluding strings)", bytes_per_fight * fights / 1024);
+        let bytes_per_fight = std::mem::size_of::<crate::domain::combat::Participant>() * (PLAYERS + 4);
+        println!("  ~{} KiB of participant data kept alive for {fights} fights (participants only, excluding strings)", bytes_per_fight * fights / 1024);
     }
 }
