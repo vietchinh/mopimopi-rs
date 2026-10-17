@@ -12,7 +12,7 @@ use super::graph_bars::graph_bars;
 use super::table_environment::SharedEnvironment;
 use super::visible_players::visible_players;
 use crate::application::app_state::TablesContext;
-use crate::domain::combat::CombatantKind;
+use crate::domain::combat::MemberKind;
 use crate::domain::formatting::{cell_fragments_ranked, CellContext};
 use crate::application::i18n::translate;
 use crate::domain::translations::translations;
@@ -25,19 +25,19 @@ use std::collections::HashSet;
 
 pub(super) fn standard_table(
     environment: &SharedEnvironment,
-    combatants: &[Member],
+    members: &[Member],
     encounter: &EncounterFacts,
     is_healing: bool,
     blurred_rows: &HashSet<String>,
 ) -> Element {
     let table = &environment.table;
-    let players = visible_players(&table.kind(is_healing).filter, combatants, is_healing);
+    let players = visible_players(&table.kind(is_healing).filter, members, is_healing);
     // The best value in this table; bar widths are relative to it. A plain scan, not the position
     // of the first row, since a healing table's own order (sorted in `visible_players`, best first)
     // would make that valid too, but a damage table's order is only usually already sorted this way.
-    let top_value = combatants
+    let top_value = members
         .iter()
-        .map(|combatant| if is_healing { combatant.healed } else { combatant.damage })
+        .map(|member| if is_healing { member.healed } else { member.damage })
         .fold(0.0, f64::max);
     let label = super::table_label(is_healing);
     let columns = environment.columns.of(is_healing);
@@ -51,14 +51,14 @@ pub(super) fn standard_table(
     // "Spacing of DPS/HPS Table": the space above each table's header.
     let table_gap = table.kind(is_healing).gap;
     let rows = players.iter().map(|player| {
-        let row_id = row_element_id(&player.combatant.name);
+        let row_id = row_element_id(&player.member.name);
         let blur_key = format!("{label}{row_id}");
         let is_blurred = blurred_rows.contains(&blur_key);
         rsx! {
             PlayerRow {
                 key: "{blur_key}",
                 environment: environment.clone(),
-                combatant: player.combatant.clone(),
+                member: player.member.clone(),
                 encounter: encounter.clone(),
                 rank: player.rank,
                 top_value,
@@ -115,7 +115,7 @@ fn TableHeader(columns: Vec<Column>) -> Element {
 #[component]
 fn PlayerRow(
     environment: SharedEnvironment,
-    combatant: Member,
+    member: Member,
     encounter: EncounterFacts,
     rank: usize,
     top_value: f64,
@@ -124,17 +124,17 @@ fn PlayerRow(
 ) -> Element {
     let tables = use_context::<TablesContext>();
     let label = super::table_label(is_healing);
-    let row_id = row_element_id(&combatant.name);
+    let row_id = row_element_id(&member.name);
     let blur_key = format!("{label}{row_id}");
-    let is_local_players_pet = matches!(combatant.kind(), CombatantKind::Pet { owner_name, .. } if owner_name == "YOU");
+    let is_local_players_pet = matches!(member.kind(), MemberKind::Pet { owner_name, .. } if owner_name == "YOU");
     let is_own = row_id == "YOU" || is_local_players_pet;
     let columns = environment.columns.of(is_healing);
     let cell_context = environment.cell_context();
     let cells = columns.iter().map(|column| {
         if column.name == "Class" {
-            job_icon_cell(&environment, &combatant, column, tables.blurred_player_rows, blur_key.clone())
+            job_icon_cell(&environment, &member, column, tables.blurred_player_rows, blur_key.clone())
         } else {
-            cell(&cell_context, &combatant, rank, &encounter, column, is_blurred)
+            cell(&cell_context, &member, rank, &encounter, column, is_blurred)
         }
     });
 
@@ -145,15 +145,15 @@ fn PlayerRow(
             class: if is_own { "text-own" },
             class: if is_local_players_pet { "myPet" },
             table { class: "tableBody", tbody { tr { {cells} } } }
-            {graph_bars(&environment, &combatant, top_value, is_healing, &row_id)}
+            {graph_bars(&environment, &member, top_value, is_healing, &row_id)}
             div { class: "barBg bg-(--chrome-bar-bg) corner-body" }
         }
     }
 }
 
-fn cell(cell_context: &CellContext, combatant: &Member, rank: usize, encounter: &EncounterFacts, column: &Column, row_is_blurred: bool) -> Element {
+fn cell(cell_context: &CellContext, member: &Member, rank: usize, encounter: &EncounterFacts, column: &Column, row_is_blurred: bool) -> Element {
     let is_blurred = column.name == "name" && row_is_blurred;
-    let content = text_fragments_view(cell_fragments_ranked(&column.key, combatant, encounter, cell_context, rank), true);
+    let content = text_fragments_view(cell_fragments_ranked(&column.key, member, encounter, cell_context, rank), true);
     rsx! {
         td {
             key: "{column.name}",
@@ -170,13 +170,13 @@ fn cell(cell_context: &CellContext, combatant: &Member, rank: usize, encounter: 
 /// The job icon cell. Clicking it blurs / unblurs the player's name (only outside of fights).
 fn job_icon_cell(
     environment: &SharedEnvironment,
-    combatant: &Member,
+    member: &Member,
     column: &Column,
     blurred_player_rows: Signal<HashSet<String>>,
     blur_key: String,
 ) -> Element {
     let can_blur = environment.can_blur_names;
-    let icon = job_icon_view(&environment.table.icon_set, combatant, true, environment.npc_look());
+    let icon = job_icon_view(&environment.table.icon_set, member, true, environment.npc_look());
     rsx! {
         td {
             key: "{column.name}",

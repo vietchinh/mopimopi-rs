@@ -60,3 +60,55 @@ fn layers_only_import_downwards() {
     let stale: Vec<_> = allowed.iter().filter(|v| !found.contains(v)).collect();
     assert!(stale.is_empty(), "fixed; remove from ALLOWED_VIOLATIONS: {stale:?}");
 }
+
+/// Combat's open host service: everything outside `domain/combat` reaches it through the published language (the
+/// names `domain::combat` itself exports), never through its inner modules.
+#[test]
+fn combat_is_used_only_through_its_published_language() {
+    let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut files = Vec::new();
+    rust_files(&src, &mut files);
+    let mut offenders = Vec::new();
+    for file in files {
+        let relative = file.strip_prefix(&src).unwrap().to_string_lossy().replace('\\', "/");
+        if relative.starts_with("domain/combat/") {
+            continue;
+        }
+        let source = fs::read_to_string(&file).unwrap();
+        for line in source.lines() {
+            let line = line.trim_start();
+            if line.starts_with("//") {
+                continue;
+            }
+            // `domain::combat::something::` where `something` is a module (lower case) and not a type or function.
+            if let Some(rest) = line.split("domain::combat::").nth(1) {
+                if rest.chars().next().is_some_and(|c| c.is_lowercase()) && rest.split(['{', ',', ';']).next().is_some_and(|p| p.contains("::")) {
+                    offenders.push(format!("{relative}: {line}"));
+                }
+            }
+        }
+    }
+    assert!(offenders.is_empty(), "reach into Combat's inner modules: {offenders:?}");
+}
+
+/// ACT's words stop at the translator: the wire types and field names exist only in `infrastructure/act`.
+#[test]
+fn acts_wire_types_stay_in_the_act_edge() {
+    let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut files = Vec::new();
+    rust_files(&src, &mut files);
+    let mut offenders = Vec::new();
+    for file in files {
+        let relative = file.strip_prefix(&src).unwrap().to_string_lossy().replace('\\', "/");
+        if relative.starts_with("infrastructure/act/") {
+            continue;
+        }
+        let source = fs::read_to_string(&file).unwrap();
+        for word in ["CombatantRecord", "EncounterRecord", "CombatDataMessage", "OverlayMessage", "lenient_"] {
+            if source.contains(word) {
+                offenders.push(format!("{relative}: {word}"));
+            }
+        }
+    }
+    assert!(offenders.is_empty(), "ACT's wire types leak out of the edge: {offenders:?}");
+}

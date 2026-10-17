@@ -2,7 +2,7 @@
 
 use crate::domain::formatting::TextFragment;
 use dioxus::prelude::*;
-use crate::domain::combat::CombatantKind;
+use crate::domain::combat::MemberKind;
 use crate::domain::combat::Member;
 
 /// Fragments as DOM: plain text, and dimmed text in a `span.ex`. `sized_by_table` says whether the
@@ -41,13 +41,13 @@ fn icon_code(job_code: &str) -> &str {
 /// raid mode's cards size their icon through the parent `.rIcon`'s own nested `& img` rule
 /// instead, so they pass `false`. `aspect-ratio: auto 1` reserves a square until the image loads (icons are square), so a
 /// newly added row does not grow, and push the rows below it, when its icon arrives.
-pub fn job_icon_view(icon_set: &str, combatant: &Member, sized_by_table: bool, npc_look: bool) -> Element {
-    let job_code = match combatant.kind() {
-        CombatantKind::LimitBreak if npc_look && combatant.is_npc() => NPC_ICON_CODE.to_string(),
-        CombatantKind::LimitBreak => "LMB".to_string(),
-        CombatantKind::Pet { .. } => "AVA".to_string(),
-        CombatantKind::Chocobo { .. } => "CBO".to_string(),
-        _ => combatant.job_text.to_uppercase(),
+pub fn job_icon_view(icon_set: &str, member: &Member, sized_by_table: bool, npc_look: bool) -> Element {
+    let job_code = match member.kind() {
+        MemberKind::LimitBreak if npc_look && member.is_npc() => NPC_ICON_CODE.to_string(),
+        MemberKind::LimitBreak => "LMB".to_string(),
+        MemberKind::Pet { .. } => "AVA".to_string(),
+        MemberKind::Chocobo { .. } => "CBO".to_string(),
+        _ => member.job.to_uppercase(),
     };
 
     let source = format!("images/icon/{icon_set}/{}.png", icon_code(&job_code));

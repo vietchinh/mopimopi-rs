@@ -5,7 +5,7 @@ use crate::domain::combat::EncounterFacts;
 use serde::Deserialize;
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
-pub struct EncounterRecord {
+pub(in crate::infrastructure::act) struct EncounterRecord {
     #[serde(default, deserialize_with = "lenient_text")]
     pub title: String,
     #[serde(default, rename = "duration", deserialize_with = "lenient_text")]

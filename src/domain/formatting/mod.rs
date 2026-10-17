@@ -19,5 +19,5 @@ pub use number_format::NumberFormat;
 pub use text_fragment::TextFragment;
 
 
-/// Job code for the Limit Break pseudo-combatant (used to look up its translated display name).
+/// Job code for the Limit Break pseudo-member (used to look up its translated display name).
 pub const LIMIT_BREAK_JOB_CODE: &str = "LMB";

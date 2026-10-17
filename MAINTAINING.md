@@ -4,6 +4,10 @@ A Rust + Dioxus 0.7 port of the MopiMopi FFXIV ACT combat overlay. It compiles t
 as a static site (GitHub Pages). The port is a **conformist** copy: what it shows and how it is configured
 must match the original (see `docs/ddd/`). Start with `docs/ddd/vision.md`, `glossary.md` and `CHANGES.md`.
 
+> **Old names.** Sections 2 onward were written before the DDD refactor. Read "combatant" as `Member` (domain) or
+> `CombatantRecord` (only inside `infrastructure/act`), `Player`/`PlayerStats` as `Figures` + `Member`, and
+> `CombatantKind` as `MemberKind`. `docs/ddd/CHANGES.md` is the authority.
+
 ---------------------------------------------------------------------------------------------------
 
 ## 0. Layers (folder structure)
@@ -25,7 +29,7 @@ src/
     browser_websocket/  the WebSocket itself
     browser_storage.rs  localStorage: settings and backup (the only place that touches storage)
   domain/           business domain: rules + the objects they work on (no Dioxus, no browser APIs)
-    combat/           players, roles, pets, rankings, pet merging, `EncounterKey`
+    combat/           the Encounter aggregate and its members (`Player`, `Npc`, `PlayerCompanion`, `LimitBreak`, `Unclassified`), value objects (`Rate`, `Percent`, `Amount`, `Job`), `History`, events, pet merging. Its published language is what `combat/mod.rs` re-exports.
     formatting/       how values become table text
     settings/         the user's settings and their rules (text in, text out; no storage)
     translations/     translated texts, settings-page schema

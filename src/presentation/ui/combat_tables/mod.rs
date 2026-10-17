@@ -79,24 +79,24 @@ pub fn CombatTables(is_settings_preview: bool) -> Element {
         message
     };
     let local_player_name = tables.local_player_name.read().clone();
-    let combatants = &message.rows(crate::application::app_state::pet_view(merge_pets, &local_player_name));
+    let members = &message.rows(crate::application::app_state::pet_view(merge_pets, &local_player_name));
     let encounter = message.facts();
 
-    // The original only builds its tables when the data has a combatant named "YOU" (`onCombatDataUpdate`
+    // The original only builds its tables when the data has a member named "YOU" (`onCombatDataUpdate`
     // starts with that check); without one both tables stay empty.
-    if !combatants.iter().any(|combatant| combatant.name == "YOU") {
+    if !members.iter().any(|member| member.name == "YOU") {
         return empty_tables();
     }
 
     let environment = environment();
-    let raid_mode = environment.table.raid_mode(combatants.len()) || (is_settings_preview && *settings_screen.settings_preview_raid_mode.read());
+    let raid_mode = environment.table.raid_mode(members.len()) || (is_settings_preview && *settings_screen.settings_preview_raid_mode.read());
     let blurred_rows = tables.blurred_player_rows.read();
 
     let sections = environment.table.tables_in_order().into_iter().map(|is_healing| {
         if raid_mode {
-            raid_grid::raid_grid(&environment, combatants, encounter, is_healing)
+            raid_grid::raid_grid(&environment, members, encounter, is_healing)
         } else {
-            standard_table::standard_table(&environment, combatants, encounter, is_healing, &blurred_rows)
+            standard_table::standard_table(&environment, members, encounter, is_healing, &blurred_rows)
         }
     });
     rsx! { {sections} }

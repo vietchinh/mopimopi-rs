@@ -21,4 +21,4 @@ mod overlay_message;
 
 pub use combat_data_message::encounter_from_json;
 pub use combat_data_peek::peek_combat_data;
-pub use overlay_message::OverlayMessage;
+pub(in crate::infrastructure::act) use overlay_message::OverlayMessage;

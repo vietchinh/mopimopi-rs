@@ -1,96 +1,151 @@
-//! One participant of an Encounter as the domain knows it: a plain value, with no serde and no ACT field names.
-//! The ACT translator (`infrastructure::act`) builds these; everything that decides what a participant is
-//! (`kind`, `class_code`, roles) or how participants combine (`absorb_pet`) lives here.
+//! The kinds of member an Encounter holds. Who is a player, an NPC, a companion, the Limit Break or none of these is
+//! decided once, when the Encounter is built (`Member::sort`); everything after that asks the type.
 //!
-//! (DDD: the wire type stays at the edge, an anticorruption layer; the domain owns its own model.)
+//! * `Player`          – a character; "YOU" is the local one.
+//! * `Npc`             – a trust or duty-support helper: no job, no owner in its name, not the gauge.
+//! * `PlayerCompanion` – a pet or chocobo; it always has an owner, named as ACT names it.
+//! * `LimitBreak`      – the shared gauge. There is at most one per Encounter.
+//! * `Unclassified`    – technical: ACT sent something the model cannot place (a pet missing from the known list, a
+//!   companion whose owner is not in the fight, a second gauge). It is shown as its own row, so nothing ACT sent is lost.
+//!
+//! (DDD: entities of the aggregate; the weakest-parameter and "preconditions in types" rules of the talks.)
 
-use super::encounter::{Amount, Rate};
-use super::{percent_of, CombatantIdentity, CombatantKind, Healing, PetJob};
+use super::{Figures, MemberKind, PetJob};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Member {
-    /// Position in ACT's message (0 = first). Not part of the JSON. Rows that tie on the value a table
-    /// is sorted by keep this order, which is what the original's stable sort does.
-    pub arrival_index: usize,
-    pub name: String,
-    pub job_text: String,
-    /// The combatant's own duration, e.g. "00:34".
-    pub duration_text: String,
-    pub duration_seconds: f64,
+pub struct Player {
+    pub figures: Figures,
+}
 
-    pub damage: f64,
-    pub damage_per_second: f64,
-    pub hits: f64,
-    pub misses: f64,
-    pub swings: f64,
-    pub critical_hits: f64,
-    pub direct_hits: f64,
-    pub critical_direct_hits: f64,
-    pub damage_taken: f64,
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Npc {
+    pub figures: Figures,
+}
 
-    pub heals: f64,
-    /// Everything: HP restored + overheal + shields. See `healing()`.
-    pub healed: f64,
-    pub heal_per_second: f64,
-    pub cures: f64,
-    pub critical_heals: f64,
-    pub heals_taken: f64,
-    pub damage_shield: f64,
-    pub over_heal: f64,
-    pub absorb_heal: f64,
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct LimitBreak {
+    pub figures: Figures,
+}
 
-    pub damage_per_second_last_10_seconds: f64,
-    pub damage_per_second_last_30_seconds: f64,
-    pub damage_per_second_last_60_seconds: f64,
-    pub damage_per_second_last_180_seconds: f64,
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CompanionKind {
+    Pet(PetJob),
+    Chocobo,
+}
 
-    /// The action of the strongest hit ("Shieldsplitter"); the amount is
-    /// `strongest_hit_amount`. Empty when there was none. (ACT sends "Shieldsplitter-1819".)
-    pub strongest_hit_name: String,
-    pub strongest_hit_amount: f64,
-    /// The action of the strongest heal ("Divine Veil (*)"); the amount is
-    /// `strongest_heal_amount`. Empty when there was none.
-    pub strongest_heal_name: String,
-    pub strongest_heal_amount: f64,
+#[derive(Clone, Debug, PartialEq)]
+pub struct PlayerCompanion {
+    pub figures: Figures,
+    /// The owner's name as it stands in the companion's own name: "Eos (Future Fade)" has owner "Future Fade".
+    pub owner: String,
+    pub kind: CompanionKind,
+}
 
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Unclassified {
+    pub figures: Figures,
+    /// Set when this was a companion whose owner is not in the fight: it still looks like the pet or chocobo it is.
+    pub was_companion_of: Option<(String, CompanionKind)>,
+}
 
-    pub avoided_hits: f64,
-    pub mana_restored: f64,
-    pub parry_percent: f64,
-    pub block_percent: f64,
-    pub deaths: f64,
+#[derive(Clone, Debug, PartialEq)]
+pub enum Member {
+    Player(Player),
+    Npc(Npc),
+    Companion(PlayerCompanion),
+    LimitBreak(LimitBreak),
+    Unclassified(Unclassified),
+}
 
-    /// After pets are merged: the part of `damage` that came from pets. 0 otherwise.
-    /// For drawing the pet's segment of the DPS bar.
-    pub pet_damage: f64,
-    /// After pets are merged: the part of the effective healing that came from pets.
-    /// For drawing the pet's segment of the HPS bar.
-    pub pet_effective_healed: f64,
+impl Default for Member {
+    fn default() -> Self {
+        Member::Player(Player::default())
+    }
+}
+
+impl Deref for Member {
+    type Target = Figures;
+    fn deref(&self) -> &Figures {
+        match self {
+            Member::Player(m) => &m.figures,
+            Member::Npc(m) => &m.figures,
+            Member::Companion(m) => &m.figures,
+            Member::LimitBreak(m) => &m.figures,
+            Member::Unclassified(m) => &m.figures,
+        }
+    }
+}
+
+impl DerefMut for Member {
+    fn deref_mut(&mut self) -> &mut Figures {
+        match self {
+            Member::Player(m) => &mut m.figures,
+            Member::Npc(m) => &mut m.figures,
+            Member::Companion(m) => &mut m.figures,
+            Member::LimitBreak(m) => &mut m.figures,
+            Member::Unclassified(m) => &mut m.figures,
+        }
+    }
 }
 
 impl Member {
-    /// A trust or duty-support NPC: a row with no job and no owner in its name that is not the Limit Break gauge itself.
-    /// The original draws these exactly like the gauge (see `CombatantKind::classify`); that is a Display decision.
+    pub fn player(figures: Figures) -> Self {
+        Member::Player(Player { figures })
+    }
+
+    /// Decides what ACT's row is, from its name and job text, the way the original does. A pet or chocobo is a companion
+    /// here whatever its owner; `Encounter::from_figures` demotes the ones whose owner is absent.
+    pub fn sort(figures: Figures) -> Self {
+        let kind = MemberKind::classify(figures.identity());
+        match kind {
+            MemberKind::Player => Member::Player(Player { figures }),
+            MemberKind::LimitBreak if figures.job == "Limit Break" || figures.name == "Limit Break" => {
+                Member::LimitBreak(LimitBreak { figures })
+            }
+            MemberKind::LimitBreak => Member::Npc(Npc { figures }),
+            MemberKind::Pet { owner_name, job } => {
+                let owner = owner_name.to_owned();
+                Member::Companion(PlayerCompanion { figures, owner, kind: CompanionKind::Pet(job) })
+            }
+            MemberKind::Chocobo { owner_name } => {
+                let owner = owner_name.to_owned();
+                Member::Companion(PlayerCompanion { figures, owner, kind: CompanionKind::Chocobo })
+            }
+            MemberKind::Unknown => Member::Unclassified(Unclassified { figures, was_companion_of: None }),
+        }
+    }
+
+    /// This companion, placed as unclassified because its owner is not in the fight.
+    pub(super) fn demoted(self) -> Self {
+        match self {
+            Member::Companion(PlayerCompanion { figures, owner, kind }) => {
+                Member::Unclassified(Unclassified { figures, was_companion_of: Some((owner, kind)) })
+            }
+            Member::LimitBreak(LimitBreak { figures }) => Member::Unclassified(Unclassified { figures, was_companion_of: None }),
+            other => other,
+        }
+    }
+
+    /// A trust or duty-support NPC. The original draws these exactly like the gauge (see `MemberKind::classify`);
+    /// that is a Display decision.
     pub fn is_npc(&self) -> bool {
-        self.kind() == CombatantKind::LimitBreak && self.job_text != "Limit Break" && self.name != "Limit Break"
+        matches!(self, Member::Npc(_))
     }
 
-    /// Damage per second over the member's *own* active time (ACT's `dps`, the overlay's "P.DPS"). A time of 0 counts as
-    /// 1 second, as in the original.
-    pub fn personal_damage_per_second(&self) -> Rate {
-        let seconds = if self.duration_seconds == 0.0 { 1.0 } else { self.duration_seconds };
-        Rate::per_second(Amount::new(self.damage), seconds)
+    /// Player, pet, chocobo or Limit Break, as the original's look decides them (see `MemberKind`). NPCs look like the gauge.
+    pub fn kind(&self) -> MemberKind<'_> {
+        match self {
+            Member::Player(_) => MemberKind::Player,
+            Member::Npc(_) | Member::LimitBreak(_) => MemberKind::LimitBreak,
+            Member::Companion(c) => companion_kind(&c.owner, c.kind),
+            Member::Unclassified(u) => match &u.was_companion_of {
+                Some((owner, kind)) => companion_kind(owner, *kind),
+                None => MemberKind::Unknown,
+            },
+        }
     }
 
-    /// The name and job the domain rules work with.
-    pub fn identity(&self) -> CombatantIdentity<'_> {
-        CombatantIdentity { name: &self.name, job: &self.job_text }
-    }
-
-    /// Player, pet, chocobo or Limit Break (see `CombatantKind`).
-    pub fn kind(&self) -> CombatantKind<'_> {
-        CombatantKind::classify(self.identity())
-    }
 
     /// The original's `Class`: what a bar's colour is looked up by. (The job *icon* is looked up by the
     /// raw job instead, see `job_icon_view`.) The two differ for the base classes, which take their
@@ -99,9 +154,9 @@ impl Member {
     pub fn class_code(&self) -> String {
         use crate::domain::combat::PetJob::*;
         match self.kind() {
-            CombatantKind::LimitBreak => "LMB".into(),
-            CombatantKind::Chocobo { .. } => "CBO".into(),
-            CombatantKind::Pet { job, .. } => match job {
+            MemberKind::LimitBreak => "LMB".into(),
+            MemberKind::Chocobo { .. } => "CBO".into(),
+            MemberKind::Pet { job, .. } => match job {
                 Summoner => "SMN",
                 Scholar => "SCH",
                 Machinist => "MCH",
@@ -113,7 +168,7 @@ impl Member {
                 Beastmaster => "AVA",
             }
             .into(),
-            _ => match self.job_text.to_uppercase().as_str() {
+            _ => match self.job.to_uppercase().as_str() {
                 "GLD" | "GLA" => "PLD".into(),
                 "MRD" => "WAR".into(),
                 "PUG" | "PGL" => "MNK".into(),
@@ -128,7 +183,7 @@ impl Member {
         }
     }
 
-    /// Whether this combatant counts as a tank / healer / crafter-or-gatherer for the job-filter
+    /// Whether this member counts as a tank / healer / crafter-or-gatherer for the job-filter
     /// settings ("`DPS_T`", "`HPS_H`", ... in `visible_players`) and the "role" palette mode. Checked
     /// directly against `job_text` (base classes included as their own entries, not remapped to
     /// their advanced job), the same way the icon is looked up (`job_text.to_uppercase()`) --
@@ -140,21 +195,21 @@ impl Member {
     /// specific pets; every other pet (Summoner's, Machinist's, ...) is *not* hardcoded this way
     /// in the original either, and stays plain DPS here too.
     pub fn is_tank(&self) -> bool {
-        matches!(self.job_text.to_uppercase().as_str(), "PLD" | "WAR" | "DRK" | "GNB" | "GLA" | "MRD")
-            || matches!(self.kind(), CombatantKind::Pet { job: PetJob::DarkKnight, .. })
+        matches!(self.job.to_uppercase().as_str(), "PLD" | "WAR" | "DRK" | "GNB" | "GLA" | "MRD")
+            || matches!(self.kind(), MemberKind::Pet { job: PetJob::DarkKnight, .. })
     }
 
     pub fn is_healer(&self) -> bool {
-        matches!(self.job_text.to_uppercase().as_str(), "SCH" | "WHM" | "AST" | "SGE" | "CNJ")
-            || matches!(self.kind(), CombatantKind::Pet { job: PetJob::Scholar | PetJob::Astrologian | PetJob::WhiteMage | PetJob::Sage, .. })
+        matches!(self.job.to_uppercase().as_str(), "SCH" | "WHM" | "AST" | "SGE" | "CNJ")
+            || matches!(self.kind(), MemberKind::Pet { job: PetJob::Scholar | PetJob::Astrologian | PetJob::WhiteMage | PetJob::Sage, .. })
     }
 
     pub fn is_crafter(&self) -> bool {
-        matches!(self.job_text.to_uppercase().as_str(), "CRP" | "BSM" | "ARM" | "GSM" | "LTW" | "WVR" | "ALC" | "CUL")
+        matches!(self.job.to_uppercase().as_str(), "CRP" | "BSM" | "ARM" | "GSM" | "LTW" | "WVR" | "ALC" | "CUL")
     }
 
     pub fn is_gatherer(&self) -> bool {
-        matches!(self.job_text.to_uppercase().as_str(), "BTN" | "MIN" | "FSH")
+        matches!(self.job.to_uppercase().as_str(), "BTN" | "MIN" | "FSH")
     }
 
     pub fn is_crafter_or_gatherer(&self) -> bool {
@@ -175,63 +230,24 @@ impl Member {
             "Crafter"
         } else if self.is_gatherer() {
             "Gathering"
-        } else if matches!(self.kind(), CombatantKind::Player | CombatantKind::Pet { .. }) {
+        } else if matches!(self.kind(), MemberKind::Player | MemberKind::Pet { .. }) {
             // A pet is a plain "DPS" unless it is one of the healing/tanking pets handled above.
             "DPS"
-        } else if matches!(self.kind(), CombatantKind::Chocobo { .. }) {
+        } else if matches!(self.kind(), MemberKind::Chocobo { .. }) {
             "CBO"
         } else {
             ""
         }
     }
 
-    /// Healing split into what was restored, overhealed and shielded.
-    pub fn healing(&self) -> Healing {
-        Healing { healed: self.healed, over_heal: self.over_heal, damage_shield: self.damage_shield }
-    }
 
-    /// Like ACT's `critheal%`, but exact (ACT rounds; `NumberFormat::percent` does the same).
-    pub fn critical_heal_percent(&self) -> Option<f64> {
-        percent_of(self.critical_heals, self.heals)
-    }
 
-    pub fn absorb_pet(&mut self, pet: &Member) {
-        self.damage += pet.damage;
-        self.damage_per_second += pet.damage_per_second;
-        self.hits += pet.hits;
-        self.misses += pet.misses;
-        self.swings += pet.swings;
-        self.critical_hits += pet.critical_hits;
-        self.direct_hits += pet.direct_hits;
-        self.critical_direct_hits += pet.critical_direct_hits;
-        self.damage_taken += pet.damage_taken;
+}
 
-        self.heals += pet.heals;
-        self.healed += pet.healed;
-        self.heal_per_second += pet.heal_per_second;
-        self.cures += pet.cures;
-        self.critical_heals += pet.critical_heals;
-        self.heals_taken += pet.heals_taken;
-        self.damage_shield += pet.damage_shield;
-        self.over_heal += pet.over_heal;
-        self.absorb_heal += pet.absorb_heal;
-
-        self.damage_per_second_last_10_seconds += pet.damage_per_second_last_10_seconds;
-        self.damage_per_second_last_30_seconds += pet.damage_per_second_last_30_seconds;
-        self.damage_per_second_last_60_seconds += pet.damage_per_second_last_60_seconds;
-        self.damage_per_second_last_180_seconds += pet.damage_per_second_last_180_seconds;
-
-        self.pet_damage += pet.damage;
-        self.pet_effective_healed += pet.healing().effective();
-
-        if pet.strongest_hit_amount > self.strongest_hit_amount {
-            self.strongest_hit_amount = pet.strongest_hit_amount;
-            self.strongest_hit_name.clone_from(&pet.strongest_hit_name);
-        }
-        if pet.strongest_heal_amount > self.strongest_heal_amount {
-            self.strongest_heal_amount = pet.strongest_heal_amount;
-            self.strongest_heal_name.clone_from(&pet.strongest_heal_name);
-        }
+fn companion_kind(owner: &str, kind: CompanionKind) -> MemberKind<'_> {
+    match kind {
+        CompanionKind::Pet(job) => MemberKind::Pet { owner_name: owner, job },
+        CompanionKind::Chocobo => MemberKind::Chocobo { owner_name: owner },
     }
 }
 

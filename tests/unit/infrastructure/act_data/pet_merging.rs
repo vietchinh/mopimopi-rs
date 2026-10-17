@@ -1,7 +1,7 @@
 // //! End to end: JSON in, merged combatants out.
 //
 // use super::*;
-// use crate::domain::combat::CombatantKind;
+// use crate::domain::combat::MemberKind;
 //
 // const BEASTMASTER: &str = include_str!("samples/beastmaster.json");
 // const ZURVAN: &str = include_str!("samples/zurvan.json");
@@ -77,7 +77,7 @@
 //     let merged = parse(ZURVAN, MERGE);
 //     assert_eq!(sorted_names(&separate), sorted_names(&merged));
 //     assert_eq!(merged.combatants.len(), 9);
-//     assert_eq!(merged.combatant("Limit Break").unwrap().kind(), CombatantKind::LimitBreak);
+//     assert_eq!(merged.combatant("Limit Break").unwrap().kind(), MemberKind::LimitBreak);
 // }
 //
 // #[test]

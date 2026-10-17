@@ -14,7 +14,7 @@ const INACTIVE_END: &str = r#","isActive":"false"}"#;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CombatDataPeek {
     pub is_active: bool,
-    pub has_combatants: bool,
+    pub has_members: bool,
 }
 
 pub trait SearchableText {
@@ -28,8 +28,8 @@ pub fn peek_combat_data<Text: SearchableText + ?Sized>(message: &Text) -> Option
         (_, true) => false,
         _ => return None,
     };
-    let has_combatants = !message.contains(NO_COMBATANTS);
-    Some(CombatDataPeek { is_active, has_combatants })
+    let has_members = !message.contains(NO_COMBATANTS);
+    Some(CombatDataPeek { is_active, has_members })
 }
 
 impl SearchableText for str {

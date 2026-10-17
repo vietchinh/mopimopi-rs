@@ -1,6 +1,6 @@
 //! How a player's name is displayed in the name column.
 
-use crate::domain::combat::CombatantKind::LimitBreak;
+use crate::domain::combat::MemberKind::LimitBreak;
 use crate::domain::combat::LOCAL_PLAYER;
 use crate::domain::settings::Settings;
 use crate::domain::combat::Member;

@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(tag = "type")]
-pub enum OverlayMessage {
+pub(in crate::infrastructure::act) enum OverlayMessage {
     CombatData(CombatDataMessage),
     ChangePrimaryPlayer(ChangePrimaryPlayer),
     /// Any other `"type"` (`ChangeZone`, `LogLine`, `MiniParse` `broadcast`, ...). Its fields are discarded.

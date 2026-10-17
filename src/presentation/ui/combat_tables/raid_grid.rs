@@ -8,8 +8,8 @@ use crate::presentation::ui::shared::row_identity::row_element_id;
 use crate::presentation::ui::shared::text_display::{job_icon_view, text_fragments_view};
 use dioxus::prelude::*;
 
-pub(super) fn raid_grid(environment: &SharedEnvironment, combatants: &[Member], encounter: &EncounterFacts, is_healing: bool) -> Element {
-    let players = visible_players(&environment.table.kind(is_healing).filter, combatants, is_healing);
+pub(super) fn raid_grid(environment: &SharedEnvironment, members: &[Member], encounter: &EncounterFacts, is_healing: bool) -> Element {
+    let players = visible_players(&environment.table.kind(is_healing).filter, members, is_healing);
     let cards_per_row = environment.raid.cards_in_a_row();
     let label = super::table_label(is_healing);
     let suffix = environment.element_id_suffix;
@@ -19,9 +19,9 @@ pub(super) fn raid_grid(environment: &SharedEnvironment, combatants: &[Member], 
         let cards = row_players.iter().map(|player| {
             rsx! {
                 RaidCard {
-                    key: "{row_element_id(&player.combatant.name)}",
+                    key: "{row_element_id(&player.member.name)}",
                     environment: environment.clone(),
-                    combatant: player.combatant.clone(),
+                    member: player.member.clone(),
                     encounter: encounter.clone(),
                     rank: player.rank,
                     is_healing,
@@ -44,14 +44,14 @@ pub(super) fn raid_grid(environment: &SharedEnvironment, combatants: &[Member], 
 
 /// One card of the raid grid. A component, so a card whose data and settings did not change is not drawn again.
 #[component]
-fn RaidCard(environment: SharedEnvironment, combatant: Member, encounter: EncounterFacts, rank: usize, is_healing: bool) -> Element {
+fn RaidCard(environment: SharedEnvironment, member: Member, encounter: EncounterFacts, rank: usize, is_healing: bool) -> Element {
     let value_column = if is_healing { ColumnKey::Enchps } else { ColumnKey::Encdps };
     let cell_context = environment.cell_context();
-    let row_id = row_element_id(&combatant.name);
-    let color_strip = environment.bar_color(&combatant, &row_id);
-    let icon = job_icon_view(&environment.table.icon_set, &combatant, false, environment.npc_look());
-    let name = text_fragments_view(cell_fragments_ranked(&ColumnKey::Name, &combatant, &encounter, &cell_context, rank), false);
-    let value = text_fragments_view(cell_fragments(&value_column, &combatant, &encounter, &cell_context), false);
+    let row_id = row_element_id(&member.name);
+    let color_strip = environment.bar_color(&member, &row_id);
+    let icon = job_icon_view(&environment.table.icon_set, &member, false, environment.npc_look());
+    let name = text_fragments_view(cell_fragments_ranked(&ColumnKey::Name, &member, &encounter, &cell_context, rank), false);
+    let value = text_fragments_view(cell_fragments(&value_column, &member, &encounter, &cell_context), false);
     let is_own = row_id == "YOU";
     let card_style = if is_own { "raid-cell-own" } else { "raid-cell-other" };
     rsx! {

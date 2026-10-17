@@ -14,15 +14,15 @@
 //     };
 //     assert!(message.is_encounter_active);
 //     assert_eq!(message.encounter.zone_name, "Shirogane");
-//     assert_eq!(message.combatants.len(), 2);
-//     let you = message.combatants.iter().find(|c| c.name == "YOU").unwrap();
+//     assert_eq!(message.members.len(), 2);
+//     let you = message.members.iter().find(|c| c.name == "YOU").unwrap();
 //     assert_eq!(you.job_text, "Bst");
 //     assert_eq!(you.damage, 1714.0);
 //     assert_eq!(you.strongest_hit_text, "attack-53");
 // }
 //
 // #[test]
-// fn companion_without_job_is_an_owned_combatant() {
+// fn companion_without_job_is_an_owned_member() {
 //     use crate::domain::combat::{build_rankings, PlayerRole};
 //     let Some(ActEvent::CombatData(message)) = parse_incoming_message(BEASTMASTER_CAPTURE).unwrap() else { panic!() };
 //     let rankings = build_rankings(&message, true, "");

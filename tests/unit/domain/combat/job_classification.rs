@@ -28,7 +28,7 @@ fn known_pet_is_recognised_by_name() {
 }
 
 #[test]
-fn unknown_owned_combatant_becomes_cbo() {
+fn unknown_owned_member_becomes_cbo() {
     let result = classify("Wild Thing (YOU)", "");
     assert_eq!(result.job_code, COMBATANT_JOB_CODE);
     assert_eq!(result.role, PlayerRole::OwnedCombatant);

@@ -49,6 +49,15 @@ impl Percent {
         Self(p_float(value))
     }
 
+    /// The share `part` makes of `whole`; 0 when there is no whole (ACT would show NaN there).
+    pub fn share(part: Amount, whole: Amount) -> Self {
+        if whole.value() == 0.0 {
+            Self::default()
+        } else {
+            Self::of(part, whole)
+        }
+    }
+
     pub fn of(part: Amount, whole: Amount) -> Self {
         Self::new(part.value() / whole.value() * 100.0)
     }
@@ -70,6 +79,31 @@ impl Job {
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl std::ops::Deref for Job {
+    type Target = str;
+    fn deref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl PartialEq<str> for Job {
+    fn eq(&self, other: &str) -> bool {
+        self.0 == other
+    }
+}
+
+impl PartialEq<&str> for Job {
+    fn eq(&self, other: &&str) -> bool {
+        self.0 == *other
+    }
+}
+
+impl From<String> for Job {
+    fn from(text: String) -> Self {
+        Self(text)
     }
 }
 

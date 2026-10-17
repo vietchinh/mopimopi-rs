@@ -4,13 +4,13 @@
 use super::combatant_record::CombatantRecord;
 use super::encounter_record::EncounterRecord;
 use super::lenient_values::lenient_bool;
-use crate::domain::combat::{Encounter, Member};
+use crate::domain::combat::{Encounter, Figures};
 use serde::de::{Deserializer, IgnoredAny, MapAccess, Visitor};
 use serde::Deserialize;
 use std::fmt;
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
-pub struct CombatDataMessage {
+pub(in crate::infrastructure::act) struct CombatDataMessage {
     #[serde(rename = "Encounter")]
     pub encounter: EncounterRecord,
     /// ACT sends `Combatant` as an object keyed by name, but every record repeats its name,
@@ -26,8 +26,8 @@ pub struct CombatDataMessage {
 /// The translation from ACT's wire shape into the domain's Encounter (an anticorruption layer): the wire type ends here.
 impl From<CombatDataMessage> for Encounter {
     fn from(message: CombatDataMessage) -> Encounter {
-        let members = message.combatants.into_iter().map(Member::from).collect();
-        Encounter::new(message.encounter.into(), members, message.is_encounter_active)
+        let figures = message.combatants.into_iter().map(Figures::from).collect();
+        Encounter::from_figures(message.encounter.into(), figures, message.is_encounter_active)
     }
 }
 

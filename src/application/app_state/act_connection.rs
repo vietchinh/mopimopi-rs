@@ -202,14 +202,14 @@ fn handle_message(
     mut error_signal: Signal<Option<String>>,
     sink: MessageSink,
 ) {
-    // An idle "still connected" heartbeat (no combatants, no fight, and none was running) shows nothing and is skipped.
+    // An idle "still connected" heartbeat (no members, no fight, and none was running) shows nothing and is skipped.
     // An empty message is *not* skipped when a fight is running or just was: ACT starts a new encounter with active
-    // messages that have no combatants yet, and the original overlay redraws (and so empties) its tables on them,
+    // messages that have no members yet, and the original overlay redraws (and so empties) its tables on them,
     // and treats the first inactive message after them as the end of that fight.
     // The first message of all is never skipped: it is what tells the app that ACT is connected (and idle).
     let previous = combat_data_message.peek().clone();
     let fight_was_running = previous.as_ref().is_some_and(|previous| previous.is_active());
-    if previous.is_some() && peek_combat_data(text).is_some_and(|peek| !peek.has_combatants && !peek.is_active && !fight_was_running) {
+    if previous.is_some() && peek_combat_data(text).is_some_and(|peek| !peek.has_members && !peek.is_active && !fight_was_running) {
         return;
     }
     match interpret(text) {

@@ -3,7 +3,7 @@ use crate::domain::combat::EncounterFacts;
 
 fn fight(title: &str, zone: &str, damage: f64) -> Rc<Encounter> {
     let facts = EncounterFacts { title: title.into(), zone_name: zone.into(), total_damage: damage, duration_seconds: 10.0, ..EncounterFacts::default() };
-    Rc::new(Encounter::new(facts, vec![], false))
+    Rc::new(Encounter::from_figures(facts, vec![], false))
 }
 
 #[test]

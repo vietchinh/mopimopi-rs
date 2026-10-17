@@ -1,8 +1,8 @@
-//! Decides, for one update, which pets fold into which owners. It only names combatants;
-//! adding up the numbers is done by the combatant record (`Member::absorb_pet`).
+//! Decides, for one update, which pets fold into which owners. It only names members;
+//! adding up the numbers is done by the member record (`Member::absorb_pet`).
 
-use super::pet_ownership::{ClassifiedCombatant, PetOwnership};
-use super::CombatantIdentity;
+use super::pet_ownership::{ClassifiedMember, PetOwnership};
+use super::MemberKind;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PetMerge {
@@ -12,17 +12,17 @@ pub struct PetMerge {
 
 /// Chocobos, unknown pets and pets whose owner is not in this update are left alone.
 pub fn plan_pet_merges<'a>(
-    combatants: impl IntoIterator<Item = CombatantIdentity<'a>>,
+    members: impl IntoIterator<Item = (&'a str, MemberKind<'a>)>,
     local_player_name: Option<&'a str>,
 ) -> Vec<PetMerge> {
-    let classified: Vec<ClassifiedCombatant> = combatants.into_iter().map(ClassifiedCombatant::new).collect();
+    let classified: Vec<ClassifiedMember> = members.into_iter().map(|(name, kind)| ClassifiedMember::of(name, kind)).collect();
     let ownership = PetOwnership::new(&classified, local_player_name);
 
     classified
         .iter()
-        .filter_map(|combatant| {
-            let owner = ownership.owner_of(combatant.kind.pet_owner_name()?)?;
-            Some(PetMerge { pet: combatant.name.to_owned(), owner: owner.to_owned() })
+        .filter_map(|member| {
+            let owner = ownership.owner_of(member.kind.pet_owner_name()?)?;
+            Some(PetMerge { pet: member.name.to_owned(), owner: owner.to_owned() })
         })
         .collect()
 }

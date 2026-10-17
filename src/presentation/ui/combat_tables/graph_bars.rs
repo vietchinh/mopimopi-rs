@@ -37,9 +37,9 @@ struct BarWidths {
     shield: i32,
 }
 
-fn bar_widths(combatant: &Member, top_value: f64, is_healing: bool) -> BarWidths {
+fn bar_widths(member: &Member, top_value: f64, is_healing: bool) -> BarWidths {
     let (total, contributed_by_pets) =
-        if is_healing { (combatant.healed, combatant.pet_effective_healed) } else { (combatant.damage, combatant.pet_damage) };
+        if is_healing { (member.healed, member.pet_effective_healed) } else { (member.damage, member.pet_damage) };
     BarWidths {
         // The main bar is a share of the table's best value. The pet bar is *also* sized against
         // the table's best value (the original's `inputGraph` divides by `maxDamage`, not by the
@@ -48,8 +48,8 @@ fn bar_widths(combatant: &Member, top_value: f64, is_healing: bool) -> BarWidths
         // row's own healing.
         main: percent_of_whole(total, top_value).clamp(0, 100),
         pet: percent_of_whole(contributed_by_pets, top_value).clamp(0, 100),
-        overheal: percent_of_whole(combatant.over_heal, combatant.healed).clamp(0, 100),
-        shield: percent_of_whole(combatant.damage_shield, combatant.healed).clamp(0, 100),
+        overheal: percent_of_whole(member.over_heal, member.healed).clamp(0, 100),
+        shield: percent_of_whole(member.damage_shield, member.healed).clamp(0, 100),
     }
 }
 
@@ -170,17 +170,17 @@ fn animation_of(key: &str, geometry: Option<BarGeometry>, on_right: bool) -> Bar
 
 pub(super) fn graph_bars(
     environment: &SharedEnvironment,
-    combatant: &Member,
+    member: &Member,
     top_value: f64,
     is_healing: bool,
     row_id: &str,
 ) -> Element {
     let bars = &environment.bars;
-    let widths = bar_widths(combatant, top_value, is_healing);
+    let widths = bar_widths(member, top_value, is_healing);
     let animated = environment.animate_bars;
     let side = bars.side(is_healing);
 
-    let main_background = bars.fade.apply(&environment.bar_color(combatant, row_id));
+    let main_background = bars.fade.apply(&environment.bar_color(member, row_id));
 
     // The small bars, in the original's DOM order (each floats to the configured side, so the
     // first one sits at the edge). A row whose small bars add up to more than the container wraps

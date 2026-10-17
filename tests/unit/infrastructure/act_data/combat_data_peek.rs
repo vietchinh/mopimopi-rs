@@ -16,19 +16,19 @@
 //
 // #[test]
 // fn idle_message_after_a_trial() {
-//     assert_eq!(peek(IDLE_AFTER_TRIAL), Some(CombatDataPeek { is_active: true, has_combatants: false }));
+//     assert_eq!(peek(IDLE_AFTER_TRIAL), Some(CombatDataPeek { is_active: true, has_members: false }));
 // }
 //
 // #[test]
 // fn real_fights() {
-//     assert_eq!(peek(BEASTMASTER), Some(CombatDataPeek { is_active: true, has_combatants: true }));
-//     assert_eq!(peek(ZURVAN), Some(CombatDataPeek { is_active: false, has_combatants: true }));
+//     assert_eq!(peek(BEASTMASTER), Some(CombatDataPeek { is_active: true, has_members: true }));
+//     assert_eq!(peek(ZURVAN), Some(CombatDataPeek { is_active: false, has_members: true }));
 // }
 //
 // #[test]
 // fn empty_and_inactive() {
 //     let message = IDLE_AFTER_TRIAL.replace(r#""isActive":"true""#, r#""isActive":"false""#);
-//     assert_eq!(peek(&message), Some(CombatDataPeek { is_active: false, has_combatants: false }));
+//     assert_eq!(peek(&message), Some(CombatDataPeek { is_active: false, has_members: false }));
 // }
 //
 // #[test]
@@ -40,7 +40,7 @@
 //             panic!("expected combat data")
 //         };
 //         assert_eq!(peeked.is_active, parsed.is_encounter_active);
-//         assert_eq!(peeked.has_combatants, !parsed.combatants.is_empty());
+//         assert_eq!(peeked.has_members, !parsed.combatants.is_empty());
 //     }
 // }
 //
@@ -70,5 +70,5 @@
 // #[test]
 // fn look_alike_text_in_a_name_is_not_the_key() {
 //     let message = r#"{"type":"CombatData","Encounter":{"title":"\"Combatant\":{},"},"Combatant":{"YOU":{"name":"YOU"}},"isActive":"true"}"#;
-//     assert_eq!(peek(message), Some(CombatDataPeek { is_active: true, has_combatants: true }));
+//     assert_eq!(peek(message), Some(CombatDataPeek { is_active: true, has_members: true }));
 // }

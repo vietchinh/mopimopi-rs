@@ -82,6 +82,12 @@ pub enum OverlayPluginEvent {
 /// What one message means. Pure: no I/O, so it is tested directly.
 /// `Ok(None)` for valid messages that are not events (for example, replies to calls).
 /// A fresh Encounter is built per message (ACT sends full snapshots); nothing is merged or sorted here.
+/// Only for the efficiency measurements: the wire step alone, without the translation into the domain.
+#[cfg(test)]
+pub fn parse_wire_only(text: &str) -> bool {
+    OverlayMessage::parse(text).is_ok()
+}
+
 pub fn interpret(text: &str) -> Result<Option<OverlayPluginEvent>, serde_json::Error> {
     match OverlayMessage::parse(text)? {
         OverlayMessage::CombatData(combat_data) => Ok(Some(CombatData(Encounter::from(combat_data)))),

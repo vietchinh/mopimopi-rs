@@ -57,7 +57,7 @@ pub fn NavigationBar(is_settings_preview: bool) -> Element {
         Some(message) => (
             message.facts().duration_text.clone(),
             message.facts().title.clone(),
-            summary_line(settings_context, tables, &settings, &nav.summary, &message.rows(crate::application::app_state::pet_view(merge_pets, &tables.local_player_name.read())), message.facts(), is_settings_preview),
+            summary_line(settings_context, tables, &settings, &nav.summary, message, crate::application::app_state::pet_view(merge_pets, &tables.local_player_name.read()), is_settings_preview),
         ),
         // Nothing has ever arrived yet: the only case the original shows this placeholder for
         // (before its own `firstCombat` flag is ever set).

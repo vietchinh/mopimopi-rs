@@ -1,12 +1,12 @@
 //! One entry of the `Combatant` object: a player, a pet, a chocobo or the Limit Break.
 
 use super::lenient_values::{lenient_number, lenient_rate, lenient_text, lenient_action_name};
-use crate::domain::combat::Member;
+use crate::domain::combat::Figures;
 use serde::Deserialize;
 
 /// Field names follow ACT's JSON (see the `rename` attributes); Rust names say what the value is.
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
-pub struct CombatantRecord {
+pub(in crate::infrastructure::act) struct CombatantRecord {
     /// Position in ACT's message (0 = first). Not part of the JSON. Rows that tie on the value a table
     /// is sorted by keep this order, which is what the original's stable sort does.
     #[serde(skip)]
@@ -104,12 +104,12 @@ pub struct CombatantRecord {
     pub pet_effective_healed: f64,
 }
 
-impl From<CombatantRecord> for Member {
-    fn from(record: CombatantRecord) -> Member {
-        Member {
+impl From<CombatantRecord> for Figures {
+    fn from(record: CombatantRecord) -> Figures {
+        Figures {
             arrival_index: record.arrival_index,
             name: record.name,
-            job_text: record.job_text,
+            job: record.job_text.into(),
             duration_text: record.duration_text,
             duration_seconds: record.duration_seconds,
             damage: record.damage,

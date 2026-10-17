@@ -2,6 +2,7 @@
 //! that file (so they can use its private items) but kept here, outside `src/`.
 
 use super::*;
+use crate::domain::combat::Member;
 use crate::domain::combat::PetView;
 
 fn parse(json: &str) -> Encounter {

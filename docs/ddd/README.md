@@ -12,6 +12,8 @@ change made to reach it.
 * `pinned-original.md` – which MopiMopi the port follows and how upstream changes are brought in
 * `MEASUREMENTS.md` – what the design costs
 * `TO-CONFIRM.md` – what the raider still has to confirm
+* `event-storming.md` – the events found in the code, for the raider to confirm
+* `../../CONTRIBUTING.md` – how to build, test and add a change
 
 Keeping it DDD afterwards: new words go into `glossary.md` first; a new rule goes on the type that owns the data (not into a
 component); a new import must pass `tests/unit/architecture.rs` (layers only import downwards, the exception list is empty and

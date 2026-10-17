@@ -1,7 +1,8 @@
 use super::*;
+use crate::domain::combat::MemberIdentity;
 
-fn identities<'a>(pairs: &[(&'a str, &'a str)]) -> Vec<CombatantIdentity<'a>> {
-    pairs.iter().map(|&(name, job)| CombatantIdentity { name, job }).collect()
+fn identities<'a>(pairs: &[(&'a str, &'a str)]) -> Vec<(&'a str, MemberKind<'a>)> {
+    pairs.iter().map(|&(name, job)| (name, MemberKind::classify(MemberIdentity { name, job }))).collect()
 }
 
 fn merge(pet: &str, owner: &str) -> PetMerge {
@@ -10,7 +11,7 @@ fn merge(pet: &str, owner: &str) -> PetMerge {
 
 #[test]
 fn plans_pets_only() {
-    let combatants = [
+    let members = [
         ("YOU", "Sch"),
         ("Eos (Future Fade)", ""),
         ("Kay Lionheart", "Smn"),
@@ -19,7 +20,7 @@ fn plans_pets_only() {
         ("Limit Break", "Limit Break"),
         ("Mystery Pet (Kay Lionheart)", ""),
     ];
-    let mut plan = plan_pet_merges(identities(&combatants), Some("Future Fade"));
+    let mut plan = plan_pet_merges(identities(&members), Some("Future Fade"));
     plan.sort_by(|a, b| a.pet.cmp(&b.pet));
     assert_eq!(
         plan,
@@ -43,8 +44,8 @@ fn pet_of_absent_owner_stays() {
 
 #[test]
 fn several_pets_of_one_owner() {
-    let combatants = [("Kay Lionheart", "Smn"), ("Demi-Bahamut (Kay Lionheart)", ""), ("Carbuncle (Kay Lionheart)", "")];
-    let mut plan = plan_pet_merges(identities(&combatants), None);
+    let members = [("Kay Lionheart", "Smn"), ("Demi-Bahamut (Kay Lionheart)", ""), ("Carbuncle (Kay Lionheart)", "")];
+    let mut plan = plan_pet_merges(identities(&members), None);
     plan.sort_by(|a, b| a.pet.cmp(&b.pet));
     assert_eq!(
         plan,
